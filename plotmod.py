@@ -16,13 +16,13 @@ if "PLOTMOD" in os.environ:
       raise ImportError, "Sorry, unrecognized PLOTMOD '%s'" % \
             os.environ['PLOTMOD']
 else:
-   # Okay, try PGPLOT first and if not, MPL
+   # Okay, try MPL first and if not, PYGPLOT
    try:
-      import pygplot              #My PGPLOT wrappers
-      version='pgplot'
+      from plot_sne_mpl import *
+      version='mpl'
    except:
       try:
-         import matplotlib
+         from plot_sne_pg import *
          version='mpl'
       except:
          st = "\nSorry, you don't seem to have matplotlib or pygplot wrappers.\n"+\
@@ -30,8 +30,3 @@ else:
                "Or matplotlib from http://matplotlib.sourceforge.net/"
          raise ImportError, st
 
-   if version == 'pgplot':
-      from plot_sne_pg import *
-   else:
-      from plot_sne_mpl import *
- 

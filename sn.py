@@ -17,16 +17,14 @@ from distutils.version import StrictVersion
 from numpy.oldnumeric import *       # Vectors
 import ubertemp             # a template class that contains these two
 import kcorr                # Code for generating k-corrections
-try:
-   import dust_getval          # Code for computing Schlegel's extinctions
-except ImportError:
-   import utils.NED_dust_getval as dust_getval
+import utils.NED_dust_getval as dust_getval
 
 from utils import stats     # some convenient stats functions
 from utils import fit_poly  # polynomial fitter
 import scipy                # Scientific python routines
 linalg = scipy.linalg       # Several linear algebra routines
 from scipy.integrate import trapz
+from scipy.interpolate import interp1d
 from utils import fit_spline # My Spline fitting routines
 from filters import fset    # filter definitions.
 from filters import standards as spectra # spectra.
@@ -34,15 +32,12 @@ import mangle_spectrum      # SN SED mangling routines
 import pickle
 import model
 
-Version = '0.5'     # Let's keep track of this from now on.
+Version = '0.6'     # Let's keep track of this from now on.
 
 # Some useful functions in other modules which the interactive user may want:
 getSED = kcorr.get_SED
 Robs = kcorr.R_obs
 Ia_w,Ia_f = getSED(0, 'H3')
-
-# Some switches (mostly for enabling experimental stuff)
-include_template_errors = 0
 
 class dict_def:
    '''A class that acts like a dictionary, but if you ask for a key
@@ -181,6 +176,13 @@ class sn(object):
             return self.parameters[name]
       if name.replace('e_','') in self.errors:
          return self.errors[name.replace('e_','')]
+      if name == 'dm15':
+         if 'B' in self.data:
+            return getattr(self.data['B'], 'dm15', None)
+         else:
+            return None
+      if name == 'st':
+         return None
       raise AttributeError, "Error:  attribute %s not defined" % (name)
 
    def __setattr__(self, name, value):
@@ -191,7 +193,7 @@ class sn(object):
       #if name == 'Rv_host'
       self.__dict__[name] = value
 
-   def choose_model(self, name):
+   def choose_model(self, name, stype='dm15'):
       '''A convenience function for selecting a model from the model module.
       The model will be used when self.fit() is called and will contain
       all the parameters and errors.'''
@@ -205,7 +207,7 @@ class sn(object):
          st = "Not a valid model.  Choose one of:  "+str(models)
          raise ValueError, st
 
-      self.model = model.__dict__[name](self)
+      self.model = model.__dict__[name](self, stype=stype)
       self.template_bands = [b for b in self.model.rbs \
             if b not in ['Bs','Vs','Rs','Is']]
      
@@ -372,17 +374,17 @@ class sn(object):
       '''Compute the k-corrections for the filters [bands] (default:  do all
       filters in self.data).  In order to get the best k-corrections possible,
       we warp the SNIa SED (defined by self.k_version) to match the observed
-      photometry defined by the filters in [mbands] (default:  same as bands)
-      unless mangle=0.  Not all bands will be observed on the same day (or some
+      photometry defined by the filters in [mbands] (default:  same as [bands])
+      unless [mangle]=0.  Not all bands will be observed on the same day (or some
       data may be less than reliable), so there are several arguments that
       control how the warping is done.  First, only filters whose effective
       wavelengths are separated by more than [min_filter_sep] will be used (to
       avoid unstable splines).  For days with no data, colors will be
-      constructed by GLOEs interpolation, unless interp=0, in which case only
+      constructed by GLOEs interpolation, unless [interp]=0, in which case only
       colors that are observed will be used.  If you would rather use the
-      light-curve model currently defined, set use_model=1 (all points are
-      interpolated based on the model).  if use_stretch=1, then the value
-      of dm15 is mapped to a time stretch and applied to the SED templates
+      light-curve model currently defined, set [use_model]=1 (all points are
+      interpolated based on the model).  If [use_stretch]=1, then the value
+      of dm15 or st is mapped to a time stretch and applied to the SED templates
       to take into account that faster decliners evolve more quickly.
       Lastly, you can use any options used by mangle_spectrum.mangle_spectrum2
       (see it's docstring).
@@ -398,18 +400,22 @@ class sn(object):
       '''
       if use_stretch and self.k_version != '91bg':
          dm15 = self.__getattr__('dm15')
-         if dm15 is None:
+         st = self.__getattr__('st')
+         if dm15 is None and st is None:
             raise AttributeError, "Before you can k-correct with stretch, you"+\
-                  " need to set self.dm15"
-         if dm15 > 1.7:
-            print "Warning:  dm15 > 1.7.  Using stretch on the Hsiao SED"
-            print "  is not recommended.  I'm setting stretch to 1.0.  You"
-            print "  might consider using the 91bg SED template."
-            s = kcorr.dm152s(1.7)
-         elif dm15 < 0.7:
-            s = kcorr.dm152s(0.7)
+                  " need to solve for dm15 or st, using either a model or LC fit"
+         if dm15 is None:
+            s = st
          else:
-            s = kcorr.dm152s(dm15)
+            if dm15 > 1.7:
+               print "Warning:  dm15 > 1.7.  Using this stretch on the Hsiao SED"
+               print "  is not recommended.  I'm setting stretch to 1.0.  You"
+               print "  might consider using the 91bg SED template."
+               s = kcorr.dm152s(1.7)
+            elif dm15 < 0.7:
+               s = kcorr.dm152s(0.7)
+            else:
+               s = kcorr.dm152s(dm15)
       elif use_stretch and self.k_version == '91bg':
          print "Warning:  you asked for stretching the template SED, but"
          print "you have selected the 91bg template.  Setting stretch to 1.0."
@@ -786,6 +792,37 @@ class sn(object):
       bands.'''
       for band in self.data:
          self.restbands[band] = self.closest_band(band)
+
+   def lc_offsets(self, min_off=0.5):
+      '''Find offsets such that the lcs, when plotted, won't overlap.  Specify
+      [filters] the order you want them, otherwise, they are chosen in
+      order of increasing effective wavelength.'''
+
+      if self.filter_order is None:
+         bands = self.data.keys()
+         eff_wavs = []
+         for filter in bands:
+            eff_wavs.append(fset[filter].ave_wave)
+         eff_wavs = asarray(eff_wavs)
+         ids = argsort(eff_wavs)
+         self.filter_order = [bands[i] for i in ids]
+
+      offs = [0]
+      filter = self.filter_order[0]
+
+      f = interp1d(self.data[filter].MJD, self.data[filter].mag, bounds_error=False,
+            fill_value=self.data[filter].mag.max())
+      for filter in self.filter_order[1:]:
+         off = offs[-1] + min_off
+         while not alltrue(greater(self.data[filter].mag+off - f(self.data[filter].MJD),
+            0)):
+            off += 0.5
+         offs.append(off)
+         f = interp1d(self.data[filter].MJD, self.data[filter].mag+off, bounds_error=False,
+                           fill_value=self.data[filter].mag.max())
+      return offs
+
+
 
    def save(self, filename):
       '''Save this SN instance to a pickle file, which can be loaded again

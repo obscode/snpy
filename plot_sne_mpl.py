@@ -1,7 +1,7 @@
 '''plot_sne_pg.py
 
    A collection of plotting routines that SNPY uses to display data.  This
-   version uses the PGPLOT library.
+   version uses the matplotlib library.
 '''
 from numpy import *
 import matplotlib
@@ -58,8 +58,8 @@ class symbol_dict(dict):
             raise KeyError, k
 
 # Some default colors and labels to use in plotting.
-default_colors = color_dict()
-default_symbols = symbol_dict()
+#default_colors = color_dict()
+#default_symbols = symbol_dict()
 
 class click_line:
    '''an interactive chord.  Given an axis instance and a start
@@ -203,14 +203,21 @@ class ButtonClick:
       self.id2 = None
       self.pending = None     # Set to axis which has a pending event
       self.pending_key = None
-      self.bindings = bindings
+      self.bindings = {}
+      self.mouse_bindings = {}
+      for key in bindings:
+         if key[0:5] == 'mouse':
+            self.mouse_bindings[key] = bindings[key]
+         else:
+            self.bindings[key] = bindings[key]
 
    def __del__(self):
       self.disconnect()
 
    def connect(self):
       self.id = self.figure.canvas.mpl_connect('key_press_event', self.keypress)
-      self.id2 = self.figure.canvas.mpl_connect('button_press_event', self.buttonpress)
+      if len(self.mouse_bindings.keys()) > 1:
+         self.id2 = self.figure.canvas.mpl_connect('button_press_event', self.buttonpress)
 
    def disconnect(self):
       if self.id is None:  return
@@ -219,10 +226,10 @@ class ButtonClick:
    def buttonpress(self, event):
       if event.inaxes is None:  return
       if self.pending_key is not None:  return
-      if 'mouse'+str(event.button) in self.bindings:
+      if 'mouse'+str(event.button) in self.mouse_bindings:
          return apply(self.bindings['mouse'+str(event.button)], (event,))
-      elif event.button == 1:
-         print "%f %f" % (event.xdata, event.ydata)
+      #elif event.button == 1:
+      #   print "%f %f" % (event.xdata, event.ydata)
 
 
    def keypress(self, event):
@@ -364,7 +371,7 @@ def plot_filters(self, bands=None, day=0, fill=0):
 def plot_sn(self, xrange=None, yrange=None, device=None, 
       title=None, interactive=0, single=0, dm=1, fsize=12., linewidth=1,
       symbols=None, colors=None, relative=0, legend=1, mask=1, label_bad=0,
-      flux=0, epoch=0, msize=6, **pargs):
+      flux=0, epoch=1, msize=6, **pargs):
    '''Plot out the supernova data in a nice format.  There are several 
    options:
       - xrange,yrange:  specify the ranges to plot as lists [xmin,xmax], 
@@ -386,8 +393,8 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
 
    if not xrange:  xrange=self.xrange
    if not yrange:  yrange=self.yrange
-   if not symbols:  symbols = default_symbols
-   if not colors:  colors = default_colors
+   if not symbols:  symbols = symbol_dict()
+   if not colors:  colors = color_dict()
    if fsize is None:  fsize = 12
    if linewidth is None:  linewidth=1
 
@@ -396,28 +403,21 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
       bands = self.filter_order
    else:
       bands = self.data.keys()
-      if not single:
-         eff_wavs = []
-         for filter in bands:
-            eff_wavs.append(fset[filter].ave_wave)
-         eff_wavs = asarray(eff_wavs)
-         ids = argsort(eff_wavs)
-         self.filter_order = [bands[i] for i in ids]
-      else:
-         mins = []
-         for filter in bands:
-            if self.data[filter].model is not None:
-               mins.append(min(self.data[filter].model))
-            else:
-               mins.append(min(self.data[filter].mag))
-         mins = asarray (mins)
-         ids = argsort(mins)
-         self.filter_order = [bands[i] for i in ids]
+      eff_wavs = []
+      for filter in bands:
+         eff_wavs.append(fset[filter].ave_wave)
+      eff_wavs = asarray(eff_wavs)
+      ids = argsort(eff_wavs)
+      self.filter_order = [bands[i] for i in ids]
       bands = self.filter_order
       
    for b in bands:
-      if b not in colors:  colors[b] = 'black'
-      if b not in symbols:  symbols[b] = 'o'
+      if not single:
+         colors[b] = 'blue'
+         symbols[b] = 'o'
+      else:
+         if b not in colors:  colors[b] = 'black'
+         if b not in symbols:  symbols[b] = 'o'
    if relative:
       if self.data[bands[0]].model is not None:
          rel_off = min(self.data[bands[0]].model)
@@ -438,11 +438,14 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
       cols = int(round(sqrt(n_plots)))
       rows = (n_plots / cols)
       if n_plots % cols:  rows += 1
-      p = myplotlib.PanelPlot(cols, rows, num=110, figsize=(6,6.*rows/cols))
+      p = myplotlib.PanelPlot(cols, rows, num=110, figsize=(8,8.*rows/cols))
    else:
-      p = myplotlib.PanelPlot(1,1, num=110, figsize=(6,8))
+      p = myplotlib.SimplePlot(num=110, figsize=(8,8))
 
-   if title is not None:  p.title(title)
+   if title is not None:  
+      p.title(title)
+   else:
+      p.title(self.name)
    if epoch:
       p.xlabel('Days after B maximum')
    else:
@@ -460,26 +463,24 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
          ax.set_ylim(yrange)
 
    i = 0
-   maxes = [self.data[filter].mag.min() for filter in bands]
+   offsets = self.lc_offsets()
    for filter in bands:
       # Add extra space, if needed
-      delt = max(i*dm, i*dm + maxes[0] - maxes[i])
-      delt = round(delt, 1)
+      #delt = max(i*dm, i*dm + maxes[0] - maxes[i])
+      #delt = round(delt, 1)
+      delt = offsets[i]
       if not single:
          ax = p.axes[i]
          # make a reference to the lightcruve we are plotting.
          ax.lc = self.data[filter]
       else:
          ax = p.axes[0]
-      if not i and title is None:
-         label = self.name + " " + filter
-      else:
-         label = filter
+      label = filter
       ax.mylabels = []
       if not single:
-         ax.mylabels.append(ax.text(0.8, 0.9, label, transform=ax.transAxes, color=colors[filter], 
-               horizontalalignment='right', fontsize=fsize, 
-               verticalalignment='top'))
+         ax.mylabels.append(ax.text(0.9, 0.9, label, transform=ax.transAxes, 
+            horizontalalignment='right', fontsize=fsize, 
+            verticalalignment='top'))
       if mask:
          x = self.data[filter].MJD[self.data[filter].mask]
          if not flux:
@@ -532,6 +533,10 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
                                 relative*rel_off))
          ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y), 
                color='k', linewidth=linewidth)
+         ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y+err), 
+               '--',color='k', linewidth=linewidth)
+         ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y-err), 
+               '--',color='k', linewidth=linewidth)
       elif self.data[filter].tck is not None:
          tck = self.data[filter].tck
          t = arange(tck[0][0], tck[0][-1], 1.0)
@@ -547,7 +552,7 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
       i = i + 1
 
       if single and legend:
-         ax.legend(loc='upper right', numpoints=1, ncol=2)
+         ax.legend(loc='lower right', numpoints=1, ncol=1, prop={'size':'small'})
          ax.text(0.05,0.05,self.name,transform=ax.transAxes)
    
    #p.draw()
@@ -913,7 +918,6 @@ def plot_lc(self, device='/XSERVE', interactive=0, epoch=1, flux=0, gloes=0,
          p2._errb = p2.errorbar(x - epoch*Tmax,y, yerr=dy, barsabove=True,
                capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
                ecolor='black')
-      p2.axhline(y=0)
       # useful stats:
       if self.tck is not None:
          extra_title = 'Np = %d  Nk = %d  s = %.1f r-chi-sq = %.2f' % \
@@ -927,9 +931,9 @@ def plot_lc(self, device='/XSERVE', interactive=0, epoch=1, flux=0, gloes=0,
                (N,sigma,self.line.chisq())
       self.mp._title.set_text(string.split(self.mp._title.get_text(), '\n')[0]+\
                               '\n' + extra_title)
-
-
    self.mp.set_limits()
+   if len(self.mp.axes) > 1:
+      self.mp.axes[0].axhline(0)
    self.mp.draw()
    self.mp.bc = ButtonClick(self.mp.fig, bindings={'a':add_knot, 'd':delete_knot, 
       'm':move_knot, '-':change_s, '+':change_s, '=':change_s,
@@ -945,8 +949,8 @@ def plot_kcorrs(self, device='13/XW', colors=None, symbols=None):
    if len(bands) == 0:
       return
 
-   if colors is None:  colors = default_colors
-   if symbols is None:  symbols = default_symbols
+   if colors is None:  colors = color_dict()
+   if symbols is None:  symbols = symbol_dict()
 
    eff_wavs = []
    for filter in bands:

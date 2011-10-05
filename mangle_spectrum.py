@@ -17,6 +17,7 @@ from snpy.utils import mpfit
 import copy
 
 filts = fset
+debug=False
 
 class function:
    '''A function object that represents a way of making a smooth multiplication

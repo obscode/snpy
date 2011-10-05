@@ -8,6 +8,62 @@ CSPtemp/dm15temp.c -text
 CSPtemp/dm15temp.h -text
 CSPtemp/dm15temp2.py -text
 CSPtemp/dm15temp_wrap.c -text
+CSPtemp/fits/H_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/H_std2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_B_mean1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_B_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_B_std1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_B_std2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_H_mean1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_H_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_H_std1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_H_std2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_J_mean1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_J_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_J_std1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_J_std2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_V_mean1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_V_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_V_std1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_V_std2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_Y_mean1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_Y_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_Y_std1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_Y_std2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_g_mean1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_g_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_g_std1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_g_std2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_i_mean1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_i_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_i_std1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_i_std2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_r_mean1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_r_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_r_std1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_r_std2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_u_mean1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_u_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_u_std1.fits -text svneol=unset#unset
+CSPtemp/fits/dm15_u_std2.fits -text svneol=unset#unset
+CSPtemp/fits/st_B_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/st_B_std2.fits -text svneol=unset#unset
+CSPtemp/fits/st_H_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/st_H_std2.fits -text svneol=unset#unset
+CSPtemp/fits/st_J_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/st_J_std2.fits -text svneol=unset#unset
+CSPtemp/fits/st_V_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/st_V_std2.fits -text svneol=unset#unset
+CSPtemp/fits/st_Y_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/st_Y_std2.fits -text svneol=unset#unset
+CSPtemp/fits/st_g_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/st_g_std2.fits -text svneol=unset#unset
+CSPtemp/fits/st_i_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/st_i_std2.fits -text svneol=unset#unset
+CSPtemp/fits/st_r_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/st_r_std2.fits -text svneol=unset#unset
+CSPtemp/fits/st_u_mean2.fits -text svneol=unset#unset
+CSPtemp/fits/st_u_std2.fits -text svneol=unset#unset
 CSPtemp/generate_surf.py -text
 CSPtemp/gloes.c -text
 CSPtemp/gloes.h -text

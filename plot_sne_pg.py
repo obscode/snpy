@@ -137,7 +137,7 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
       else:
          mins = []
          for filter in bands:
-            if self.data[filter].model is not None:
+            if getattr(self.data[filter],'model',None) is not None:
                mins.append(min(self.data[filter].model))
             else:
                mins.append(min(self.data[filter].mag))

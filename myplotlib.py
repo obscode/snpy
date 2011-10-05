@@ -40,8 +40,7 @@ class SimplePlot:
    min_pad = 0.05         # a minimum padding aroudn the axis (so that eve
                           #  with no labels, we still see the grid
 
-   def __init__(self, fig=None, position=None, nsubx=5,
-         nsuby=5, **kwargs):
+   def __init__(self, fig=None, position=None, nsubx=5, nsuby=5, **kwargs):
       self.left_pad = self.min_pad
       self.right_pad = self.min_pad
       self.bottom_pad = self.min_pad
@@ -57,11 +56,13 @@ class SimplePlot:
          self.position = position
       if fig is None:
          self.fig = plt.figure(**kwargs)
+         self.fig.clear()
       else:
          self.fig = fig
 
       pos = self.get_axis_position()
       self.axis = self.fig.add_axes(pos, autoscale_on=False)
+      self.axes = [self.axis]
 
    def __getattr__(self, key):
       '''Map axis attributes to this class.'''
@@ -69,6 +70,15 @@ class SimplePlot:
          return getattr(self.axis, key)
       else:
          raise AttributeError
+
+   def xlabel(self, label, **args):
+      return self.axis.set_xlabel(label, **args)
+
+   def ylabel(self, label, **args):
+      return self.axis.set_ylabel(label, **args)
+
+   def title(self, label, **args):
+      return self.axis.set_title(label, **args)
 
    def get_axis_position(self):
       '''Based on the current plot position and padding, compute the axis
@@ -172,6 +182,7 @@ class SimplePlot:
       bboxes = []
       for label in labels:
          if label.get_visible():
+            #print label
             bbox = label.get_window_extent()
             bboxi = bbox.inverse_transformed(self.fig.transFigure)
             bboxes.append(bboxi)
@@ -221,7 +232,7 @@ class SimplePlot:
       self.top_padd += dy
       self.reset_panel_positions()
 
-   def set_limits(self, pad=0.01, dox=True, doy=True):
+   def set_limits(self, pad=0.01, dox=True, doy=True, all_equal=False):
       '''Set the limits based on what's in the axis limits.'''
       if dox:
          bbox = axis_bbox(self.axis)
@@ -284,6 +295,7 @@ class MultiPlot:
 
       if fig is None:
          self.fig = plt.figure(**kwargs)
+         self.fig.clear()
       else:
          self.fig = fig
       self.fig.clear()
@@ -586,6 +598,7 @@ class PanelPlot:
 
       if fig is None:
          self.fig = plt.figure(**kwargs)
+         self.fig.clear()
       else:
          self.fig = fig
       self.fig.clear()

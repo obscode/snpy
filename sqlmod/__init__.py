@@ -4,7 +4,7 @@ import getpass
 #from snpy import filters
 
 try:
-   import MySQLdb as sql
+   import pymysql as sql
    have_sql = 1
 except:
    have_sql = 0
@@ -326,7 +326,7 @@ class sqlbase:
 
 
 class sql_highz(sqlbase):
-   host = "newton.obs.carnegiescience.edu"
+   host = "kepler.obs.carnegiescience.edu"
    user = "CSP"
    passwd = None
    db = "SN"

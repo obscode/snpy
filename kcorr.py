@@ -315,14 +315,14 @@ def kcorr_mangle3(waves, spectra, filts, mags, m_mask, restfilts, z, colorfilts=
 
 def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfilts=None,
       full_output=0, normfilter=None, **mopts):
-   '''Find the (cross-band) k-correction for each filter in restfilts to
-   observed corresponding filter in fitls at redshift z, using the provided
-   colorfilts (or filts if colorfilts is not defined) and magnitudes to mangle
-   the SED.  The array mags and mask should have dimensions (len(days),len(
+   '''Find the (cross-band) k-correction for each filter in [restfilts] to
+   observed corresponding filter in [filts] at redshift [z], using the provided
+   [colorfilts] (or [filts] if [colorfilts] is not defined) and magnitudes to mangle
+   the SED.  The array [mags] and [mask] should have dimensions (len(days),len(
    colorfilts)) so that mags[i,j] correspond to the magnitude on day days[i] in
    filter filts[j].  The mask is used to determine which magnitudes are good
    and which are bad (for whatever reason).  Use this version if your data
-   needs to be masked in any way.  If full_output=True, returm a list of
+   needs to be masked in any way.  If [full_output]=True, returm a list of
    [waves,factors] of
 
    Output: 
@@ -383,11 +383,11 @@ def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfil
          if debug:  print "factors = ",factors
          if debug:
             # check the colors
-            for i in range(len(colorfilts)-1):
-               print "input color:  %s-%s = %f" % (colorfilts[i],colorfilts[i+1],
-                     cs[i]),
-               f1 = filters.fset[colorfilts[i]]
-               f2 = filters.fset[colorfilts[i+1]]
+            for i in range(len(fs)-1):
+
+               print "input color:  %s-%s = %f" % (fs[i],fs[i+1], cs[i]),
+               f1 = filters.fset[fs[i]]
+               f2 = filters.fset[fs[i+1]]
                col = f1.synth_mag(spec_wav*(1+z), man_spec_f) - \
                      f2.synth_mag(spec_wav*(1+z), man_spec_f)
                print "  output color:  %f" % (col)
