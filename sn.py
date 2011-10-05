@@ -818,8 +818,11 @@ class sn(object):
             0)):
             off += 0.5
          offs.append(off)
-         f = interp1d(self.data[filter].MJD, self.data[filter].mag+off, bounds_error=False,
+         if self.data[filter].MJD.shape[0] > 1:
+            f = interp1d(self.data[filter].MJD, self.data[filter].mag+off, bounds_error=False,
                            fill_value=self.data[filter].mag.max())
+         else:
+            f = lambda x:  self.data[filter].mag+off
       return offs
 
 
@@ -861,11 +864,15 @@ class sn(object):
              use the default kcorr=1 and reset_kcorrs=1.'''
 
       if bands is None:
-         bands = self.data.keys()
+         # By default, we fit the bands whose restbands are provided by the model
+         bands = [b for b in self.data.keys() if self.restbands[b] in self.model.rbs]
       # Setup initial Robs (in case it is used by the model)
       for band in bands:
          if band not in self.Robs:
             self.Robs[band] = fset[band].R(self.Rv_gal, Ia_w, Ia_f, z=self.z)
+
+      if self.z <= 0:
+         raise ValueError, "The heliocentric redshift is zero.  Fix this before you fit"
 
       # Check to make sure we have filters we can fit:
       for filter in bands:

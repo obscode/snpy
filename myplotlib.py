@@ -26,7 +26,7 @@ def line_bbox(line):
 
 def axis_bbox(axis):
    '''Given an axis, find the bounding box for all the data therein.'''
-   bboxs = [line_bbox(line) for line in axis.lines]
+   bboxs = [line_bbox(line) for line in axis.lines if getattr(line,'autoscale',True)]
    bboxs += [patch.get_bbox() for patch in axis.patches]
    bboxs += [col.get_datalim(axis.transData) for col in axis.collections]
    if len(bboxs) >= 1:
