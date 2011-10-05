@@ -5,6 +5,7 @@
 '''
 from numpy import *
 import matplotlib
+matplotlib.use('TkAgg')
 from matplotlib import pyplot,rcParams
 from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D

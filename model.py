@@ -885,7 +885,7 @@ class max_model2(model):
       # Apply Robs*EBVgal:
       if band in self.parent.Robs:
          if type(self.parent.Robs[band]) is type(()):
-            R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
+            R = scipy.interpolate.splev(t+Tmax, self.parent.Robs[band])
          else:
             R = self.parent.Robs[band]
          temp = temp + R*self.parent.EBVgal

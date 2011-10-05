@@ -8,7 +8,7 @@
 #  Added reddening correction for galactic and host extinctions
 
 import os,sys,string,re
-import pygplot
+#import pygplot
 import numpy.oldnumeric as num
 import scipy.interpolate
 from utils import deredden
@@ -266,14 +266,14 @@ def kcorr_mangle3(waves, spectra, filts, mags, m_mask, restfilts, z, colorfilts=
          factors_a.append(factors)
  
       # Let's plot these guys out
-      if debug:
-         p = pygplot.Plot(device='/XWIN', xrange=[3500,9500])
-         p.line(spec_wav, spec_f/max(spec_f), color='blue')
-         p.line(spec_wav, man_spec_f/max(spec_f), color='green')
-         p.point(waves/(1+z), factors, symbol=3, size=2,color='orange')
-         tck = scipy.interpolate.splrep(waves/(1+z), factors, k=3, s=0)
-         xx = num.arange(waves[0]/(1+z), waves[-1]/(1+z), 10)
-         p.line(xx, scipy.interpolate.splev(xx, tck), color='orange')
+      #if debug:
+      #   p = pygplot.Plot(device='/XWIN', xrange=[3500,9500])
+      #   p.line(spec_wav, spec_f/max(spec_f), color='blue')
+      #   p.line(spec_wav, man_spec_f/max(spec_f), color='green')
+      #   p.point(waves/(1+z), factors, symbol=3, size=2,color='orange')
+      #   tck = scipy.interpolate.splrep(waves/(1+z), factors, k=3, s=0)
+      #   xx = num.arange(waves[0]/(1+z), waves[-1]/(1+z), 10)
+      #   p.line(xx, scipy.interpolate.splev(xx, tck), color='orange')
  
       for i in range(len(filts)):
          f1 = filters.fset[restfilts[i]]
@@ -283,13 +283,13 @@ def kcorr_mangle3(waves, spectra, filts, mags, m_mask, restfilts, z, colorfilts=
          # Now compute the fluxes using Simpson's composite rule:
          f1flux_0 = f1.response(spec_wav, man_spec_f, z=0)
          f2flux_z = f2.response(spec_wav, man_spec_f, z=z)
-         if debug:
-            p.line(f1.wave, f1.resp)
-            p.line(f2.wave, f2.resp)
-            p.line(f2.wave/(1.0+z), f2.resp, color='red')
-            p.plot()
-            p.close()
-            del p.lines[-3:]
+         #if debug:
+         #   p.line(f1.wave, f1.resp)
+         #   p.line(f2.wave, f2.resp)
+         #   p.line(f2.wave/(1.0+z), f2.resp, color='red')
+         #   p.plot()
+         #   p.close()
+         #   del p.lines[-3:]
          if f1flux_0 < 0 or f2flux_z < 0:
             kcorrs[-1].append(0.0)
             mask[-1].append(0)
@@ -398,12 +398,12 @@ def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfil
             args[key] = mopts[key]
          m_opts.append(args)
       # Let's plot these guys out
-      if debug:
-         p = pygplot.Plot(device='/XWIN', yrange=[0,2])
-         p.line(spec_wav, spec_f/max(spec_f), color='blue')
-         p.line(spec_wav, man_spec_f/max(spec_f), color='green')
-         p.point(waves/(1+z), factors, color='orange', symbol=4)
-         p.line(spec_wav, man_spec_f/spec_f, color='orange')
+      #if debug:
+      #   p = pygplot.Plot(device='/XWIN', yrange=[0,2])
+      #   p.line(spec_wav, spec_f/max(spec_f), color='blue')
+      #   p.line(spec_wav, man_spec_f/max(spec_f), color='green')
+      #   p.point(waves/(1+z), factors, color='orange', symbol=4)
+      #   p.line(spec_wav, man_spec_f/spec_f, color='orange')
  
       for i in range(len(filts)):
          f1 = filters.fset[restfilts[i]]
@@ -413,13 +413,13 @@ def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfil
          # Now compute the fluxes using Simpson's composite rule:
          f1flux_0 = f1.response(spec_wav, man_spec_f, z=0)
          f2flux_z = f2.response(spec_wav, man_spec_f, z=z)
-         if debug:
-            p.line(f1.wave, f1.resp)
-            p.line(f2.wave, f2.resp)
-            p.line(f2.wave/(1.0+z), f2.resp, color='red')
-            p.plot()
-            p.close()
-            del p.lines[-3:]
+         #if debug:
+         #   p.line(f1.wave, f1.resp)
+         #   p.line(f2.wave, f2.resp)
+         #   p.line(f2.wave/(1.0+z), f2.resp, color='red')
+         #   p.plot()
+         #   p.close()
+         #   del p.lines[-3:]
          if f1flux_0 < 0 or f2flux_z < 0:
             kcorrs[-1].append(0.0)
             mask[-1].append(0)
@@ -487,15 +487,15 @@ def kcorr_mangle(days, filts, colors,  restfilts, z, version='H', **mopts):
             print "  output color:  %f" % (col)
  
       # Let's plot these guys out
-      if debug:
-         p = pygplot.Plot(device='/XWIN')
-         p.line(spec_wav, spec_f/max(spec_f), color='blue')
-         p.line(spec_wav, man_spec_f/max(spec_f), color='green')
-         #p.line(waves/(1+z), factors, color='orange')
-         p.point(waves/(1+z), factors, symbol=3, size=2,color='orange')
-         tck = scipy.interpolate.splrep(waves/(1+z), factors, k=3, s=0)
-         xx = num.arange(waves[0]/(1+z), waves[-1]/(1+z), 10)
-         p.line(xx, scipy.interpolate.splev(xx, tck), color='orange')
+      #if debug:
+      #   p = pygplot.Plot(device='/XWIN')
+      #   p.line(spec_wav, spec_f/max(spec_f), color='blue')
+      #   p.line(spec_wav, man_spec_f/max(spec_f), color='green')
+      #   #p.line(waves/(1+z), factors, color='orange')
+      #   p.point(waves/(1+z), factors, symbol=3, size=2,color='orange')
+      #   tck = scipy.interpolate.splrep(waves/(1+z), factors, k=3, s=0)
+      #   xx = num.arange(waves[0]/(1+z), waves[-1]/(1+z), 10)
+      #   p.line(xx, scipy.interpolate.splev(xx, tck), color='orange')
  
       for i in range(len(filts)):
          f1 = filters.fset[restfilts[i]]
@@ -505,13 +505,13 @@ def kcorr_mangle(days, filts, colors,  restfilts, z, version='H', **mopts):
          # Now compute the fluxes using Simpson's composite rule:
          f1flux_0 = f1.response(spec_wav, man_spec_f, z=0)
          f2flux_z = f2.response(spec_wav, man_spec_f, z=z)
-         if debug:
-            p.line(f1.wave, f1.resp)
-            p.line(f2.wave, f2.resp)
-            p.line(f2.wave/(1.0+z), f2.resp, color='red')
-            p.plot()
-            p.close()
-            del p.lines[-3:]
+         #if debug:
+         #   p.line(f1.wave, f1.resp)
+         #   p.line(f2.wave, f2.resp)
+         #   p.line(f2.wave/(1.0+z), f2.resp, color='red')
+         #   p.plot()
+         #   p.close()
+         #   del p.lines[-3:]
          if f1flux_0 < 0 or f2flux_z < 0:
             kcorrs[-1].append(0.0)
             mask[-1].append(0)
