@@ -1,0 +1,4 @@
+setup.py
+spline2.py
+spline2_nonint.c
+spline2_wrap.c

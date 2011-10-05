@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+from numpy import *
+from snpy import *
+import sys
+if "lowz" in sys.argv:
+   del sys.argv[sys.argv.index("lowz")]
+   sqlmod.default_sql = sqlmod.sql_lowz()
+
+import IPython.ipapi
+
+IPython.ipapi.launch_new_instance(globals())

@@ -1,0 +1,15 @@
+/*.pyc
+/*.pylc
+CSPtemp/*.pyc
+/build
+dm15temp/*.pyc
+dm15temp_dest/*.pyc
+filters/*.pyc
+lib/*.pyc
+lib/*.swp
+lib/err*.obj
+lib/kerror.py
+spline2/*.pyc
+sqlmod/*.pyc
+tspack/*.pyc
+utils/*.pyc

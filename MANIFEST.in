@@ -1,0 +1,3 @@
+recursive-include doc *
+include CHANGELOG
+include INSTALL

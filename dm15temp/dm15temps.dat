@@ -1,0 +1,14 @@
+templates/template92al.new templates/sigma92al.new   1.110        0.00     -0.02    -0.01
+templates/template92bc.new templates/sigma92bc.new   0.870        0.00      0.00    -0.02
+templates/template91bg.new templates/sigma91bg.new   1.93000      -0.05     -0.14    -0.10 
+templates/template92bo.new templates/sigma92bo.new   1.690        0.00      0.00    -0.02
+templates/template91t.new  templates/sigma91t.new    0.940       -0.02     -0.01     0.00
+templates/template92a.new  templates/sigma92a.new    1.470       -0.03     -0.03    -0.05 
+templates/template94d.new  templates/sigma94d.new    1.343        0.00      0.00    -0.10
+templates/template94ae.new templates/sigma94ae.new   0.938       -0.01      0.00     0.00
+templates/template95d.new  templates/sigma95d.new    1.052        0.00      0.00     0.00
+templates/template95al.new templates/sigma95al.new   0.894       -0.01     -0.01    -0.01
+templates/template96x.new  templates/sigma96x.new    1.251       -0.02      0.00    -0.07
+templates/template98bu.new templates/sigma98bu.new   1.047        0.00     -0.01    -0.05
+templates/template99aa.new templates/sigma99aa.new   0.82699999  -0.02     -0.02    -0.03
+templates/template01el.new templates/sigma01el.new   1.120       -0.03     -0.01    -0.06

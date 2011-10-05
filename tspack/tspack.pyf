@@ -1,0 +1,391 @@
+! Left off at tsval1
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module tspack ! in 
+    interface  ! in :tspack
+!        subroutine arcl2d(n,x,y,t,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: t
+!            integer :: ier
+!        end subroutine arcl2d
+!        subroutine arcl3d(n,x,y,z,t,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: z
+!            double precision dimension(n),depend(n) :: t
+!            integer :: ier
+!        end subroutine arcl3d
+!        subroutine b2tri(n,x,y,w,p,d,sd,t11,t12,t21,t22,ys,yp,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: w
+!            double precision :: p
+!            double precision dimension(n),depend(n) :: d
+!            double precision dimension(n),depend(n) :: sd
+!            double precision dimension(n),depend(n) :: t11
+!            double precision dimension(n),depend(n) :: t12
+!            double precision dimension(n),depend(n) :: t21
+!            double precision dimension(n),depend(n) :: t22
+!            double precision dimension(n),depend(n) :: ys
+!            double precision dimension(n),depend(n) :: yp
+!            integer :: ier
+!        end subroutine b2tri
+!        subroutine b2trip(n,x,y,w,p,d,sd,t11,t12,t21,t22,u11,u12,u21,u22,ys,yp,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: w
+!            double precision :: p
+!            double precision dimension(n),depend(n) :: d
+!            double precision dimension(n),depend(n) :: sd
+!            double precision dimension(n),depend(n) :: t11
+!            double precision dimension(n),depend(n) :: t12
+!            double precision dimension(n),depend(n) :: t21
+!            double precision dimension(n),depend(n) :: t22
+!            double precision dimension(n),depend(n) :: u11
+!            double precision dimension(n),depend(n) :: u12
+!            double precision dimension(n),depend(n) :: u21
+!            double precision dimension(n),depend(n) :: u22
+!            double precision dimension(n),depend(n) :: ys
+!            double precision dimension(n),depend(n) :: yp
+!            integer :: ier
+!        end subroutine b2trip
+!        function endslp(x1,x2,x3,y1,y2,y3,sigma) ! in :tspack:tspack.f
+!            double precision :: x1
+!            double precision :: x2
+!            double precision :: x3
+!            double precision :: y1
+!            double precision :: y2
+!            double precision :: y3
+!            double precision :: sigma
+!            double precision :: endslp
+!        end function endslp
+!        function hppval(t,n,x,y,yp,sigma,ier) ! in :tspack:tspack.f
+!            double precision :: t
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: yp
+!            double precision dimension(n),depend(n) :: sigma
+!            integer :: ier
+!            double precision :: hppval
+!        end function hppval
+!        function hpval(t,n,x,y,yp,sigma,ier) ! in :tspack:tspack.f
+!            double precision :: t
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: yp
+!            double precision dimension(n),depend(n) :: sigma
+!            integer :: ier
+!            double precision :: hpval
+!        end function hpval
+!        function hval(t,n,x,y,yp,sigma,ier) ! in :tspack:tspack.f
+!            double precision :: t
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: yp
+!            double precision dimension(n),depend(n) :: sigma
+!            integer :: ier
+!            double precision :: hval
+!        end function hval
+!        function intrvl(t,n,x) ! in :tspack:tspack.f
+!            double precision :: t
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            integer :: intrvl
+!        end function intrvl
+!        function sig0(x1,x2,y1,y2,y1p,y2p,ifl,hbnd,tol,ier) ! in :tspack:tspack.f
+!            double precision :: x1
+!            double precision :: x2
+!            double precision :: y1
+!            double precision :: y2
+!            double precision :: y1p
+!            double precision :: y2p
+!            integer :: ifl
+!            double precision :: hbnd
+!            double precision :: tol
+!            integer :: ier
+!            double precision :: sig0
+!        end function sig0
+!        function sig1(x1,x2,y1,y2,y1p,y2p,ifl,hpbnd,tol,ier) ! in :tspack:tspack.f
+!            double precision :: x1
+!            double precision :: x2
+!            double precision :: y1
+!            double precision :: y2
+!            double precision :: y1p
+!            double precision :: y2p
+!            integer :: ifl
+!            double precision :: hpbnd
+!            double precision :: tol
+!            integer :: ier
+!            double precision :: sig1
+!        end function sig1
+!        function sig2(x1,x2,y1,y2,y1p,y2p,ifl,tol,ier) ! in :tspack:tspack.f
+!            double precision :: x1
+!            double precision :: x2
+!            double precision :: y1
+!            double precision :: y2
+!            double precision :: y1p
+!            double precision :: y2p
+!            integer :: ifl
+!            double precision :: tol
+!            integer :: ier
+!            double precision :: sig2
+!        end function sig2
+!        subroutine sigbi(n,x,y,yp,tol,b,bmax,sigma,icflg,dsmax,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: yp
+!            double precision :: tol
+!            double precision dimension(5,n),depend(n) :: b
+!            double precision :: bmax
+!            double precision dimension(n),depend(n) :: sigma
+!            integer dimension(n),depend(n) :: icflg
+!            double precision :: dsmax
+!            integer :: ier
+!        end subroutine sigbi
+!        subroutine sigbp(n,x,y,xp,yp,tol,bl,bu,bmax,sigma,dsmax,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: xp
+!            double precision dimension(n),depend(n) :: yp
+!            double precision :: tol
+!            double precision dimension(n),depend(n) :: bl
+!            double precision dimension(n),depend(n) :: bu
+!            double precision :: bmax
+!            double precision dimension(n),depend(n) :: sigma
+!            double precision :: dsmax
+!            integer :: ier
+!        end subroutine sigbp
+!        subroutine sigs(n,x,y,yp,tol,sigma,dsmax,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: yp
+!            double precision :: tol
+!            double precision dimension(n),depend(n) :: sigma
+!            double precision :: dsmax
+!            integer :: ier
+!        end subroutine sigs
+!        subroutine smcrv(n,x,y,sigma,period,w,sm,smtol,wk,ys,yp,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: sigma
+!            logical :: period
+!            double precision dimension(n),depend(n) :: w
+!            double precision :: sm
+!            double precision :: smtol
+!            double precision dimension(n,10),depend(n) :: wk
+!            double precision dimension(n),depend(n) :: ys
+!            double precision dimension(n),depend(n) :: yp
+!            integer :: ier
+!        end subroutine smcrv
+!        subroutine snhcsh(x,sinhm,coshm,coshmm) ! in :tspack:tspack.f
+!            double precision :: x
+!            double precision :: sinhm
+!            double precision :: coshm
+!            double precision :: coshmm
+!        end subroutine snhcsh
+!        function store(x) ! in :tspack:tspack.f
+!            double precision :: x
+!            double precision :: y
+!            double precision :: store
+!            common /stcom/ y
+!        end function store
+!        function tsintl(a,b,n,x,y,yp,sigma,ier) ! in :tspack:tspack.f
+!            double precision :: a
+!            double precision :: b
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: yp
+!            double precision dimension(n),depend(n) :: sigma
+!            integer :: ier
+!            double precision :: tsintl
+!        end function tsintl
+        subroutine tspbi(n,x,y,ncd,iendc,per,b,bmax,lwk,wk,yp,sigma,icflg,ier) ! in :tspack:tspack.f
+            integer intent(hide),depend(x) :: n=len(x)
+            double precision dimension(n) :: x
+            double precision dimension(n) :: y
+            integer :: ncd
+            integer :: iendc
+            logical :: per
+            double precision dimension(5,n) :: b
+            double precision :: bmax
+            integer intent(hide),depend(wk) :: lwk=len(wk)
+            double precision intent(in,out),dimension(lwk) :: wk
+            double precision intent(in,out),dimension(n) :: yp
+            double precision intent(in,out),dimension(n) :: sigma
+            integer intent(out),dimension(n),depend(n) :: icflg
+            integer intent(out) :: ier
+        end subroutine tspbi
+        subroutine tspbp(n,x,y,ncd,iendc,per,bl,bu,bmax,lwk,wk,t,xp,yp,sigma,ier) ! in :tspack:tspack.f
+            integer intent(hide),depend(x) :: n=len(x)
+            double precision dimension(n) :: x
+            double precision dimension(n) :: y
+            integer :: ncd
+            integer :: iendc
+            logical :: per
+            double precision dimension(n) :: bl
+            double precision dimension(n) :: bu
+            double precision :: bmax
+            integer intent(hide),depend(wk) :: lwk=len(wk)
+            double precision intent(in,out),dimension(lwk) :: wk
+            double precision intent(out),dimension(n),depend(n) :: t
+            double precision intent(in,out),dimension(n) :: xp
+            double precision intent(in,out),dimension(n) :: yp
+            double precision intent(in,out),dimension(n) :: sigma
+            integer :: ier
+        end subroutine tspbp
+        subroutine tspsi(n,x,y,ncd,iendc,per,unifrm,lwk,wk,yp,sigma,ier) ! in :tspack:tspack.f
+            integer intent(hide),depend(x) :: n=len(x)
+            double precision intent(in),dimension(n) :: x
+            double precision intent(in),dimension(n) :: y
+            integer intent(in):: ncd
+            integer intent(in):: iendc
+            logical intent(in):: per
+            logical intent(in):: unifrm
+            integer intent(hide),depend(wk) :: lwk=len(wk)
+            double precision intent(in,out), dimension(lwk) :: wk
+            double precision intent(in,out),dimension(n),depend(n) :: yp
+            double precision intent(in,out),dimension(n),depend(n) :: sigma
+            integer intent(out):: ier
+        end subroutine tspsi
+        subroutine tspsp(n,nd,x,y,z,ncd,iendc,per,unifrm,lwk,wk,t,xp,yp,zp,sigma,ier) ! in :tspack:tspack.f
+            integer intent(hide),depend(x) :: n=len(x)
+            integer intent(in):: nd
+            double precision dimension(n) :: x
+            double precision dimension(n) :: y
+            double precision dimension(n) :: z
+            integer intent(in):: ncd
+            integer intent(in):: iendc
+            logical intent(in):: per
+            logical intent(in):: unifrm
+            integer intent(hide),depend(wk) :: lwk=len(wk)
+            double precision intent(in,out),dimension(lwk) :: wk
+            double precision intent(in,out),dimension(n) :: t
+            double precision intent(in,out),dimension(n) :: xp
+            double precision intent(in,out),dimension(n) :: yp
+            double precision intent(in,out),dimension(n) :: zp
+            double precision intent(in,out),dimension(n) :: sigma
+            integer :: ier
+        end subroutine tspsp
+        subroutine tspss(n,x,y,per,unifrm,w,sm,smtol,lwk,wk,sigma,ys,yp,nit,ier) ! in :tspack:tspack.f
+            integer intent(hide),depend(x) :: n=len(x)
+            double precision intent(in),dimension(n) :: x
+            double precision intent(in),dimension(n) :: y
+            logical intent(in):: per
+            logical intent(in):: unifrm
+            double precision intent(in),dimension(n) :: w
+            double precision intent(in):: sm
+            double precision intent(in):: smtol
+            integer intent(hide),depend(wk) :: lwk=len(wk)
+            double precision intent(in,out),dimension(lwk) :: wk
+            double precision intent(in,out),dimension(n) :: sigma
+            double precision intent(in,out),dimension(n) :: ys
+            double precision intent(in,out),dimension(n) :: yp
+            integer intent(out):: nit
+            integer intent(out):: ier
+        end subroutine tspss
+        subroutine tsval1(n,x,y,yp,sigma,iflag,ne,te,v,ier) ! in :tspack:tspack.f
+            integer intent(hide),depend(x) :: n=len(x)
+            double precision dimension(n) :: x
+            double precision dimension(n) :: y
+            double precision dimension(n) :: yp
+            double precision dimension(n) :: sigma
+            integer :: iflag
+            integer intent(hide),depend(te) :: ne=len(te)
+            double precision dimension(ne) :: te
+            double precision intent(out),dimension(ne),depend(ne) :: v
+            integer intent(out) :: ier
+        end subroutine tsval1
+        subroutine tsval2(n,t,x,y,xp,yp,sigma,iflag,ne,te,vx,vy,ier) ! in :tspack:tspack.f
+            integer intent(hide),depend(t) :: n=len(t)
+            double precision dimension(n) :: t
+            double precision dimension(n) :: x
+            double precision dimension(n) :: y
+            double precision dimension(n) :: xp
+            double precision dimension(n) :: yp
+            double precision dimension(n) :: sigma
+            integer :: iflag
+            integer intent(hide),depend(te) :: ne=len(te)
+            double precision dimension(ne) :: te
+            double precision intent(out),dimension(ne) :: vx
+            double precision intent(out),dimension(ne) :: vy
+            integer intent(out):: ier
+        end subroutine tsval2
+        subroutine tsval3(n,t,x,y,z,xp,yp,zp,sigma,iflag,ne,te,vx,vy,vz,ier) ! in :tspack:tspack.f
+            integer intent(hide),depend(t) :: n=len(t)
+            double precision dimension(n) :: t
+            double precision dimension(n) :: x
+            double precision dimension(n) :: y
+            double precision dimension(n) :: z
+            double precision dimension(n) :: xp
+            double precision dimension(n) :: yp
+            double precision dimension(n) :: zp
+            double precision dimension(n) :: sigma
+            integer :: iflag
+            integer intent(hide),depend(te) :: ne=len(te)
+            double precision dimension(ne) :: te
+            double precision intent(out),dimension(ne) :: vx
+            double precision intent(out),dimension(ne) :: vy
+            double precision intent(out),dimension(ne) :: vz
+            integer intent(out) :: ier
+        end subroutine tsval3
+!        subroutine ypc1(n,x,y,yp,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: yp
+!            integer :: ier
+!        end subroutine ypc1
+!        subroutine ypc1p(n,x,y,yp,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: yp
+!            integer :: ier
+!        end subroutine ypc1p
+!        subroutine ypc2(n,x,y,sigma,isl1,isln,bv1,bvn,wk,yp,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: sigma
+!            integer :: isl1
+!            integer :: isln
+!            double precision :: bv1
+!            double precision :: bvn
+!            double precision dimension(n),depend(n) :: wk
+!            double precision dimension(n),depend(n) :: yp
+!            integer :: ier
+!        end subroutine ypc2
+!        subroutine ypc2p(n,x,y,sigma,wk,yp,ier) ! in :tspack:tspack.f
+!            integer optional,check(len(x)>=n),depend(x) :: n=len(x)
+!            double precision dimension(n) :: x
+!            double precision dimension(n),depend(n) :: y
+!            double precision dimension(n),depend(n) :: sigma
+!            double precision dimension(*) :: wk
+!            double precision dimension(n),depend(n) :: yp
+!            integer :: ier
+!        end subroutine ypc2p
+!        subroutine ypcoef(sigma,dx,d,sd) ! in :tspack:tspack.f
+!            double precision :: sigma
+!            double precision :: dx
+!            double precision :: d
+!            double precision :: sd
+!        end subroutine ypcoef
+    end interface 
+end python module tspack
+
+! This file was auto-generated with f2py (version:2.45.241_1926).
+! See http://cens.ioc.ee/projects/f2py2e/

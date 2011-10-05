@@ -1,0 +1,17 @@
+# UBVRI mags from Fukugita et al (2006).  Megacam from A. Conley.  
+# NIR from E. Persson.
+Us   0.020
+Bs   0.030
+Vs   0.030
+Rs   0.030
+Is   0.024
+g_m 0.0220
+r_m 0.0281
+i_m 0.0241
+z_m 0.0214
+Jc  -0.001
+J   -0.001
+Yc   0.000
+Y    0.000
+H    0.000
+K    -0.001

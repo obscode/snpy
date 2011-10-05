@@ -1,0 +1,5 @@
+VegaB  alpha_lyr_stis_005.ascii  vega_mags.dat  Vega spectrum from Calspec, version 5 (Bohlin & Gilliand (2004) AJ 127 3508)
+VegaB4  alpha_lyr_stis_004.ascii  vega_mags.dat  Vega spectrum from Calspec, version 4 (Bohlin & Gilliand (2004) AJ 127 3508)
+VegaK   vega_kurucz.dat   vega_mags.dat Kurutz model for NIR spectrum of Vega
+VegaH01 vegahayes85.dat   vega_mags.dat Vega spectrum from Hayes (1985) IAU Symp. 111 plus Kurutz model
+VegaH85 vegahayes85.dat   vega_mags.dat Vega spectrum from Hayes (1985) IAU Symp. 111

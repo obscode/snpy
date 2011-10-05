@@ -1,0 +1,1101 @@
+'''Model.py:  a class that defines a SN model to be fit by SNOOPY.'''
+import os
+from snpy import ubertemp
+from snpy import kcorr
+from snpy.filters import fset
+from numpy.oldnumeric import *
+from numpy.linalg import cholesky
+from scipy import stats
+from scipy.optimize import leastsq
+from scipy.optimize import brent
+import scipy.interpolate
+from numpy import median, bool, diag
+from numpy.linalg import inv
+
+Ia_w,Ia_f = kcorr.get_SED(0, 'H3')
+
+debug = 0
+base = os.path.dirname(globals()['__file__'])
+if os.path.isfile(os.path.join(base, 'tck3.pickle')):
+   f = open(os.path.join(base, 'tck3.pickle'))
+   tck3 = pickle.load(f)
+   f.close()
+else:
+   tck3 = None
+
+it_sigma = 1.0
+
+class model:
+
+   model_in_mags = 1
+
+   def __init__(self, parent):
+      self.parent = parent       # make a link to the SN object
+      self.parent.model = self   # make a link to the model
+      self.parameters = {}    # dictionary of parameters of the model
+      self.errors = {}        # dictionary of errors on the parameters
+      self.fixed = []         # list of parameters that are held fixed
+      self.do_kcorr = 1       # Do we perform initial k-corrections?
+      self.rbs = []           # List of rest-frame filters this model supports
+      self._fbands = []
+
+   def guess(self, param):
+      '''A function that is run and picks initial guesses for
+      the parameter [param].'''
+      raise NotImplementedError('Derived class must overide')
+
+   def setup(self):
+      '''A function that does any initial setup (estimating k-correcions,
+      etc)'''
+      raise NotImplementedError('Derived class must overide')
+
+   def model(self, bands, **args):
+      '''A function that models the data in [parent] and returns
+      the model values and the weights.'''
+      model = {}.fromkeys(bands,None)
+      weights = {}.fromkeys(bands,None)
+
+      return model,weights
+
+   def model_lc(self, band):
+      '''For band [band], produce a model lightcurve suitable for plotting as a line.'''
+      raise NotImplementedError('Derived class must overide')
+
+
+   def fit(self, bands, epsfcn=0, **args):
+      '''Fit the model with currently fixed and free parameters againts the
+      set of bands [bands].  All other arguments are passed directly to
+      the model() member function as optional arguments.  After running,
+      the free parameters will be set to their fit values and self.C will
+      contain the covariance matrix'''
+      self.args = args.copy()
+      if debug:  print "model.fit() called with args = ", args
+
+      for b in bands:
+         if b not in self.parent.data:
+            raise ValueError, "band %s not defined in this SN object" % (b)
+
+      self._fbands = bands
+
+      self.setup()
+
+      # build up the fixed variables
+      self.fixed = []
+      for key in args.keys():
+         if key in self.parameters:
+            self.parameters[key] = args[key]
+            self.fixed.append(key)
+            del args[key]
+      # build up list of free variables:
+      self._free = [p for p in self.parameters.keys() if p not in self.fixed]
+      pars = [self.parameters[p] for p in self._free]
+      # Make initial parameter guesses if any are None
+      for i in range(len(pars)):
+         if pars[i] is None:
+            pars[i] = self.guess(self._free[i])
+            if debug:  print "Initial guess for %s = %f" % (self._free[i],pars[i])
+
+      # get the error matrix or vector
+      error = {}
+      for band in bands:
+         error[band] = self.parent.data[band].get_covar(flux=1)
+
+      pars,C,self.info,self.mesg,self.ier = \
+            leastsq(self._wrap_model, pars, (bands,error), full_output=1,
+                  epsfcn=epsfcn)
+      if self.ier > 4:  print self.mesg
+
+      self.chisquare = sum(power(self.info['fvec'], 2))
+      self.dof = len(self.info['fvec']) - len(self._free)
+      self.rchisquare = self.chisquare/self.dof
+      
+      # update errors and covariance matrix
+      if C is None:
+         raise RuntimeError, "Error:  Corariance Matrix is singular.  No errors computed"
+      C = C*self.rchisquare    # the trick for underestimated errors.
+      self.C = {}
+      for p in self.parameters:  self.errors[p] = 0.0
+      for i in range(len(self._free)):
+         self.errors[self._free[i]] = sqrt(C[i,i])
+         if self._free[i] not in self.C:  self.C[self._free[i]] = {}
+         for j in range(len(self._free)):
+            self.C[self._free[i]][self._free[j]] = C[i,j]
+
+   def systematics(self):
+      '''compute the systematic errors associated with the model paramters.'''
+      systs = dict.fromkeys(self.paramters.keys())
+
+   def _wrap_model(self, pars, bands, error):
+      resids_list = []
+      sum_w = 0
+      for i in range(len(pars)):
+         self.parameters[self._free[i]] = pars[i]
+
+      if debug:  
+         print ">>> _wrap_model called with pars:"
+         for i in range(len(self._free)):
+            print "   %s:  %f" % (self._free[i],pars[i])
+      for band in bands:
+         mod,err,mask = self.__call__(band, self.parent.data[band].MJD)
+         if self.model_in_mags:
+            f = power(10, -0.4*(mod - fset[band].zp))
+            #ef = sqrt(power(err*mod/1.0857,2) + \
+            #          power(self.parent.data[band].e_flux,2))
+            cov_f = power(f*err/1.0857,2)
+         else:
+            f = mod
+            cov_f = power(err,2)
+         m = mask*self.parent.data[band].mask
+         if len(shape(error[band])) == 1:
+            # simple weight array
+            W = m*1.0/sqrt(error[band]+cov_f)
+            sum_w += sum(W)
+            resids_list.append((f - self.parent.data[band].flux)*W)
+         else:
+            W = cholesky(inv(error[band]+diag(cov_f)))
+            W = W*m[NewAxis,:]*m[:,NewAxis]
+            sum_w += sum(diagonal(W))
+            resids_list.append(dot(W, f - self.parent.data[band].flux))
+
+      if sum_w == 0:
+         raise RuntimeError, "All weights are zero:  fitter is in a part of parameter" +\
+                " space where the model is not valid or there is no useful data."
+      res = concatenate(resids_list)
+      if debug:  print "  weighted resids = ", resids_list
+      return(res)
+
+
+
+   def __getattr__(self, attr):
+      if 'parameters' in self.__dict__:
+         if attr in self.__dict__['parameters']:
+            return self.__dict__['parameters'][attr]
+      if attr in self.__dict__:
+         return self.__dict__[attr]
+      else:
+         raise AttributeError, "Attribute %s not found" % (attr)
+
+   def __setattr__(self, attr, value):
+      if 'parameters' in self.__dict__:
+         if attr in self.__dict__['parameters']:
+            self.__dict__['parameters'][attr] = value
+         else:
+            self.__dict__[attr] = value
+      else:
+         self.__dict__[attr] = value
+
+
+
+class EBV_model(model):
+   '''This model fits any number of lightcurves with CSP uBVgriYJHK templates
+   or Prieto BsVsRsIs templates.  The parameters you can fit:
+      - dm15 (decline rate)
+      - Tmax (time of peak B maximum)
+      - DM   (distance modulus)
+      - EBVhost  (host galaxy extinction)
+   The model is constructed by assuming a peak B absolute magnitude  and B-X
+   colors based on the current value of dm15.  The colors are from Folatelli
+   et al. (2009), as are the calibration of Bmax vs dm15.  For the latter,
+   there are 6 calibrations, based on the sample used to make the fit.  The
+   default is 6 (best observed, excluding heavily extincted SNe), but you can
+   choose a different calibration by setting that argument in the fit() call.
+   Aside from the instrinsic colors, a global extinction parameter EBVhost
+   is applied to each light-curve, as well as Milky way extinction from 
+   the SN object's EBVgal.  The value of R_V for the host galaxy is
+   not a parameter, but is controled by the choice of calibration in order to
+   remain consistent with Folatelli et al. (2009).  The R_V for the galactic
+   extinction is taken from the SN object (default 3.1).'''
+
+   def __init__(self, parent):
+
+      model.__init__(self, parent)
+      self.rbs = ['u','B','V','g','r','i','Y','J','H','K','Bs','Vs','Rs','Is',
+            'J_K','H_K']
+      self.parameters = {'DM':None, 'dm15':None, 'EBVhost':None, 'Tmax':None}
+      self.errors = {'DM':0, 'dm15':0, 'EBVhost':0, 'Tmax':0}
+      self.template = ubertemp.template()
+      # R_V as a function of which calibration fit number (see Folatelli et
+      #  al. (2009) table 9
+      self.Rv_host = {1:0, 2:3.10, 3:1.50, 4:1.46, 5:1.46, 6:1.01}
+      self.dRv_host = {1:0, 2:0, 3:0.11, 4:0.10, 5:0.33, 6:0.31}
+      self.M0 = {1:-19.07,2:-19.39,3:-19.15,4:-19.13,5:-19.16,6:-19.11}
+      self.dM0 = {1:0.01, 2:0.02, 3:0.02, 4:0.01, 5:0.03, 6:0.02}
+      self.b = {1:1.03, 2:0.98, 3:0.94, 4:1.05, 5:0.94, 6:1.08}
+      self.db = {1:0.25, 2:0.41, 3:0.11, 4:0.11, 5:0.12, 6:0.11}
+      # B-X pseudo-colors from Folatelli et al. (2009) table 3
+      self.colors = {'u':-0.32, 'B':0.0, 'V':-0.02, 'g':0.05, 'r':-0.09, 'i':-0.63,
+            'Y':-0.69, 'J':-0.65, 'H':-0.79, 'K':-0.61, 'J_K':-0.65, 'H_K':-0.79}
+      self.dcolors = {'u':0.04, 'B':0, 'V':0.01, 'g':0.02, 'r':0.02, 'i':0.02,
+            'Y':0.03, 'J':0.02, 'H':0.03, 'K':0.05, 'J_K':0.02, 'H_K':0.03}
+      self.color_slopes = {'u':-0.47, 'B':0.0, 'V':0.12, 'g':0.05, 'r':0.29,
+                           'i':0.39, 'Y':0.63, 'J':0.67, 'H':0.66, 'K':0.26,
+                           'J_K':0.67, 'H_K':0.66}
+      self.dcolor_slopes = {'u':0.25, 'B':0, 'V':0.05, 'g':0.06, 'r':0.07,
+                            'i':0.08, 'Y':0.17, 'J':0.10, 'H':0.11, 'K':0.18,
+                            'J_K':0.10, 'H_K':0.11}
+      self.do_Robs = 0
+      self.Robs = {}
+
+
+   def setup(self):
+      # check to see if we have more than one filter when solving for EBV
+      if 'EBVhost' not in self.args:
+         if len(self._fbands) < 2:
+            raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
+
+      if 'calibration' in self.args:
+         self.calibration = self.args['calibration']
+      else:
+         self.calibration = 6
+
+      for band in self._fbands:
+         if 'calibration' in self.args:
+            cal = self.args['calibration']
+         else:
+            cal = 6
+         self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
+               self.Rv_host[cal], self.parent.Rv_gal, self.parent.k_version)
+      
+   def guess(self, param):
+      s = self.parent
+      if param == 'Tmax':
+         Tmaxs = []
+         for f in s.data:
+            Tmaxs.append(s.data[f].MJD[argmin(s.data[f].mag)])
+         return median(Tmaxs)
+
+      if param == 'DM':
+         # Quick DM based on Ho = 72
+         if s.z < 1e-10:
+            raise ValueError, "SN redshift is too close to zero.  Set it properly."
+         return 43.11 + 5*log10(s.z)
+
+      if param == 'dm15':
+         # choose just the average dm15:
+         return(1.1)
+
+      return(0.0)
+
+   def __call__(self, band, t):
+      self.template.mktemplate(self.dm15)
+      t = t - self.Tmax
+      rband = self.parent.restbands[band]
+
+      # Now build the lc model
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z)
+      # If k-corrections are there, use them
+      if band in self.parent.ks_tck:   
+         temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
+         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+               self.Tmax))
+         # mask based on original mask and limits of Hsiao spectrum
+         mask2 = self.parent.ks_mask[band][mids]*\
+               greater_equal(t, -19)*less_equal(t, 70)
+      else:
+         mask2 = ones(temp.shape, typecode=bool)
+
+      # Apply reddening correction:
+      # Figure out the reddening law
+      if self.do_Robs:
+         self.Robs[band] = kcorr.R_obs(band, self.parent.z, t, self.EBVhost,
+               self.parent.EBVgal, self.Rv_host[self.calibration], self.parent.Rv_gal,
+               self.parent.k_version)
+         temp = temp + self.Robs[band]*(self.EBVhost + self.parent.EBVgal)
+      else:
+         # Apply Robs*EBVgal:
+         if band in self.parent.Robs:
+            if type(self.parent.Robs[band]) is type(()):
+               R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
+            else:
+               R = self.parent.Robs[band]
+         temp = temp + self.Robs[band]*self.EBVhost + R*self.parent.EBVgal
+      temp = temp + self.DM + self.MMax(rband, self.calibration)
+      return temp,etemp,mask*mask2
+
+   def get_max(self, bands, restframe=0, deredden=0):
+      Tmaxs = []
+      Mmaxs = []
+      eMmaxs = []
+      rbands = []
+      self.template.mktemplate(self.dm15)
+      for band in bands:
+         rband = self.parent.restbands[band]
+         # find where the template truly peaks:
+         x0 = brent(lambda x: self.template.eval(rband, x)[0], brack=(0.,5.))
+         Tmaxs.append(x0 + self.Tmax)
+         mmax = self.DM + self.MMax(rband, self.calibration)
+         if not restframe and band in self.parent.ks_tck:
+            # add the K-correction
+            mmax = mmax + scipy.interpolate.splev(Tmaxs[-1], self.parent.ks_tck[band])
+         if not deredden:
+            if self.do_Robs:
+               Robs = kcorr.R_obs(band, self.parent.z, x0, self.EBVhost, 
+                     self.parent.EBVgal, self.Rv_host[self.calibration], self.parent.Rv_gal, 'H3')
+               mmax = mmax + Robs*(self.EBVhost + self.parent.EBVgal)
+            else:
+               # Apply Robs*EBVgal:
+               if band in self.parent.Robs:
+                  if type(self.parent.Robs[band]) is type(()):
+                     R = scipy.interpolate.splev(Tmaxs[-1], self.parent.Robs[band])
+                  else:
+                     R = self.parent.Robs[band]
+               else:
+                  EBV = max(self.parent.EBVgal, 0.01)
+                  R = kcorr.R_obs(band, self.parent.z, 0, 0, EBV,
+                                  self.Rv_host[self.calibration], self.parent.Rv_gal,
+                                  self.parent.k_version)
+               EBV = max(self.EBVhost, 0.01)
+               Robs = kcorr.R_obs(band, self.parent.z, 0, EBV,
+                     0, self.Rv_host[self.calibration], self.parent.Rv_gal,
+                     self.parent.k_version)
+               mmax = mmax + Robs*self.EBVhost + R*self.parent.EBVgal
+         Mmaxs.append(mmax)
+         eMmaxs.append(self.errors['DM'])
+         rbands.append(rband)
+      return(Tmaxs, Mmaxs, eMmaxs, rbands)
+
+   def MMax(self, band, calibration=6):
+      '''Given self.dm15, return the absolute magnitude at maximum for the given
+      filter [band].  The calibration paramter allows you to choose which
+      fit (1-6) in Folatelli et al. (2009), table 9'''
+      if band == 'Bs':
+         return -19.319 + (self.dm15-1.1)*0.634
+      elif band == 'Vs':
+         return -19.246 + (self.dm15-1.1)*0.606
+      elif band == 'Rs':
+         return -19.248 + (self.dm15-1.1)*0.566
+      elif band == 'Is':
+         return -18.981 + (self.dm15-1.1)*0.524
+      elif band in ['u','B','V','g','r','i','Y','J','H','K','J_K','H_K']:
+         return self.M0[calibration] + (self.dm15-1.1)*self.b[calibration] -\
+                self.colors[band] - self.color_slopes[band]*(self.dm15 -1.1)
+      else:
+         return -19.0
+
+   def systematics(self, calibration=6, include_Ho=False):
+      '''Returns the systematic errors in the paramters as a dictionary.  
+      If no estimate is available, return None for that paramter.'''
+      systs = dict.fromkeys(self.parameters.keys())
+      # DM contains systematics for Ho, plus average of calibration
+      #  uncertainties
+      syst_DM = []
+      syst_EBV = []
+      weights = []
+      for band in self._fbands:
+         rb = self.parent.restbands[band]
+         # make a call to get the weights
+         mod,err,mask = self.__call__(band, self.parent.data[band].MJD)
+         weights.append(sum(where(mask, power(err,-2), 0)))
+         ddm15 = self.dm15 - 1.1
+         Robs = kcorr.R_obs(band, self.parent.z, 0, self.EBVhost,
+               self.parent.EBVgal, self.Rv_host[calibration], self.parent.Rv_gal,
+               self.parent.k_version)
+         dRobs = Robs*self.dRv_host[calibration]/self.Rv_host[calibration]
+         syst_DM.append(power(ddm15*self.db[calibration],2)+\
+                        power(ddm15*self.dcolor_slopes[rb],2)+\
+                        power(self.EBVhost*dRobs, 2)+\
+                        power(self.dM0[calibration], 2)+\
+                        power(self.dcolors[rb]*Robs, 2) +\
+                        power(0.06*Robs, 2) +\
+                        #power(2.17*velerr/(3e5*self.parent.z),2) +\
+                        power(0.06,2))
+         syst_EBV.append(power(0.06*Robs,2))
+      syst_DM = array(syst_DM)
+      weights = array(weights)
+      systs['DM'] = sum(weights*syst_DM)/sum(weights)
+      if include_Ho:
+         systs['DM'] += power(2.17*0.1,2)     # assume 10% error in Ho
+      systs['DM'] = sqrt(systs['DM'])
+      systs['EBVhost'] = 0.06
+      return(systs)
+
+class EBV_model2(model):
+   '''This model fits any number of lightcurves with CSP uBVgriYJHK templates
+   or Prieto BsVsRsIs templates.  The parameters you can fit:
+      - dm15 (decline rate)
+      - Tmax (time of peak B maximum)
+      - DM   (distance modulus)
+      - EBVhost  (host galaxy extinction)
+   The model is constructed by assuming a peak absolute magnitudes in tall
+   the filters, as derived in Burns et al. 2010.  Calibrations were determined
+   using MCMC modeling on all filters at once, determining M_X and b_X for
+   each filter, and one value for R_V.  There are 2 calibrations, based on the 
+   sample used to make the fit and the prior used on the extinction.  Default
+   is 0, where the 2 red SNe are excluded and the blue sub-sample is used to
+   anchor the colors.  Value of 1 is for the sample where the two red
+   SNe were included.  A global extinction parameter EBVhost
+   is applied to each light-curve, as well as Milky way extinction from 
+   the SN object's EBVgal.  The value of R_V for the host galaxy is
+   not a parameter, but is controled by the choice of calibration
+   R_V for the galactic extinction is taken from the SN object (default 3.1).'''
+
+   def __init__(self, parent):
+
+      model.__init__(self, parent)
+      self.rbs = ['u','B','V','g','r','i','Y','J','H']
+      self.parameters = {'DM':None, 'dm15':None, 'EBVhost':None, 'Tmax':None}
+      self.errors = {'DM':0, 'dm15':0, 'EBVhost':0, 'Tmax':0}
+      self.template = ubertemp.template()
+      # R_V as a function of which calibration fit number (see Folatelli et
+      #  al. (2009) table 9
+      self.Rv_host = [1.95, 1.40]
+      self.eRv_host = [0.06, 0.16]
+      self.sigSN = [0.08, 0.05]
+      self.M0 = {'u':[-18.64,-18.62],
+                 'B':[-19.02,-19.02],
+                 'V':[-19.01,-19.00],
+                 'g':[-19.07,-19.07],
+                 'r':[-18.93,-18.92],
+                 'i':[-18.35,-18.32],
+                 'Y':[-18.35,-18.33],
+                 'J':[-18.44,-18.43],
+                 'H':[-18.26,-18.25]}
+      self.eM0 = {'u':[0.08,0.08],
+                  'B':[0.06,0.06],
+                  'V':[0.04,0.04],
+                  'g':[0.06,0.05],
+                  'r':[0.04,0.03],
+                  'i':[0.03,0.02],
+                  'Y':[0.02,0.02],
+                  'J':[0.02,0.02],
+                  'H':[0.02,0.02]}
+      self.b = {'u':[0.58,0.46],
+                'B':[0.32,0.32],
+                'V':[0.33,0.32],
+                'g':[0.31,0.33],
+                'r':[0.26,0.26],
+                'i':[0.14,0.11],
+                'Y':[0.10,0.10],
+                'J':[0.10,0.11],
+                'H':[0.12,0.11]}
+      self.eb = {'u':[0.32, 0.31],
+                 'B':[0.26, 0.24],
+                 'V':[0.18, 0.15],
+                 'g':[0.24, 0.22],
+                 'r':[0.15, 0.12],
+                 'i':[0.11, 0.09],
+                 'Y':[0.07, 0.07],
+                 'J':[0.07, 0.07],
+                 'H':[0.06, 0.07]}
+      self.do_Robs = 0
+      self.Robs = {}
+
+
+   def setup(self):
+      # check to see if we have more than one filter when solving for EBV
+      if 'EBVhost' not in self.args:
+         if len(self._fbands) < 2:
+            raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
+
+      if 'calibration' in self.args:
+         self.calibration = self.args['calibration']
+      else:
+         self.calibration = 0
+
+      for band in self._fbands:
+         self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
+               self.Rv_host[self.calibration], self.parent.Rv_gal, self.parent.k_version)
+      
+   def guess(self, param):
+      s = self.parent
+      if param == 'Tmax':
+         Tmaxs = []
+         for f in s.data:
+            Tmaxs.append(s.data[f].MJD[argmin(s.data[f].mag)])
+         return median(Tmaxs)
+
+      if param == 'DM':
+         # Quick DM based on Ho = 72
+         if s.z < 0.0001:
+            return 0
+         return 43.11 + 5*log10(s.z)
+
+      if param == 'dm15':
+         # choose just the average dm15:
+         return(1.1)
+
+      return(0.0)
+
+   def __call__(self, band, t):
+      self.template.mktemplate(self.dm15)
+      t = t - self.Tmax
+      rband = self.parent.restbands[band]
+
+      # Now build the lc model
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z)
+      # If k-corrections are there, use them
+      if band in self.parent.ks_tck:   
+         temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
+         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+               self.Tmax))
+         # mask based on original mask and limits of Hsiao spectrum
+         mask2 = self.parent.ks_mask[band][mids]*\
+               greater_equal(t, -19)*less_equal(t, 70)
+      else:
+         mask2 = ones(temp.shape, typecode=bool)
+
+      # Apply reddening correction:
+      # Figure out the reddening law
+      if self.do_Robs:
+         self.Robs[band] = kcorr.R_obs(band, self.parent.z, t, self.EBVhost,
+               self.parent.EBVgal, self.Rv_host[self.calibration], self.parent.Rv_gal,
+               self.parent.k_version)
+         temp = temp + self.Robs[band]*(self.EBVhost + self.parent.EBVgal)
+      else:
+         # Apply Robs*EBVgal:
+         if band in self.parent.Robs:
+            if type(self.parent.Robs[band]) is type(()):
+               R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
+            else:
+               R = self.parent.Robs[band]
+         temp = temp + self.Robs[band]*self.EBVhost + R*self.parent.EBVgal
+      temp = temp + self.DM + self.MMax(rband, self.calibration)
+      return temp,etemp,mask*mask2
+
+   def get_max(self, bands, restframe=0, deredden=0):
+      Tmaxs = []
+      Mmaxs = []
+      eMmaxs = []
+      rbands = []
+      self.template.mktemplate(self.dm15)
+      for band in bands:
+         rband = self.parent.restbands[band]
+         # find where the template truly peaks:
+         x0 = brent(lambda x: self.template.eval(rband, x)[0], brack=(0.,5.))
+         Tmaxs.append(x0 + self.Tmax)
+         mmax = self.DM + self.MMax(rband, self.calibration)
+         if not restframe and band in self.parent.ks_tck:
+            # add the K-correction
+            mmax = mmax + scipy.interpolate.splev(Tmaxs[-1], self.parent.ks_tck[band])
+         if not deredden:
+            if self.do_Robs:
+               Robs = kcorr.R_obs(band, self.parent.z, x0, self.EBVhost, 
+                     self.parent.EBVgal, self.Rv_host[self.calibration], self.parent.Rv_gal, 'H3')
+               mmax = mmax + Robs*(self.EBVhost + self.parent.EBVgal)
+            else:
+               # Apply Robs*EBVgal:
+               if band in self.parent.Robs:
+                  if type(self.parent.Robs[band]) is type(()):
+                     R = scipy.interpolate.splev(Tmaxs[-1], self.parent.Robs[band])
+                  else:
+                     R = self.parent.Robs[band]
+               else:
+                  EBV = max(self.parent.EBVgal, 0.01)
+                  R = kcorr.R_obs(band, self.parent.z, 0, 0, EBV,
+                                  self.Rv_host[self.calibration], self.parent.Rv_gal,
+                                  self.parent.k_version)
+               EBV = max(self.EBVhost, 0.01)
+               Robs = kcorr.R_obs(band, self.parent.z, 0, EBV,
+                     0, self.Rv_host[self.calibration], self.parent.Rv_gal,
+                     self.parent.k_version)
+               mmax = mmax + Robs*self.EBVhost + R*self.parent.EBVgal
+         Mmaxs.append(mmax)
+         eMmaxs.append(self.errors['DM'])
+         rbands.append(rband)
+      return(Tmaxs, Mmaxs, eMmaxs, rbands)
+
+   def MMax(self, band, calibration=1):
+      '''Given self.dm15, return the absolute magnitude at maximum for the given
+      filter [band].  The calibration paramter allows you to choose which
+      fit (1-6) in Folatelli et al. (2009), table 9'''
+      if band in ['u','B','V','g','r','i','Y','J','H']:
+         return self.M0[band][calibration] + (self.dm15-1.1)*self.b[band][calibration]
+      else:
+         return -19.0
+
+   def systematics(self, calibration=1, include_Ho=False):
+      '''Returns the systematic errors in the paramters as a dictionary.  
+      If no estimate is available, return None for that paramter.'''
+      systs = dict.fromkeys(self.parameters.keys())
+      # DM contains systematics for Ho, plus average of calibration
+      #  uncertainties
+      syst_DM = []
+      weights = []
+      for band in self._fbands:
+         rb = self.parent.restbands[band]
+         # make a call to get the weights
+         mod,err,mask = self.__call__(band, self.parent.data[band].MJD)
+         weights.append(sum(where(mask, power(err,-2), 0)))
+         ddm15 = self.dm15 - 1.1
+         Robs = kcorr.R_obs(band, self.parent.z, 0, self.EBVhost,
+               self.parent.EBVgal, self.Rv_host[calibration], self.parent.Rv_gal,
+               self.parent.k_version)
+         dRobs = Robs*self.eRv_host[calibration]/self.Rv_host[calibration]
+         syst_DM.append(power(ddm15*self.eb[rb][calibration],2)+\
+                        power(self.EBVhost*dRobs, 2)+\
+                        power(self.eM0[rb][calibration], 2)+\
+                        #power(2.17*velerr/(3e5*self.parent.z),2) +\
+                        power(self.sigSN[calibration],2))
+      syst_DM = array(syst_DM)
+      weights = array(weights)
+      systs['DM'] = sum(weights*syst_DM)/sum(weights)
+      if include_Ho:
+         systs['DM'] += power(2.17*0.1,2)     # assume 10% error in Ho
+      systs['DM'] = sqrt(systs['DM'])
+      return(systs)
+
+
+class max_model(model):
+   '''This model is very similar to the EBV_model, but instead of having an
+   extinction parameter (EBVhost) that controls all the colors, we simply
+   fit a peak magnitude for each band independently.  There are therefore
+   a variable number of parameters, based on the number of bands you fit:
+   - dm15 (decline rate parameter)
+   - Tmax (time of maximum in B)
+   - Xmax (peak magnitude in restband X).  N of these for N bands.
+   The lightcurves are constructed by offsetting each template by Xmax vertically
+   and Tmax horizontally, as a function of dm15.  Each band is also offset by
+   R_X*EBVgal, where EBVgal is taken from the parent SN object (as is the value
+   of R_V).'''
+
+   def __init__(self, parent):
+
+      model.__init__(self, parent)
+      self.rbs = ['u','B','V','g','r','i','Y','J','H','K','Bs','Vs','Rs','Is',
+            'H_K','J_K']
+      self.M0s = {'u':-18.82, 'B':-19.11, 'V':-19.12, 'g':-19.16, 'r':-19.03,
+                  'i':-18.50, 'Y':-18.45, 'J':-18.44, 'H':-18.38, 'K':-18.42,
+                  'J_K':-18.44, 'H_K':-18.38,
+                  'Bs':-19.319, 'Vs':-19.246, 'Rs':-19.248, 'Is':-18.981}
+      self.parameters = {'dm15':None, 'Tmax':None}
+      self.errors = {'dm15':0, 'Tmax':0}
+      self.template = ubertemp.template()
+      self.do_Robs = 1
+      self.R_obs = {}
+
+   def setup(self):
+      '''Since we have a variable number of parameters, we need to 
+      do this dynamically before the fitting is done.'''
+      self.N_bands = len(self._fbands)
+      self._rbs = [self.parent.restbands[band] for band in self._fbands]
+      # start with the set we always have:
+      pars = {'dm15':self.parameters['dm15'], 'Tmax':self.parameters['Tmax']}
+      errs = {'dm15':self.parameters['dm15'], 'Tmax':self.parameters['Tmax']}
+      # now build up maxs, but use previously fit values if they exist.
+      for band in self._rbs:
+         if band+"max" not in pars:
+            if band+"max" in self.parameters:
+               pars[band+"max"] = self.parameters[band+"max"]
+               errs[band+"max"] = self.errors[band+"max"]
+            else:
+               pars[band+"max"] = None
+               errs[band+"max"] = 0
+      self.parameters = pars
+      self.errors = errs
+
+   def guess(self, param):
+      s = self.parent
+      if param == 'Tmax':
+         Tmaxs = []
+         for f in s.data:
+            Tmaxs.append(s.data[f].MJD[argmin(s.data[f].mag)])
+         return median(Tmaxs)
+
+      if param.find('max') > 0:
+         M0 = self.M0s[param.replace('max','')]
+         if s.z < 1e-6:
+            return M0
+         return 43.11 + 5*log10(s.z) + M0
+      
+      if param == 'dm15':
+         # choose just the average dm15:
+         return(1.1)
+
+      return(0.0)
+
+   def __call__(self, band, t):
+      self.template.mktemplate(self.dm15)
+      t = t - self.Tmax
+      rband = self.parent.restbands[band]
+
+      # Now build the lc model
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z)
+      # If k-corrections are there, use them
+      if band in self.parent.ks_tck:   
+         temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
+         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+               self.Tmax))
+         # mask based on original mask and limits of Hsiao spectrum
+         mask2 = self.parent.ks_mask[band][mids]*\
+               greater_equal(t, -19)*less_equal(t, 70)
+      else:
+         mask2 = ones(temp.shape, typecode=bool)
+
+      # Apply Max
+      temp = temp + self.parameters[rband+'max'] 
+
+      # Apply Robs*EBVgal:
+      if band in self.parent.Robs:
+         if type(self.parent.Robs[band]) is type(()):
+            R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
+         else:
+            R = self.parent.Robs[band]
+         temp = temp + R*self.parent.EBVgal
+      return temp,etemp,mask*mask2
+
+   def get_max(self, bands, restframe=0, deredden=0):
+      Tmaxs = []
+      Mmaxs = []
+      eMmaxs = []
+      rbands = []
+      self.template.mktemplate(self.dm15)
+      for band in bands:
+         rband = self.parent.restbands[band]
+         # find where the template truly peaks:
+         x0 = brent(lambda x: self.template.eval(rband, x)[0], brack=(0.,5.))
+         Tmaxs.append(x0 + self.Tmax)
+         if rband+"max" not in self.parameters:
+            raise ValueError, "Trying to find max of %s, but haven't solved for %s" %\
+                  (band, rband+"max")
+         mmax = self.parameters[rband+'max']
+         if not restframe and band in self.parent.ks_tck:
+            # add the K-correction
+            mmax = mmax + scipy.interpolate.splev(Tmaxs[-1], self.parent.ks_tck[band])
+         if not deredden:
+            if band in self.parent.Robs:
+               if type(self.parent.Robs[band]) is type(()):
+                  R = scipy.interpolate.splev(x0+self.Tmax, self.parent.Robs[band])
+               else:
+                  R = self.parent.Robs[band]
+            else:
+               R = kcorr.R_obs(band, self.parent.z, int(floor(x0)), 0.0, 
+                     self.parent.EBVgal, self.parent.Rv_gal, 
+                     version=self.parent.k_version)
+
+            mmax = mmax + R*self.parent.EBVgal
+         Mmaxs.append(mmax)
+         eMmaxs.append(self.errors[rband+'max'])
+         rbands.append(rband)
+      return(Tmaxs, Mmaxs, eMmaxs, rbands)
+
+
+class max_model_p(model):
+   '''
+   A model very similar to max_model, but with an added paramter:  p.  The i-band
+   light-curve template is modified as:  T' = T^p, or in terms of magnitudes:
+   T' = p*T
+   Where T' is the new template and T is the original.  This causes the template
+   to be shallower (p < 1) or deeper (p > 1)
+   '''
+
+   def __init__(self, parent):
+
+      model.__init__(self, parent)
+      self.rbs = ['u','B','V','g','r','i','Y','J','H','K','H_K','J_K',
+            'Bs','Vs','Rs','Is']
+      self.M0s = {'u':-18.82, 'B':-19.11, 'V':-19.12, 'g':-19.16, 'r':-19.03,
+                  'i':-18.50, 'Y':-18.45, 'J':-18.44, 'H':-18.38, 'K':-18.42,
+                  'J_K':-18.44, 'H_K':-18.38,
+                  'Bs':-19.319, 'Vs':-19.246, 'Rs':-19.248, 'Is':-18.981}
+      self.parameters = {'dm15':None, 'Tmax':None, 'pi':None}
+      self.errors = {'dm15':0, 'Tmax':0, 'pi':0}
+      self.template = ubertemp.template()
+      self.do_Robs = 1
+      self.R_obs = {}
+
+   def setup(self):
+      '''Since we have a variable number of parameters, we need to 
+      do this dynamically before the fitting is done.'''
+      self.N_bands = len(self._fbands)
+      self._rbs = [self.parent.restbands[band] for band in self._fbands]
+      # start with the set we always have:
+      pars = {'dm15':self.parameters['dm15'], 'Tmax':self.parameters['Tmax'],
+            'pi':self.parameters['pi']}
+      errs = {'dm15':self.errors['dm15'], 'Tmax':self.errors['Tmax'],
+            'pi':self.errors['pi']}
+      # now build up maxs, but use previously fit values if they exist.
+      for band in self._rbs:
+         if band+"max" not in pars:
+            if band+"max" in self.parameters:
+               pars[band+"max"] = self.parameters[band+"max"]
+               errs[band+"max"] = self.errors[band+"max"]
+            else:
+               pars[band+"max"] = None
+               errs[band+"max"] = 0
+      self.parameters = pars
+      self.errors = errs
+
+   def guess(self, param):
+      s = self.parent
+      if param == 'Tmax':
+         Tmaxs = []
+         for f in s.data:
+            Tmaxs.append(s.data[f].MJD[argmin(s.data[f].mag)])
+         return median(Tmaxs)
+
+      if param.find('max') > 0:
+         M0 = self.M0s[param.replace('max','')]
+         if s.z < 1e-6:
+            return M0
+         return 43.11 + 5*log10(s.z) + M0
+      
+      if param == 'dm15':
+         # choose just the average dm15:
+         return(1.1)
+
+      if param == 'pi':
+         return(1.0)
+
+      return(0.0)
+
+   def i_func(self, t):
+      func = scipy.interpolate.splev(t, tck3)
+      func = where(t < -4, exp(-0.5*power(t+4,2)/it_sigma**2)*func, func)
+      func = where(t > 35, exp(-0.5*power(t+-35,2)/it_sigma**2)*func, func)
+      return(func)
+
+
+   def __call__(self, band, t):
+      self.template.mktemplate(self.dm15)
+      t = t - self.Tmax
+      rband = self.parent.restbands[band]
+
+      # Now build the lc model
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z)
+
+      if band == 'i' and tck3 is not None:
+         #temp = temp*self.pi
+         temp = temp + self.pi*self.i_func(t/(1+self.parent.z))
+      # If k-corrections are there, use them
+      if band in self.parent.ks_tck:   
+         temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
+         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+               self.Tmax))
+         # mask based on original mask and limits of Hsiao spectrum
+         mask2 = self.parent.ks_mask[band][mids]*\
+               greater_equal(t, -19)*less_equal(t, 70)
+      else:
+         mask2 = ones(temp.shape, typecode=bool)
+
+      # Apply Max
+      temp = temp + self.parameters[rband+'max'] 
+
+      # Apply Robs*EBVgal:
+      if band in self.parent.Robs:
+         if type(self.parent.Robs[band]) is type(()):
+            R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
+         else:
+            R = self.parent.Robs[band]
+         temp = temp + R*self.parent.EBVgal
+      return temp,etemp,mask*mask2
+
+   def get_max(self, bands, restframe=0, deredden=0):
+      Tmaxs = []
+      Mmaxs = []
+      eMmaxs = []
+      rbands = []
+      self.template.mktemplate(self.dm15)
+      for band in bands:
+         # find where the template truly peaks:
+         x0 = brent(lambda x: self.template.eval(band, x)[0], brack=(0.,5.))
+         Tmaxs.append(x0 + self.Tmax)
+         rband = self.parent.restbands[band]
+         if rband+"max" not in self.parameters:
+            raise ValueError, "Trying to find max of %s, but haven't solved for %s" %\
+                  (band, rband+"max")
+         mmax = self.parameters[rband+'max']
+         if not restframe and band in self.parent.ks_tck:
+            # add the K-correction
+            mmax = mmax + scipy.interpolate.splev(Tmaxs[-1], self.parent.ks_tck[band])
+         if not deredden:
+            if band in self.parent.Robs:
+               if type(self.parent.Robs[band]) is type(()):
+                  R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
+               else:
+                  R = self.parent.Robs[band]
+            else:
+               R = kcorr.R_obs(band, self.parent.z, int(floor(x0)), 0.0, 
+                     self.parent.EBVgal, self.parent.Rv_gal, 
+                     version=self.parent.k_version)
+
+            mmax = mmax + R*self.parent.EBVgal
+         Mmaxs.append(mmax)
+         eMmaxs.append(self.errors[rband+'max'])
+         rbands.append(rband)
+      return(Tmaxs, Mmaxs, eMmaxs, rbands)
+
+class Rv_model(model):
+   '''This model fits any number of lightcurves with CSP uBVgriYJHK templates
+   or Prieto BsVsRsIs templates.  The parameters you can fit:
+      - dm15 (decline rate)
+      - Tmax (time of peak B maximum)
+      - Bmax (maximum B magnitude)
+      - EBVhost  (host galaxy extinction)
+      - Rv (host galaxy reddening law)
+   The model is constructed by assuming a peak observed magnitude in B, 
+   value of dm15, and Tmax.  This will fit the B-lightcurve.  To fit
+   the others, we use the Burns et al. (2010) calibrations to compute
+   B - X  intrinsic colors, add extinction consistent with the current
+   value of Rv and EBVhost to get predicted maximum magnitudes.'''
+
+   def __init__(self, parent):
+
+      model.__init__(self, parent)
+      self.rbs = ['u','B','V','g','r','i','Y','J','H']
+      self.parameters = {'Bmax':None, 'dm15':None, 'EBVhost':None, 
+            'Rv':None, 'Tmax':None}
+      self.errors = {'Bmax':0, 'dm15':0, 'EBVhost':0, 'Tmax':0, 'Rv':0}
+      self.template = ubertemp.template()
+      # R_V as a function of which calibration fit number (see Folatelli et
+      #  al. (2009) table 9
+      self.M0 = {'u':[-18.64,-18.62],
+                 'B':[-19.02,-19.02],
+                 'V':[-19.01,-19.00],
+                 'g':[-19.07,-19.07],
+                 'r':[-18.93,-18.92],
+                 'i':[-18.35,-18.32],
+                 'Y':[-18.35,-18.33],
+                 'J':[-18.44,-18.43],
+                 'H':[-18.26,-18.25]}
+      self.eM0 = {'u':[0.08,0.08],
+                  'B':[0.06,0.06],
+                  'V':[0.04,0.04],
+                  'g':[0.06,0.05],
+                  'r':[0.04,0.03],
+                  'i':[0.03,0.02],
+                  'Y':[0.02,0.02],
+                  'J':[0.02,0.02],
+                  'H':[0.02,0.02]}
+      self.b = {'u':[0.58,0.46],
+                'B':[0.32,0.32],
+                'V':[0.33,0.32],
+                'g':[0.31,0.33],
+                'r':[0.26,0.26],
+                'i':[0.14,0.11],
+                'Y':[0.10,0.10],
+                'J':[0.10,0.11],
+                'H':[0.12,0.11]}
+      self.eb = {'u':[0.32, 0.31],
+                 'B':[0.26, 0.24],
+                 'V':[0.18, 0.15],
+                 'g':[0.24, 0.22],
+                 'r':[0.15, 0.12],
+                 'i':[0.11, 0.09],
+                 'Y':[0.07, 0.07],
+                 'J':[0.07, 0.07],
+                 'H':[0.06, 0.07]}
+      self.do_Robs = 0
+      self.Robs = {}
+
+   def setup(self):
+      # check to see if we have more than one filter when solving for EBV
+      if 'EBVhost' not in self.args:
+         if len(self._fbands) < 2:
+            raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
+
+      if 'calibration' in self.args:
+         self.calibration = self.args['calibration']
+      else:
+         self.calibration = 0
+
+      #for band in self._fbands:
+      #   self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
+      #         self.Rv_host[self.calibration], self.parent.Rv_gal, self.parent.k_version)
+      
+   def guess(self, param):
+      s = self.parent
+      if param == 'Tmax':
+         Tmaxs = []
+         for f in s.data:
+            Tmaxs.append(s.data[f].MJD[argmin(s.data[f].mag)])
+         return median(Tmaxs)
+
+      if param == 'Bmax':
+         if s.z < 0.0001:
+            return self.M0['B'][self.calibration]
+         return 43.11 + 5*log10(s.z) + self.M0['B'][self.calibration]
+
+      if param == 'dm15':
+         # choose just the average dm15:
+         return(1.1)
+
+      if param == 'EBVhost':
+         return(0.0)
+
+      if param == 'Rv':
+         return(2.0)
+
+      return(0.0)
+
+   def __call__(self, band, t):
+      print self.Tmax, self.dm15, self.EBVhost, self.Rv, self.Bmax
+      self.template.mktemplate(self.dm15)
+      t = t - self.Tmax
+      rband = self.parent.restbands[band]
+
+      # Now build the lc model
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z)
+      # If k-corrections are there, use them
+      if band in self.parent.ks_tck:   
+         temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
+         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+               self.Tmax))
+         # mask based on original mask and limits of Hsiao spectrum
+         mask2 = self.parent.ks_mask[band][mids]*\
+               greater_equal(t, -19)*less_equal(t, 70)
+      else:
+         mask2 = ones(temp.shape, typecode=bool)
+
+      # Apply reddening correction:
+      # Figure out the reddening law
+      # Milky-Way reddening:
+      if band in self.parent.Robs:
+         if type(self.parent.Robs[band]) is type(()):
+            Rmw = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
+         else:
+            Rmw = self.parent.Robs[band]
+      # Host reddening:
+      Ahost = kcorr.A_obs(rband, 0,  0, self.EBVhost, 0, self.Rv, \
+            self.parent.Rv_gal, 'H3')
+      temp = temp + Ahost + Rmw*self.parent.EBVgal
+      temp = temp + self.Bmax + self.MMax(rband, self.calibration) - \
+            self.MMax('B', self.calibration)
+      return temp,etemp,mask*mask2
+
+   def get_max(self, bands, restframe=0, deredden=0):
+      Tmaxs = []
+      Mmaxs = []
+      eMmaxs = []
+      rbands = []
+      self.template.mktemplate(self.dm15)
+      for band in bands:
+         rband = self.parent.restbands[band]
+         # find where the template truly peaks:
+         x0 = brent(lambda x: self.template.eval(rband, x)[0], brack=(0.,5.))
+         Tmaxs.append(x0 + self.Tmax)
+         mmax = self.Bmax + self.MMax(rband, self.calibration) - \
+               self.MMax('B', self.calibation)
+         if not restframe and band in self.parent.ks_tck:
+            # add the K-correction
+            mmax = mmax + scipy.interpolate.splev(Tmaxs[-1], self.parent.ks_tck[band])
+         if not deredden:
+            if band in self.parent.Robs:
+               if type(self.parent.Robs[band]) is type(()):
+                  Rmw = scipy.interpolate.splev(x0+self.Tmax, 
+                        self.parent.Robs[band])
+               else:
+                  Rmw = self.parent.Robs[band]
+            Rhost = kcorr.R_obs(rband, 0, x0, self.EBVhost, 
+                     self.parent.EBVgal, self.Rv_host, self.parent.Rv_gal, 'H3')
+            mmax = mmax + Rhost*self.EBVhost + Rmw*self.parent.EBVgal
+         Mmaxs.append(mmax)
+         eMmaxs.append(self.errors['Bmax'])
+         rbands.append(rband)
+      return(Tmaxs, Mmaxs, eMmaxs, rbands)
+
+   def MMax(self, band, calibration=1):
+      '''Given self.dm15, return the absolute magnitude at maximum for the given
+      filter [band].  The calibration paramter allows you to choose which
+      fit (1-6) in Folatelli et al. (2009), table 9'''
+      if band in ['u','B','V','g','r','i','Y','J','H']:
+         return self.M0[band][calibration] + (self.dm15-1.1)*self.b[band][calibration]
+      else:
+         return -19.0
+
+   def systematics(self, calibration=1, include_Ho=False):
+      '''Returns the systematic errors in the paramters as a dictionary.  
+      If no estimate is available, return None for that paramter.'''
+      systs = dict.fromkeys(self.parameters.keys())
+      # DM contains systematics for Ho, plus average of calibration
+      #  uncertainties
+      return(systs)

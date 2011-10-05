@@ -1,0 +1,171 @@
+\documentclass{aastex}
+\providecommand{\tabularnewline}{\\}
+\begin{document}
+
+\section{Photometric Zero Points}
+
+When combining our high-z CSP data with the data from other groups
+with the purpose of deriving a color (to constrain reddening, for
+example), care must be taken to ensure that the photometric zero-points
+are consistent. These zero-points enter our analysis in the cross-filter
+k-corrections:
+
+\[
+K_{XY}=-2.5\log\left[1+z\right]+2.5\log\left[\frac{\int S_{X}\left(\lambda\right)\Phi\left(\lambda\right)\lambda d\lambda}{\int S_{Y}\left(\lambda/\left(1+z\right)\right)\Phi\left(\lambda\right)\lambda d\lambda}\right]-ZP_{X}+ZP_{Y}\]
+where $K_{XY}$ is the k-correction from rest-frame filter X to observed
+filter Y, $S_{X}$ and $S_{Y}$ are the transmission functions for
+filters X and Y, respectively, $\Phi$ is the SED of the observed
+object (type Ia supernova), and $ZP_{X}$ and $ZP_{Y}$ are the photometric
+zero-points of filters X and Y, respectively.
+
+If one wishes to construct a color (say $B-V$) from observed filters
+X and Y, then due to the cross-filter k-corrections, one must compute
+the following term: $\left(ZP_{B}-ZP_{X}\right)-\left(ZP_{V}-ZP_{Y}\right)$.
+These zero points can be derived as:\[
+ZP_{X}=2.5\log\left[\int S_{X}\left(\lambda\right)F_{o}\left(\lambda\right)\lambda d\lambda\right]+m_{o}\]
+where $F_{o}$ is the SED of a fiducial source and $m_{o}$ is the
+observed magnitude of this source through filter X. In the case of
+the Landolt system, the fiducial source is Vega, whereas in the SDSS
+system, there are 4 fiducial WD stars. It is evident from these formulae
+that the absolute flux level of the fiducial source is not important,
+as we are only dealing with differences in zero-points: only the color
+matters. However, this is only true if both photometric systems use
+the same fiducial sources. Unfortunately, when combining our NIR data
+(for which the ficucial source is Vega) with SDSS data (which is tied
+to the AB system), the absolute fluxes of the fiducial sources \emph{do}
+matter.
+
+For the purposes of computing photometric zero-points, we have adopted
+the SED of Vega as presented in Bohlin \& Gilliland (2004). In the
+following subsections, we outline how the zero-points were derived
+for each photometric system. Table \ref{tab:zeropoints} shows the
+final zero-points adopted.
+
+
+\subsection{CSP NIR Photometry}
+
+Our YJ photometry uses the standards of Persson et al. (1998), which
+are tied to the Elias et al. (1982) standards. In turn, the Elias
+standards are ultimately tied to Vega. We are therefore on a Vega
+system and use the Bohlin et al. (2004) SED. We assume $J_{vega}=-0.001$
+and $Y_{vega}=0.000$ (Stritzinger et al. 2005).
+
+
+\subsection{Johnson Kron/Cousins BVRI}
+
+Our light-curve templates are based on BVRI photometry as outlined
+in Prieto et al. (2006). These templates and calibration of the low-z
+sample are based on BVRI photometry from various sources. Still, all
+these data are transformed to the standard BVRI system and are therefore
+Vega-based. We adopt the following for Vega: $B_{vega}=0.0210$, $V_{vega}=0.0230$,
+$R_{vega}=0.0290,$ and $I_{vega}=0.0230$.
+
+
+\subsection{SNLS griz}
+
+SNLS uses the SDSS filter set, yet they use the Landolt standards,
+so are also on a Vega system. Again, we use the Bohlin et al. (2004)
+SED and adopt the following magnitudes for Vega: $g_{vega}=0.0220$,
+$r_{vega}=0.0281$, $i_{vega}=0.0241$, $z_{vega}=0.0214$ (Alex Conley,
+private communication).
+
+
+\subsection{ESSENCE RI}
+
+Essence uses the Landolt stars as standards and are therefore on a
+Vega system. We adopt the same magnitudes for Vega as in the case
+of the Johnson filters: $R_{vega}=0.0290$ and $I_{vega}=0.0230$.
+
+
+\subsection{SDSS II gri}
+
+Unlike all the previous datasets, Sloan uses an AB system that is
+tied to the SED of 4 F sub-dwarf stars (Fukugita et al. 1996) whose
+absolute fluxes are calibrated by the absolute flux of Vega's continuum.
+In order to compute the zero-points, we use the transmission functions
+for the APO 2.5m telescope. We then use the transformation equations
+from the SDSS website to transform the u'g'r'i'z' magnitudes of the
+4 sub-dwarfs to ugriz (2.5 m) values. We also re-calibrate the SEDs
+of these 4 sub-dwarfs so that they are consistent with the Bohlin
+et al. (2004) SED. We do this by re-binning the Bohlin SED to match
+the SED of Vega given by Fukugita et al. (1996), dividing one by the
+other, and then multiplying each sub-dwarf SED by the resulting normalization
+function. Once this is done, we use the transformed sub-dwarf magnitudes
+to compute the zero-points of the filter set.
+
+%
+\begin{table}
+\begin{tabular}{|c|c|c|}
+\hline 
+Filter&
+Survey&
+Zero-point\tabularnewline
+\hline
+\hline 
+Y&
+CSP&
+12.687\tabularnewline
+\hline 
+J&
+CSP&
+12.853\tabularnewline
+\hline 
+B&
+Johnson&
+15.289\tabularnewline
+\hline 
+V&
+Johnson&
+14.860\tabularnewline
+\hline 
+R&
+Johnson&
+15.046\tabularnewline
+\hline 
+I&
+Johnson&
+14.546\tabularnewline
+\hline 
+g&
+SNLS&
+15.536\tabularnewline
+\hline 
+r&
+SNLS&
+14.806\tabularnewline
+\hline 
+i&
+SNLS&
+14.554\tabularnewline
+\hline 
+z&
+SNLS&
+14.000\tabularnewline
+\hline 
+g&
+SDSS&
+14.192\tabularnewline
+\hline 
+r&
+SDSS&
+14.220\tabularnewline
+\hline 
+i&
+SDSS&
+13.779\tabularnewline
+\hline 
+R&
+Essence&
+15.182\tabularnewline
+\hline 
+I&
+Essence&
+14.458\tabularnewline
+\hline
+\end{tabular}
+
+
+\caption{Photometric zero-points of filter sets used by the high-z CSP. \label{tab:zeropoints}}
+\end{table}
+
+\end{document}

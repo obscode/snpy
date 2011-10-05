@@ -1,0 +1,1528 @@
+\documentclass[12pt]{article}
+\usepackage{array}
+\IfFileExists{url.sty}{\usepackage{url}}
+                      {\newcommand{\url}{\texttt}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+\newcommand{\noun}[1]{\textsc{#1}}
+%% Bold symbol macro for standard LaTeX users
+\providecommand{\boldsymbol}[1]{\mbox{\boldmath $#1$}}
+
+%% Because html converters don't know tabularnewline
+\providecommand{\tabularnewline}{\\}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+
+\usepackage{geometry}
+
+
+\geometry{verbose,letterpaper,tmargin=1in,bmargin=0.5in,lmargin=1in,rmargin=1in}
+
+\newcommand{\dmf}{$\Delta m_{15}\ $}
+\newcommand{\pygplot}{$\pi$-gplot}
+
+\begin{document}
+
+\title{Using pylc}
+
+
+\author{Chris Burns}
+
+\maketitle
+
+\section{Introduction}
+
+The philosophy if pylc is to provide both an interactive environment
+to fit light-curves as well as a set of routines that can be called
+within a scripting environment that would allow the user to write
+automated fitting routines. The goal is not to lock the user into
+one kind of method, like stretch, \dmf or what have you. Rather,
+the idea is to provide generic tools and specific components of established
+methods and let the user decide how best to fit the data. In this
+way, the software can be thought more of as a laboratory environment
+rather than a specific program.
+
+Given that this is a very modular way to program, it doesn't lend
+itself very well to compiled languages. So one has a choice of higher-level
+scripting languages: python, tcl, perl, or even the IRAF cl. In this
+case, Python was chosen. There are many reasons for this. First, I
+have the impression that Python is becoming more prevalent in Astronomy
+(for example, some of the newer STSci routines in IRAF are only provided
+through the python implementation of the cl: pyraf). Second, python
+is designed from the ground up as an object-oriented (OOP) language
+(unlike perl, tcl, IRAF cl or even IDL). OOP is very well suited for
+large modular software packages. Lastly, python has access to two
+very powerful numerical engines: scipy and pyraf. Scipy is a general-purpose
+package of scientific routines while pyraf gives one access to the
+IRAF library of routines. Together with a very large array of visualization
+and database modules, python has everything needed to make this package
+work. Python is also, in this author's opinion, the easiest and most
+intuitive programming language to learn and debug. The one thing python
+lacks is standardization, in the sense that there is an overabundance
+of modules and solutions to specific problems. In this instance, plotting
+and numerical arrays (vectors, matrices) have many different solutions.
+For plotting, I chose PGPLOT, as it has a long history in the astronomical
+community%
+\footnote{Plus, I wrote my own wrapper around the FORTRAN routines that makes
+them Pythonic.%
+}. For the arrays, I've chosen Numeric. Numeric is not the newest or
+even the best solution (in my opinion), but at the time I started,
+it was the most widely used and the least in flux.
+
+Do you need to know Python to use pylc? It depends what you want to
+do. If you want to interactively fit light-curves, then you really
+don't need to know how to program in Python. If you want to write
+a script that automatically fits light-curves or get at the underlying
+layers of the code then, yes, you need to learn Python. Even if you
+don't want to program, knowing a bit of python syntax can really help
+in the interactive shell. A good place to get started with learning
+python is the python web page: http://www.python.org \url{http://www.python.org}.
+
+pylc also uses ipython, an extended version of the python interactive
+shell. This shell has many of its own features and tricks that you
+might find useful. More information on ipython can be found on its
+project web page: http://ipython.scipy.org \url{http://ipython.scipy.org}.
+
+
+\section{A Simple Example}
+
+To give an idea of what the software package looks like and how it
+behaves, here is a quick session which shows loading the data, fitting
+a light-curve, plotting the results and saving the parameters.
+
+ \begin{verbatim}
+In[1]: s = super('SN3331')
+------------------------------------------------------------------- 
+SN SN3331 
+z = 0.190 
+ra= 34.56140 
+dec= 0.79660 
+Data in the following bands: Yc, r_s, i_s, g_s, 
+Fit results (if any): 
+Tmax = 53650.379 +/- 0.367 
+dm15 = 1.156 +/- 0.024 
+s = 1.000 +/- 0.000 
+EBVhost = 0.106 +/- 0.025 
+DM = 39.915 +/- 0.071 
+NAXES 4096 4096 
+NAXES 4096 4096
+In [2]: s.plot() 
+Out[2]: <pygplot.Panel instance at 0x17e0260>
+In [3]: print s.r_s.t, s.r_s.mag 
+[-15.00261608 -10.96844983 -10.96844983 -8.96844983 -6.01923108
+6.98858142 6.99248767 12.97686267 14.95342517 16.04326892
+17.96514392 19.05108142 22.93780017 26.95733142 29.94170642] 
+[ 22.371 21.621 21.576 21.236 21.121 21.361 21.35 21.267 
+21.647 21.441 21.847 21.655 21.88 22.011 22.263]
+In [4]: s.fit(['g_s','r_s','i_s'], s=1, Tmax=s.Tmax) 
+
+In [5]: s.plot(single=1, dm=2, device='SN3331.ps/CPS') 
+Out[5]: <pygplot.Plot instance at 0x29c9e68>
+In [6]: s.updatesql()
+In [7]: 
+\end{verbatim}
+
+On line 1, an instance of the \texttt{super} class is created by giving
+the name of a supernova already in the database. The data is retrieved
+from the mySQL server and loaded into the instance variable \texttt{s}.
+This object not only contains the photometric data for SN3331, it
+also contains the fit parameters. All the fitting, plotting, and utility
+functions are part of the instance. Notice that in line 4 above, the
+fit function is part of the \texttt{s} object. Also notice that I
+restricted Tmax (time of maximum) to be the value already in the instance
+(presumably, this would be from a previous fit).
+
+There are other classes besides the \texttt{super} class, which can
+be used inside pylc. For example, there is a \texttt{filters} class
+that has data and functions relating to photometric band-passes. There
+is also a \texttt{template} class that can be used to generate light-curve
+templates (currently using \dmf as a parameter). Here are a couple
+of examples:
+
+\begin{verbatim}
+In [7] B = filters['B']
+In [8] V = filters['V']
+In [9] seds = getSED([1,2,3,4,5], version='Hsiao') 
+In [10] Bmags = array([B.synthmag(sed) for sed in seds]) 
+In [11] Vmags = array([V.synthmag(sed) for sed in seds]) 
+In [12] t = template() 
+In [13] t.mktemplate(1.5) 
+In [14] BminusV = t.B - t.V
+In [15] BminusVsynth = Bmags - Vmags
+In [16] deltaBV = BminusV[16:21] - BminusVsynth
+In [17] print deltaBV 
+\end{verbatim}
+
+Here, in the first two lines, we've setup some filters (B and V).
+Then, we retrieve Eric Hsiao's template for days 1 through 5 after
+maximum. In lines 10 and 11, we compute synthetic magnitudes for each
+day and generate a list (this is an example where knowing python syntax
+can help a lot). We use the array function to ensure that these are
+python arrays, which allows us to do math on them later. Line 12 constructs
+a template instance and line 13 generates a template with $\Delta m_{15}=1.5$.
+We can then compare the B-V color obtained with Prieto's light-curve
+templates and what you get by making synthetic magnitudes from Eric's
+SED template. Note that the template is defined from day -15, so element
+15 is day 0, 16 is day 1, etc.
+
+
+\section{Data Persistance}
+
+The current version of \texttt{pylc} gets and saves its data from
+two possible sources: a \texttt{mySQL} database or a file that was
+created using the \texttt{save()} function (not to be confused with
+the \texttt{save()} member function of the super class). I highly
+recommend using the mySQL solution: it allows for data persistance
+that is kept separate from one user/computer combination. The major
+downside is you have to install mySQL (not too bad) and setup a schema
+which matches what pylc expects (still not too bad) and possibly learning
+mySQL in the first place (well, you always \emph{meant} to learn it,
+didn't you? This is your excuse). I'm not going to explain how to
+install mySQL and setup a schema, that's best left for the SQL documentation.
+The required schema is detailed in Appendix .
+
+
+\section{Fitting Light-curves}
+
+All the light-curve fitting is done through a member function of the
+super class: fit(). You basically tell fit() which filters to fit
+and which parameters to hold constant. However, at this point, I should
+probably explain what the model you are fitting actually is.
+
+
+\subsection{LC Model}
+
+The light-curve model is a variation of that given by Prieto et al.\cite{Prieto2006}.
+We compare the observed data to the following model:
+
+\begin{eqnarray*}
+m_{X}\left(t-t_{max}\right) & = & T_{Y}\left(\left(t^{\prime}-t_{max}\right)/(1+z)s,\Delta m_{15}\right)+M_{Y}\left(\Delta m_{15}\right)+\mu+R_{X}E\left(B-V\right)_{gal}+\\
+ &  & R_{Y}E\left(B-V\right)_{host}+K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z)s,E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)\end{eqnarray*}
+where $m_{X}$ is the observed magnitude in band $X$, $t_{max}$
+is the time of B maximum, $s$ is the stretch, $\Delta m_{15}$ is
+the decline rate parameter (Phillips et al. \cite{Phillips1993}),
+$M_{Y}$ is the absolute magnitude in filter $Y$ in the rest-frame
+of the supernova, $E(B-V)_{gal}$ and $E(B-V)_{host}$ are the reddening
+due to galactic foreground and host galaxy, respectively, $R_{X}$
+and $R_{Y}$ are the total-to-selective absorptions for filters $X$
+and $Y$, respectively, and $K_{XY}$ is the cross-band k-correction$ $from
+rest-frame $X$ to observed $Y$. Note that the k-corrections depend
+on the epoch and \emph{can} depend on the host and galaxy extinction
+(as these modify the shape of the spectral template). In the fitting,
+one has the choice of the spectral template of Nugent et al. \cite{Nugent2002}
+or Hsiao et al. \cite{Hsiao2007}. The latter is the default.
+
+Right now, the \texttt{fit()} routine can vary 5 parameters: $t_{max}$,
+$\Delta m_{15}$, $s$, $\mu$, and $E(B-V)_{host}$. The galactic
+reddening is estimated from the dust maps of Schlegel et al. \cite{Schlegel1998}.
+The fit is performed using the Lavenberg-Marquardt algorithm for minimizing
+$\chi^{2}$. Note that to determine the host reddening, you need to
+fit at least two distinct \emph{restframe} filters. Also, $s$ and
+$\Delta m_{15}$ are almost completely degenerate, so one or the other
+should be kept constant during the fit.
+
+For now, I've left the galactic and host reddening laws ($R_{X}$
+and $R_{Y}$) as member variables rather than parameters to be fit%
+\footnote{So far, data I've analyzed hasn't been good enough to distinguish
+between reddening laws.%
+}. This could change in the future.
+
+\textbf{NOTE:} Please be aware that any non-linear fitter will only
+find a \emph{local} minimum in $\chi^{2}$. It is up to you, the user,
+to try different starting points in parameter space and see which
+one gives the overall best-fit. After each fit, the member variable
+\texttt{rchisq} is updated with the reduced-$\chi^{2}$. You can therefore
+use this to discriminate between different solutions.
+
+
+\subsection{Doing the Fit}
+
+The \texttt{fit()} function is a member of the \texttt{super} class.
+The only required argument is a list of filters to fit (specified
+as a python list of strings). Following this argument, you can specify
+values for any of the parameters, which will keep them fixed during
+the iteration: \texttt{Tmax, dm15, s, EBVhost, and DM}. Here is a
+short example:
+
+\begin{verbatim}
+In [1] s = super('04D1oh')
+In [2] print s.restbands
+In [3] s.restbands['g_m'] = 'B'
+In [4] s.fit(['g_m'], s=1, EBVhost=0, dm15=1.1)
+In [5] s.fit(['g_m'], s=1, EBVhost=0)
+In [6] s.fit(['g_m','r_m','i_m','Jc'], s=1, dm15=s.dm15, Tmax=s.Tmax)
+In [7] s.fit(['g_m','r_m','i_m','Jc'], s=1)
+In [8] s.mangle_spectrum(['g_m','r_m','i_m','Jc'])
+In [9] s.fit(['g_m','r_m','i_m','Jc'], s=1, fixed_ks=1)
+In [10] s.update_sql()
+\end{verbatim}
+
+On line 1, we make a new instance. On line 2, we print out the rest
+bands that will be used as templates for each observed band. On line
+3, we decide to fit the megacam g filter with a rest-frame B template.
+On line 4, we fit only the g\_m filter and therefore restrict \texttt{EBVhost}
+to 0 (since we don't have any color information). We can also fix
+$\Delta m_{15}=1.1$ for a first attempt at a fit. On line 5, we let
+$\Delta m_{15}$ go free. On line 6, we add more filters to the fit
+and allow the host extinction to vary, though keeping $\Delta m_{15}$
+and $t_{max}$ fixed at the values determined from the previous fit
+(all fitted parameters and their errors are saved as member data of
+the \texttt{super} instance). On line 7, we allow all parameters to
+vary save stretch. On line 8, we call the member function \texttt{mangle\_spectrum},
+which {}``warps'' the template SED to match the observed colors
+and re-computes the k-corrections. On line 9, we re-fit with these
+new k-corrections, keeping them fixed from now on. On line 10, we
+update the SQL database with the fitted parameters for later use.
+
+Now that you have seen the basic workings, we can now move on to the
+details of each class so that you can build your own routines inside
+pylc, or write python scripts that use these classes to fit light-curves. 
+
+
+\subsection{Getting Help}
+
+Python has an internal help system which utilizes comments at the
+beginning of functions and classes (so-called docstrings). Simply
+use the built-in help() function to get help on an item. Here are
+some examples (output is not shown to save space):
+
+\begin{verbatim}
+In [1] help(super)
+In [2] help(super.fit)
+In [3] help(super.plot)
+In [4] help(lc)
+\end{verbatim}
+
+Line 1 gets help about the entire \texttt{super} class, which will
+list all the functions defined therein, including internal ones that
+are not meant to be used by end users (but of course are available
+to be hacked, but may lack good documentation). Lines 2 and 3 get
+more specific help on individual member functions. Line 4 gets help
+on the \texttt{lc} (light-curve) class. You can ask for help on any
+python object (including variables).
+
+
+\section{The super Object\label{sec:The-super-Object}}
+
+
+\subsection{Constructor and its options}
+
+Supernova objects are created using the \texttt{super} constructor:
+
+ \begin{verbatim}
+s = super(name, z=None, ra=None, dec=None)
+\end{verbatim}
+
+The optional arguments \texttt{z}, \texttt{ra}, and \texttt{dec} are
+used if the supernova does not exist in the sql database. The redshift
+\texttt{z} is required to do the fitting (obviously) and \texttt{ra},
+\texttt{dec} are needed to compute the galactic extinction from the
+Schlegel maps.
+
+
+\subsection{Member variables}
+
+The \texttt{super} object has a number of member variables that do
+one of 3 things: 1) contain data, 2) define a LC fit, or 3) modify
+the instance's behavior. Each of these is explained in the following
+sections. A member variable is accessed as \texttt{instance.variable}.
+For instance:
+
+\begin{verbatim}
+In[20]:  SN = super('SN3241')
+<output supressed>
+In[21]:  Tmax = SN.Tmax
+In[22]:  first_B_epoch = SN.B.MJD[0] - Tmax
+In[23]:  Max_B_obs = max(SN.B.mag)
+\end{verbatim}
+
+
+\subsubsection{Data}
+
+A \texttt{super} instance has a number of member variables that are
+not meant to be modified directly: they hold data about the SN or
+the light-curve data. That doesn't mean you \emph{can't} modify it,
+but my philosophy has been to leave the observed data alone and build
+everything into the model. The following table lists these variables
+and a short explanation:
+
+%
+\begin{table}
+\begin{tabular}{|c|c|>{\raggedright}p{0.75\columnwidth}|}
+\hline 
+Variable&
+type&
+Description\tabularnewline
+\hline
+\hline 
+\texttt{z}&
+float&
+Redshift of the Supernova\tabularnewline
+\hline 
+\texttt{ra}&
+float&
+Right Ascension in decimal degrees\tabularnewline
+\hline 
+\texttt{decl}&
+float&
+Declination in decimal degrees\tabularnewline
+\hline 
+\texttt{data}&
+dictionary&
+Holds the light-curve instances. E.g., \texttt{s.data{[}'B']} is the
+B-band LC data instance. See lc class below.\tabularnewline
+\hline 
+\texttt{template}&
+template&
+The template instance for this supernova. See template class below.\tabularnewline
+\hline 
+\texttt{bands}&
+list&
+A list of strings corresponding to the observed bands defined in \texttt{data}.\tabularnewline
+\hline 
+\emph{filter}&
+lc&
+The LC data instance for band filter. For example, \texttt{s.B} is
+the same as \texttt{s.data{[}'B']}.\tabularnewline
+\hline 
+\texttt{EBVgal}&
+float&
+The Milky-way $E\left(B-V\right)$ from the Schlegel maps.\tabularnewline
+\hline 
+\texttt{e\_EBVgal}&
+float&
+Error in \texttt{EBVgal}.\tabularnewline
+\hline 
+ks&
+dictionary&
+A dictionary of computed k-corrections. The index is the filter name,
+the value is an array of k-corrections, one for each observed epoch.\tabularnewline
+\hline
+\end{tabular}
+
+
+\caption{Data member variables}
+\end{table}
+
+
+Note that some of the member data are themselves instances of other
+classes, most notably the lc (light-curve) class and template class,
+which are covered in sections \ref{sec:Lightcurve-class} and \ref{sec:Template-class},
+respectively.
+
+
+\subsubsection{Fit Parameters}
+
+The \texttt{super} instance has variables that define the light-curve
+fit. These are a little different from the pure data variables in
+that they are computed by the f\texttt{it()} routine and modifying
+them will trigger a re-modeling of the light-curve (if the \texttt{replot}
+member variable is true). In this way, you can see how changing a
+variable changes the model. The currently defined fit parameters are
+listed in table \ref{tab:fit_param}.
+
+%
+\begin{table}
+\begin{tabular}{|c|l|}
+\hline 
+Variable&
+Description\tabularnewline
+\hline
+\hline 
+Tmax&
+Time of B maximum (days).\tabularnewline
+\hline 
+e\_Tmax&
+Error in time of B maximum (days)\tabularnewline
+\hline 
+dm15&
+The decline rate parameter, \dmf (mag.)\tabularnewline
+\hline 
+e\_dm15&
+Error in \dmf (mag.)\tabularnewline
+\hline 
+EBVhost&
+Host $E\left(B-V\right)$ reddening (mag.)\tabularnewline
+\hline 
+e\_EBVhost&
+Error in $E\left(B-V\right)$ (mag.)\tabularnewline
+\hline 
+DM&
+Distance modulus (mag.)\tabularnewline
+\hline 
+e\_DM&
+Error in Distance modulus (mag.)\tabularnewline
+\hline 
+s&
+Sretch (dimensionless)\tabularnewline
+\hline 
+e\_s&
+Error in stretch (dimensionless)\tabularnewline
+\hline
+\end{tabular}
+
+
+\caption{Fit parameters of the \texttt{super} instance.\label{tab:fit_param}}
+\end{table}
+
+
+
+\subsubsection{Behavior-Modifying Variables\label{sub:Behaviour-Modifying-Variables}}
+
+The member variables that modify how the instance behaves are listed
+in table \ref{tab:behave_var}. They are mostly to do with how the
+data are fit and plotted.
+
+%
+\begin{table}
+\begin{tabular}{|c|c|>{\raggedright}p{0.75\columnwidth}|}
+\hline 
+Name&
+type&
+Description\tabularnewline
+\hline
+\hline 
+filter\_order&
+list&
+A list of strings corresponding to the order in which the filters
+should be plotted. Also useful if you want to prevent data from being
+plotted (simply omit the filter)\tabularnewline
+\hline 
+xrange,yrange&
+list&
+X and Y range to plot. Example: \texttt{s.xrange = {[}-20,100]}\tabularnewline
+\hline 
+Rv\_host&
+float&
+Host reddening law (default: 3.1)\tabularnewline
+\hline 
+Rv\_gal&
+float&
+Milky Way reddening law (default: 3.1)\tabularnewline
+\hline 
+fit\_mag&
+boolean&
+If true (1), fit (and plot) in magnitude space, otherwise (0), fit
+in flux space. Default: 1\tabularnewline
+\hline 
+dm15\_prior&
+boolean&
+If true (1), apply a sharp prior to keep $\Delta m_{15}$ in the range
+{[}0.83,1.93]. This will keep the fitter from wandering off where
+the templates are not defined. Default: 1\tabularnewline
+\hline 
+do\_rtrue&
+boolean&
+Compute $R_{true}$ rather than just use $R_{v}$? Default: 0 Caution:
+until I re-write this in C, this is going to be VERY slow.\tabularnewline
+\hline 
+mangle&
+boolean&
+Not yet Implemented. Automatically mangle SED to compute k-corrections?
+For now, you have to do this manually.\tabularnewline
+\hline 
+restbands&
+dictionary&
+A dictionary, indexed by observed band with value corresponding restband.
+Used to specify which template (BVRI) is fit to each observed filter.\tabularnewline
+\hline 
+replot&
+boolean&
+Replot the LC's after fitting or change in parameter? Default: 1\tabularnewline
+\hline 
+quiet&
+boolean&
+Keep it quiet (non-verbose output)? Default: 1\tabularnewline
+\hline 
+dm15\_int&
+boolean&
+If true: use Jose-Luis' template interpolation, otherwise, use the
+template with closest \dmf\tabularnewline
+\hline 
+dm15\_shape&
+boolean&
+Experimental: if true, de-stretch template to \dmf=1.1 so that dm15
+is a shape parameter rather than a decline-rate parameter.\tabularnewline
+\hline 
+k\_version&
+string&
+Which SED template to use: 'H' for Eric Hsiao, 'N' for Peter Nugent.\tabularnewline
+\hline
+\end{tabular}
+
+
+\caption{Behavior modifying variables.\label{tab:behave_var}}
+\end{table}
+
+
+
+\subsection{Member Functions}
+
+These are the functions that you will use to fit light-curves, get
+information about the fit, plot the data, etc. Each function has explicit
+arguments (some mandatory, some optional). Also, some of the member
+variables will alter how a function works (see section \ref{sub:Behaviour-Modifying-Variables}).
+The most important functions are listed first, each with its own subsection,
+then a final section has the less important, but useful functions.
+Some functions are not listed as they are internal to the class. Read
+the code if you want details about any of the inner workings.
+
+
+\subsubsection{Plot}
+
+\texttt{\textbf{plot(xrange=None, yrange=None, device='10/XSERVE',
+title=None, interactive=0, single=0, dm=1, fsize=1.0, linewidth=3,
+symbols=None, colors=None, relative=0, legend=1, mask=0, label\_bad=1)}}
+
+This function simply plots the data to the screen (or other PGPLOT
+device if requested). All the arguments are optional and change the
+behavior of the plot. You can specify \texttt{xrange} and \texttt{yrange}
+to modify the extent of the plot. You can output to postscript file
+by specifying \texttt{device=''somefile.ps/CPS''} (see your local
+PGPLOT documentation for what devices are available). You can give
+the plot a title by providing a string to that argument, change the
+line width and default symbol size with \texttt{linewidth} and \texttt{fsize},
+respectively. 
+
+If you specify \texttt{interactive=1}, then the plot is interactive
+and accepts the following key bindings when the mouse is over the
+plot:
+
+\begin{itemize}
+\item click: print out x-y coordinates to the screen
+\item 'x' and 'y': Change the xrange and yrange, respectively (you need
+to click twice)
+\item 'b': Change the xrange and yrange by dragging out a box (you need
+to click twice)
+\item 'z' and 'Z': Zoom in and out, respectively
+\item right-click: re-center the plot's view at the mouse position
+\end{itemize}
+If you specify \texttt{single=1}, then all the filters are plotted
+on the same graph, with a magnitude offset of \texttt{dm} between
+them.
+
+You can modify the colors and symbols used for each filter by passing
+a dictionary of filter-value pairs. For example, \texttt{colors=\{'B':'blue',
+'R':'red', 'I':'orange'\}} and \texttt{symbols=\{'B':1, 'R':2, 'I':3\}.}
+See the PGPLOT documentation for the number-symbol combinations.
+
+
+\subsubsection{Fit}
+
+\texttt{\textbf{fit(bands, Tmax=None, dm15=None, EBVhost=None, DM=None,
+s=None, vary\_kcorr=0, update\_plot=0, fixed\_ks=0, full\_output=0)}}
+
+This function is the heart of the software: fitting a light-curve
+to the data by minimizing $\chi^{2}$. The only required argument
+is \texttt{bands}, a list of filters to fit. So if, for example, you
+had data in B, V, r' (sloan r), Jc, and Yc, you would specify {[}'B','V','r\_s','Jc','Yc']
+as the first argument. This will simultaneously fit the data in these
+filters to templates specified in the restbands member variable. So,
+if restbands=\{'B':'B', 'V':V', 'r\_s':'R', 'Jc':'I', 'Yc':'I'\},
+then the data in B would be fit with a B template, V with a V template,
+r\_s with an R template, Jc with an I template and Yc with an I template
+(not that you'd really want to do this). As an aside, passbands is
+also used when determining K-corrections (including cross-band K-corrections
+for higher-redshift objects).
+
+The arguments \texttt{Tmax} (time of B maximum), \texttt{dm15} (decline
+rate), \texttt{EBVhost} (host extinction), \texttt{DM} (distance modulus),
+and \texttt{s} (stretch) are the light-curve parameters you are fitting.
+If any parameter is given the value None (the default value) it is
+left free to vary. If it is given a value, it is kept fixed at that
+value while the other parameters are varied. Note that s and dm15
+are not meant to be varied at the same time (they are completely degenerate),
+but the code does not check for this. So, you should at least set
+one of these to a standard value ($\Delta m_{15}=1.1$ or $s=1$).
+
+The remaining arguments are:
+
+\begin{itemize}
+\item $ $\texttt{vary\_kcorr}: If true, re-compute the K-corrections at
+each iteration using the current value of EBVhost and EBVgal to redden
+the supernova SED. This will slow down the least squares iteration,
+but is technically the right thing to do. If false, K-corrections
+are computed in the last iteration of the solution, which should give
+very good values.
+\item update\_plot: If true, re-plot the light-curves and models. Slows
+things down, but can show you how a solution is progressing.
+\item fixed\_ks: If true, then K-corrections are not computed at all and
+are instead taken from the member variable ks. Use this if you compute
+k-corrections yourself or use mangle\_spectrum() to compute them.
+\end{itemize}
+
+\subsubsection{Mangling the Spectrum}
+
+\texttt{\textbf{mangle\_kcorr(bands=None, interp=0, allbands=None)}}
+
+This function allows the user to compute k-corrections that are decoupled
+from the fitting procedure. The idea is that regardless of what has
+altered the shape of the supernova's SED (extinction or intrinsic
+variation), the observed colors of the supernova give one a constraint
+on the overall {}``tilt'' of the spectrum. In the case of many bands,
+you can actually solve for a higher-order fit (cubic spline, etc). 
+
+Simply call \texttt{mangle\_kcorr} and supply it with a list of N
+filters, from which the N-1 colors will be constructed. These colors,
+and the filter passbands, will be used to find a spline that, when
+multiplied with the SED, produces the observed colors. If \texttt{allbands}
+is not \texttt{None}, the {}``mangled'' spectrum will be used to
+compute k-corrections for these bands, otherwise the filters in \texttt{bands}
+will be corrected.
+
+However, to properly estimate the colors for any given day, one needs
+to have a model for the light-curves. If you choose to use a template,
+then fit one beforehand and set \texttt{interp=0} (the default). Otherwise,
+use \texttt{interp=1} and the data will be interpolated. In this case,
+if you have fit a spline using the \texttt{template()} member function
+(see section \ref{sub:LCMember-Functions}), this will be used. Otherwise,
+the GLoEs algorithm will be used to interpolate. Probably not a good
+idea at high redshift, where S/N is low.
+
+
+\subsubsection{Other Useful functions}
+
+Here is a list and brief summary of other functions belonging to the
+super class.
+
+\begin{itemize}
+\item \texttt{\textbf{ColorMax()}}: Return the (B-V)\_max and (V-I)\_max
+colors at Bmax. From Phillips et al. AJ 118:1766-1776, 1999. Returns
+a 4-tuple: (B-V, V-I, e(B-V), e(V-I)). Note: this is reliable only
+for $0.8<\Delta m_{15}<1.7$
+\item \texttt{\textbf{MMax(band):}} Given a value of dm15, return the maximum
+magnitude in each filter, based on Prieto et al. (2006). Note, this
+is only reliable in the range $0.8<\Delta m_{15}<1.7$
+\item \texttt{\textbf{chisq(bands=None, dotemp=1, dokcorr=1):}} For the
+current set of parameters, compute chi-square and number of data points.
+Returns (chsq,N)
+\item \texttt{\textbf{closest\_band(wav, tempbands={[}'B', 'V', 'R', 'I'])}}:
+For each filter in the data, find the closest rest-frame filter. Returns
+one of the strings listed in \texttt{tempbands}. These strings must
+represent a valid filter found in the \texttt{filters} dictionary
+(see .
+\item \texttt{\textbf{compute\_CE(band1, band2, restb1, restb2):}} Once
+an initial model has been determined, use this to get a more reliable
+(I hope) estimate of color excess and the extinction. It computes
+the observed color (band1-band2), uses the k-corrections to convert
+to rest-frame color (restb1-restb2), removes galactic reddening and
+compares to the color expected for current value of $\Delta m_{15}$
+(using ColorMax). 
+\item \texttt{\textbf{compute\_w(band1, band2, band3):}} Returns the reddening-free
+magnitude in the sense that: w = band1 - R(band1,band2,band3){*}(band2
+- band3) for for instance compute\_w(V,B,V) would give: w = V - Rv(B-V).
+This is still in development.
+\item \texttt{\textbf{fit\_DM(bands):}} Fit only the distance modulus, keeping
+all the other parameters fixed. Just a convenience function that wraps
+the more general fit().
+\item \texttt{\textbf{getEBVgal(self):}} Gets the value of E(B-V) due to
+galactic extinction. The ra and decl member variables must be set
+beforehand. 
+\item \texttt{\textbf{get\_color(band1, band2, nointerp=0):}} return the
+observed SN color of band1 - band2. Returns a 4-tuple: (MJD, band1-band2,
+e\_band1-band2, flag). Flag is one of: 0 - both bands measured at
+given epoch; 1 - only one band measured, other interpolated; 2 - extrapolation
+(based on template) needed; 3 - data interpolated or extrapolated
+beyond template's definition, so not safe to use!
+\item \texttt{\textbf{get\_mag\_table(bands=None):}} This routine returns
+a table of the photometry, where the data from different filters are
+grouped according to day of observation. When data is missing, a value
+of 99.9 is inserted. Format of table is \char`\"{}MJD mag1 emag1 mag2
+emag2 ... 
+\item \texttt{\textbf{get\_restbands():}} Automatically populates the restbands
+member data with one of 'B','V', 'R','I', whichever's effective wavelength
+is closest to the observed bands. This is run automatically when the
+super object is created. 
+\item \texttt{\textbf{kcorr(band):}} Compute the k-corrections for filter
+'band'. This is done by using the SED template defined by k\_version.
+This is essentially the same as mangle\_kcorr, except without the
+mangling.
+\item \texttt{\textbf{load(dictionary):}} Given a previously saved dictionary
+(as returned by save()), re-load the parameters.
+\item \texttt{\textbf{lira(Bband, Vband, interpolate=0, tmin=30, tmax=90,
+plot=0):}} Use the Lira law to estimate the extinction. The B-V color
+is constructed as a function of time using filters \texttt{Bband}
+and \texttt{Vband}. The color excess is then estimated to be the median
+offset between (B-V) and the Lira Law in the time window \texttt{tmin
+< t < tmax}. If \texttt{interpolate=1}, then missing data is interpolated.
+Use \texttt{tmin} and \texttt{tmax} to restrict which data are used.
+Use \texttt{plot=1} to get a graph. The function returns a 3-tuple:
+E(B-V), the error and the fitted slope, which can be used as a diagnostic.
+\item \texttt{\textbf{mangle\_kcorr(bands=None):}} Compute the k-corrections
+based on a previous fit to the data (from which we can then compute
+stable colors). The SED template defined by k\_version is then {}``mangled''
+with a spline in such a way that synthetic colors based on this mangled
+SED match the observed colors. The updated k-corrections are then
+saved in the \texttt{ks} member variable.
+\item \texttt{\textbf{mask\_data():}} Interactively mask out bad data and
+unmask the data as well. The only two bindings are \char`\"{}A\char`\"{}
+(click): mask the data and \char`\"{}u\char`\"{} to unmask the data. 
+\item \texttt{\textbf{model\_data(bands, dotemp=1, dokcorr=1):}} Model a
+light curve, but only at points specified by the data, for doing chi-squared
+fitting. If dotemp=1, re-do the template (different dm15). If dokcorr=1,
+(re)compute the k-correction. Returns a 2-tuple: the data dictionary
+and a mask dictionary. The mask tells you where the template covers
+the data and where the k-corrections are valid. If shape is non-zero,
+the template is stretched to force it to have dm15=1.1, but preserving
+the shape (in the I-band especially). In this way, dm15 becomes more
+of a shape parameter, rather than a decline rate adjustment. 
+\item \texttt{\textbf{model\_lc(dokcorr=0):}} Model a light-curve based
+on the member data: Tmax (time of Bmax), dm15 (decline rate parameter),
+s (stretch), EBVhost (host reddening), and DM (distance modulus).
+The model is evaluated from {[}-20,80] at 1 day intervals. dokcorr:
+Compute k-corrections? (default: 0) 
+\item \texttt{\textbf{resids(p, fjac=None, bands=None, modelargs=None):}}
+Used by mpfit. Computes the weighted residuals between the data and
+the template model. 
+\item \texttt{\textbf{save():}} This will return the parameters dictionary,
+which can be used to save the state of the fit. Use load() to re-load
+the parameters. 
+\item \texttt{\textbf{summary():}} Get a quick summary of the data for this
+SN, along with fitted parameters (if such exist). 
+\item \texttt{\textbf{update\_sql(attributes=None, dokcorr=1):}} Updates
+the current information in the SQL database, creating a new SN if
+needed. If attributes are specified (as a list of strings), then only
+these attributes are updated. 
+\end{itemize}
+
+\section{Light-curve class\label{sec:Lightcurve-class}}
+
+The light-curve class, \texttt{lc}, is a simpler class than super
+(for now). It is available for scripting by importing the \texttt{lc}
+module. It basically contains the data of a single filter and a few
+functions to work with the data. Of particular interest might be the
+spline fitting functions, which allow one to make templates from well-sampled
+and high S/N data. 
+
+
+\subsection{Member data}
+
+Table \ref{tab:lc_member_var} lists the member variables of the \texttt{lc}
+class. 
+
+%
+\begin{table}
+\begin{tabular}{|c|c|>{\centering}p{4in}|}
+\hline 
+name&
+type&
+description\tabularnewline
+\hline
+\hline 
+band&
+string&
+name of the filter that this instance represents\tabularnewline
+\hline 
+parent&
+super inst.&
+A pointer to the \texttt{super} instance that contains this \texttt{lc}
+instance.\tabularnewline
+\hline 
+filter&
+filter inst.&
+Instance of the filter object that corresponds to self.band\tabularnewline
+\hline 
+MJD&
+float array&
+Array of observations dates, usually in Modified Julian Day\tabularnewline
+\hline 
+t&
+float array&
+If Tmax has been solved, then this is an array of epochs\tabularnewline
+\hline 
+magnitude&
+float array&
+Array of observed magnitudes.\tabularnewline
+\hline 
+e\_mag&
+float array&
+Array of uncertainties in the magnitudes.\tabularnewline
+\hline 
+K&
+float array&
+Array of k-corrections.\tabularnewline
+\hline 
+mag&
+float array&
+Like magnitude, but if K are defined, then this returns the k-corrected
+magnitudes (self.magnitude - self.K). Otherwise, it is equivalent
+to self.magnitude.\tabularnewline
+\hline 
+flux&
+float array&
+Automatically generated array of fluxed, based on the magnitudes and
+zero point defined by band.\tabularnewline
+\hline 
+e\_flux&
+float array&
+Array of uncertainties in the flux.\tabularnewline
+\hline 
+tck&
+list&
+3-element list defining a spline: array of knot points, array of spline
+coefficients, and the order of the spline. This can be used with scipy.integrate.splev()
+to evaluate the spline at any point (see help page for splev).\tabularnewline
+\hline 
+model&
+float array&
+A model of the lightcurve based on a template fit (generaged automatically
+by template()).\tabularnewline
+\hline 
+model\_t&
+float array&
+The times for the model.\tabularnewline
+\hline 
+model\_sigmas&
+float array&
+Errors in the model. Generated if do\_sigma=1 in the call to template() \tabularnewline
+\hline 
+dm15, e\_dm15&
+floats&
+The computed value of dm15 and its error (if do\_sigma=1) from the
+spline. Generated by template()\tabularnewline
+\hline 
+Tmax,e\_Tmax&
+floats&
+The computed value of Tmax and its error (if do\_sigma=1) from the
+spline. Generated by template()\tabularnewline
+\hline 
+Mmax, e\_Mmax&
+floats&
+The computed value of the maximum magnitude and its error (if do\_sigma=1)
+from the spline. Generated by template()\tabularnewline
+\hline 
+mask&
+int array&
+The mask defines which data are good. If mask{[}i] = 1, then the data
+at element i is considered good (and will be used in a fit), otherwise,
+if it is 0, the data is bad and ignored by fits.\tabularnewline
+\hline
+\end{tabular}
+
+
+\caption{Member variables of the lc class\label{tab:lc_member_var}}
+\end{table}
+
+
+
+\subsection{Member Functions\label{sub:LCMember-Functions}}
+
+The most useful member functions are given below:
+
+\begin{itemize}
+\item \texttt{\textbf{eval(self, times, recompute=0, t\_tol=0.1, {*}{*}args):}}
+Interpolate (if required) the data to time 'times'. If recompute=1,
+force a re-computation of the spline coefficients (you can also use
+any of the arguments for mkspline() here). If there is a data point
+closer than t\_tol away from a requested time, that value is used
+without interpolation. 
+\item \texttt{\textbf{mask\_emag(self, max):}} Update the lc's mask to only
+include data with e\_mag < max. 
+\item \texttt{\textbf{mask\_epoch(self, tmin, tmax):}} Update the lc's mask
+to only include data between tmin and tmax.
+\item \texttt{\textbf{mkspline(self, knots=None, k=3, s=0, fitflux=0, tmin=None,
+tmax=None, task=0):}} Generate a spline interpolation of the data.
+You can specify the knots, the order of the spline (k), the smoothing
+factor (see scipy documentation: help(scipy.interpolate.splrep)).
+To get an interpolating spline (for really smooth data), use s=0.
+To do a least-squares fit with variable smoothing, a good start is
+s=N (number of data points) and task=0 (routine choose the knots).
+Then try again with task=1 (keep the knots fixed) and different values
+of s. If you want to choose the knots yourself, specify them and use
+task=-1. If you set fitflux nonzero, the fit is performed in flux
+space. Use tmin and tmax to restrict the portion of the light-curve
+to be splined (defaults to whole range). 
+\item \texttt{\textbf{plot(self, device='/XSERVE', interactive=0, flux=0):}}
+Plot the lightcurve and possibly the fitting spline. You can change
+the device to which it is plotted, have the plot be interactive and
+also decide if you want to view the light-curve in flux units. If
+a spline has been fit, a second panel will show the residuals. If
+you choose an interactive plot, you an use the following key bindinds
+(some of which only work if a spline has been defined): 
+
+\begin{itemize}
+\item click: print the coordinates under the cursor
+\item 'b': zoom in by drawing a box
+\item 'x' and 'y': set x and y ranges
+\item 'a': add a spline knot at the cursor position
+\item 'd': delete a spline knot closest to the cursor position
+\item 'm': move nearest knot point to new position
+\item 's' and 'S': decrease and increase the smoothing parameter
+\end{itemize}
+\item \texttt{\textbf{template(self, fitflux=0, do\_sigma=1, Nboot=100,
+{*}{*}args):}} Make a spline template of the light-curve. If do\_sigma=1,
+the routine witll perform a Monte-Carlo simulation to determine the
+errors in the spline and the derived values of dm15, Tmax and Mmax.
+It will perform Nboot realizations. The rest of the arguments are
+the same as mkspline. The function sets the following member variables
+with the results from the fit: tck, model, model\_t, model\_sigmas,
+dm15, e\_dm15, Tmax, e\_Tmax, Mmax, and e\_Mmax. Note that a value
+of -1 for any of dm15, Tmax, and Mmax indicate that there was no maximum
+to the derived spline. For more info, see section \ref{sub:Splining}.
+\end{itemize}
+Note: If you fit a spline and then use the parent super instance's
+plot() function, the spline will be plotted on top of the data (unless
+there is already a model defined from a fit(), which takes precedence).
+
+
+\subsection{The Art of Splining \label{sub:Splining}}
+
+Splines are a great way to represent data, but they have one very
+serious drawback: a variable number of parameters. Not only do you
+have to specify the order of the spline (usually one chooses k=3 for
+a cubic spline), you also have to choose how many knot points to use.
+Each knot point has two parameters: its placement on the time axis
+and the coefficient of the spline at that knot point. You can therefore
+have the number of knot points equal to the number of data points
+(plus 2k end-point knots to properly define the spline on the boundaries)
+and get a spline that's guaranteed to pass through each and every
+point (an interpolating spline). But real data has noise, so this
+isn't what you want. At the other extreme, you could use the bare
+minimum of 2k+2 knots which would give the smoothest spline, but then
+you lose any interesting structure in the light-curve.
+
+Luckily, \texttt{scipy} makes many of the algorithms from Paul Dierckx's
+book {}``Curve and Surface Fitting with Splines''\cite{Dierckx1993}
+available. These algorithms deal with automatic choice of the number
+and placement of the spline knots. They distill the problem down to
+one parameter: the smoothing, \texttt{s}. The larger \texttt{s}, the
+smoother (fewer knots) the curve and the smaller, the more the spline
+will approach an interplating spline (s=0). If the weights you provide
+the spline fitter are proper 1-sigma errors, then setting s to the
+number of data points should result in a curve with reduced $\chi_{\nu}^{2}\simeq1$,
+which is what we really want. The first time you fit the spline, set
+task=0 and the routine will choose an initial set of knot points.
+If you wish to play around with the smoothing parameter, but keep
+the knots fixed, use task=1; otherwise, new knots will be chosen each
+time.
+
+It may be that the resulting spline doesn't {}``look right''. Most
+likely, this is due to badly estimated weights (variances). The solution
+is to vary s until you get somethign that looks right, but of course,
+this is purely subjective. With proper 1-sigma errors, one can legitimately
+play around with s in the range $N-\sqrt{2N}<s<N+\sqrt{2N}$ until
+the spline looks acceptable%
+\footnote{I tend to shy away from this, preferring to remove the subjectivity.
+Rather, I would re-examine the weights and decide whether they are
+correct. Playing around with s is effectively like globally increasing
+the errors.%
+}.
+
+Another way to spline is to impose what you think are sensible knots.
+In this case, simply specify them as an array with the knots argument
+to \texttt{template} or \texttt{mkspline} functions and set \texttt{task=-1}.
+In this case, the smoothing is ignored and you get the least-squares
+spline using these knots.
+
+
+\section{Template class\label{sec:Template-class}}
+
+
+\subsection{dm15temp.py}
+
+This class is basically a wrapper to Prieto's template generator and
+is used to generate templates for the \texttt{super} class. It is
+available to scripts by importing the \texttt{dm15temp} module. The
+constructor doesn't need any arguments, so you simply make an instance
+as follows:
+
+\begin{verbatim}
+t = template()
+\end{verbatim}
+
+The instance then has member variables for each filter defining a
+template: \texttt{t.B, t.V, t.R}, and \texttt{t.I}. There are also
+errors in these quantities: \texttt{t.eB, t.eV, t.eR}, and \texttt{t.eI}.
+The epoch is contained a variable \texttt{t.t} Each of these variables
+is a python array. Immediately after creating the instance, there
+will be no template defined. One has to make it with a specific value
+of $\Delta m_{15}$:
+
+\begin{verbatim}
+t.mktemplate(1.1)
+\end{verbatim}
+
+This will run Prieto's code and insert the proper values into the
+member variables. This is all done in C, so is quite fast. The only
+other member function is \texttt{t.eval(band, times, z=0).} This function
+is used to evaluate the tempalte at specific times (useful for doing
+least-squares fitting to data). Simply specify which filter as a string
+(\texttt{band}) and an array of epochs to evaluate (\texttt{times}).
+The function returns two values: an array of interpolated values of
+the template and a mask array. This mask will be 1 for interpolation
+and 0 for extrapolation (where you should not use the data). You can
+also specify a redshift z so that the times are interpreted as observed
+epochs and will be converted to rest-frame epochs before evaluating.
+
+\textbf{NEW:} In order to fit the CSP NIR light-curves, we have added
+templates for the J,H, and K bands. These are based on the work of
+Krisciunas et al.\cite{Krisciunas2004}. The peak of the lightcurves
+are modeled to be 2nd order polynomials with fixed coefficients. The
+current value of $\Delta m_{15}$ is used to compute a stretch, which
+is applied to the template (not to be confused with the global stretch
+parameter, \texttt{s}).
+
+
+\subsection{dm15temp2.py}
+
+This is new module and constitutes a new method very similar to Prieto's
+technique. The idea is that one has a set of N well-sampled lightcurves
+with pre-maximum data, so that $\Delta m_{15}$, $T_{max}$, and $M_{max}$
+are all well determined. One then has a set of data points that define
+a surface in the 3D parameter space: $\left(t,\Delta m_{15},m\right)$.
+The problem is that this surface is sparsely and heterogeneously sampled.
+Prieto's method solves this in two steps: 1) construct spline representations
+of the N lightcruves in the $t-$direction, then interpolate in the
+$\Delta m_{15}$-direction by way of averaging the splines with an
+adaptive weight function.
+
+This new generator uses an algorighm developed by Barry Madore called
+GLoEs (Gaussian Local Estimation). In 1-D, one simply interpolates
+by way of a quadratic (or higher-order polynomial) through all the
+available data points. However, the weights of the points are determined
+using a Gaussian centered at the desired interpolation point and with
+a width sufficient to include the minimum number of points required
+for the polynomial. In 2D, one uses an elliptical Gausian in the same
+way and fits a 2D polynomial to the data points. The advantage is
+that this is done in one step and data can be added without the need
+to re-train the fitter. The disadvantages are: 1) it's a slower process
+and 2) the resulting templates have more freedom to deviate from the
+idealized behaviour. For instance, if one asked for a template with
+$\Delta m_{15}=1.15$, and actually measured $\Delta m_{15}$ directly,
+you would get a slightly different answer. As such, $\Delta m_{15}$
+becomes a parameter, rather than a direct measurable.
+
+Despite these very different approaches, the dm15temp2.py module behaves
+exactly the same as the older dm15temp.py module as far as the user
+is concerned. They can be used interchangeably. However, dm15temp2.py
+uses the CSP dataset, so offers a different set of filters.
+
+
+\section{Filters and Spectra\label{sec:Filters-and-Spectra}}
+
+Two other useful classes are \texttt{filter} and \texttt{spectrum}.
+They are available for scripting by importing the \texttt{filters}
+module. The filter class inherits from the spectrum class, which is
+the more general object (a filter can be considerd a spectrum of sorts).
+
+
+\subsection{spectrum object}
+
+You create a spectrum instance with two optional arguments:
+
+\begin{verbatim}
+spec = spectrum(name, file)
+\end{verbatim}
+
+
+The name is just an identifying string. The file contains the spectrum
+as (lambda, flux) pairs, one per line. The member variables are given
+in the following table.
+
+%
+\begin{table}
+\begin{tabular}{|c|c|>{\centering}p{4in}|}
+\hline 
+name&
+type&
+description\tabularnewline
+\hline
+\hline 
+name&
+string&
+Descriptive name for the spectrum\tabularnewline
+\hline 
+file&
+string&
+Filename of the spectral data\tabularnewline
+\hline 
+wave&
+float array&
+Array of wavelengths\tabularnewline
+\hline 
+resp&
+float array&
+Array of fluxes or responses (for filters)\tabularnewline
+\hline 
+comment&
+string&
+Any useful comments you want to ad\tabularnewline
+\hline 
+wavemax,wavemin&
+float&
+The minimum and maximum wavelengths defined by this spectrum\tabularnewline
+\hline 
+avewave&
+float&
+The average wavelength (useful for filters)\tabularnewline
+\hline
+\end{tabular}
+
+
+\caption{Member variables of the spectrum class.}
+\end{table}
+
+
+
+\subsection{Filter object}
+
+The filter object inherits from the spectrum object, so it has all
+its member variables. The filter is created in the same way the spectrum
+is, except it has one additional optional argument:
+
+\begin{verbatim}
+f = filter(name, file, zp)
+\end{verbatim}
+
+
+The argument zp is the zeropoint of this filter. If you know it beforehand,
+specify it here. Otherwise, you can use the compute\_zpt() member
+function described below. The zeropoint is stored as the member variable
+\texttt{f.zp}. The filter class also adds a few extra member functions,
+which are described below:
+
+\begin{itemize}
+\item \texttt{\textbf{compute\_zpt(spectra, mag):}} Given a list of spectrum
+instances (spectra) and a list of associated magnitudes (mag), compute
+the zeropoints of this filter for these spectra, which are returned
+as an array. You could average the output to get a good handle on
+the actual zeropoint.
+\item \texttt{\textbf{response(wave, spec, z=0):}} Given an array of wavelenghts
+(wave) and fluxes (spec), compute the response of the filter across
+the wavelength: $\int F(\lambda)S(\lambda)\lambda/ch\: d\lambda$.
+If the optional redshift, z, is given, the spectrum is redshifted
+before the integration is done (actually, the filter is blueshifted).
+\item \texttt{\textbf{synth\_mag(wave, spec, z=0):}} Given an array of wavelents
+(wave) and fluxes (spec), compute the synthetic magnitude through
+this filter. The zeropoint must be defined in the instance (use compute\_zpt()
+if needed). If a redshift is specified, the filter is blueshifted
+by $1/(1+z)$ before coputing the response (as in \texttt{response()}).
+\end{itemize}
+
+\subsection{Default spectra and filters\label{sub:default_filters}}
+
+The \texttt{filters} module has two variables: \texttt{filters} and
+\texttt{spectra}. These are dictionaries of pre-defined filters and
+spectra for your use. The filters have pre-defined zeropoints, so
+can be used to compute synthetic magnitudes {}``out of the box''
+(see the accompanying document \texttt{Zeropoints.pdf} for a discussion
+on how there are determined). To get a list of the spectra and filters,
+simply print out the keys of the respective dictionaries:
+
+\begin{verbatim}
+print filters.filters.keys()
+print filters.spectra.keys()
+\end{verbatim}
+
+The module also comes with the spectra of Landolt standards. However,
+because loading all those spectra takes time and I didn't want to
+slow down the start-up time too much, you need to call the function
+\texttt{filters.load\_landolt()} before you can access these standards.
+
+
+\section{Coming Soon(ish)}
+
+Here is just a list of things which I have planned for the future,
+but have not yet implemented.
+
+\begin{enumerate}
+\item Incorporate the SCP B-band template in order to compute their stretch
+values.
+\item Use other fitting functions besides B-splines to generate templates
+(polynomials, custom parametric functions, etc).
+\item Ability to plot the confidence intervals on the fitted parameters
+in different cuts of prameter space.
+\item Ability to impose priors on the parameters. Right now, there is only
+a fixed prior on $\Delta m_{15}$ that can be turned on and off. I'd
+like to implement arbitrary priors from the user.
+\item Automatically do a grid-search for the minimum $\chi^{2}$ and plot
+confidence intervals.
+\item Make a GUI (in the far far distant future and only if someone buys
+me a really good bottle of Scotch).
+\end{enumerate}
+\begin{thebibliography}{2}
+\bibitem{Phillips1993}Phillips, M.M. 1993, ApJ, 413, L105
+
+\bibitem{Prieto2006}Prieto, J.L., Rest, A., \& Suntzeff, N.B. 2006,
+ApJ 647, 501
+
+\bibitem{Schlegel1998}Schlegel, D.J., Finkbeiner, D.P \& Davis, M.
+1998, ApJ 500, 525
+
+\bibitem{Nugent2002}Nugent, P., Kim, A., \& Perlmutter, S. 2002,
+PASP, 14, 803
+
+\bibitem{Hsiao2007}Hsiao, E. et al., in preparation
+
+\bibitem{Dierckx1993}Dierckx, Paul. {}``Curve and Surface Fitting
+with Splines''. Oxford Science Publications. 1993
+
+\bibitem{Krisciunas2004}Krisciunas, K., Phillips, M., and Suntzef,
+N. 2004, ApJ 602, L81
+
+\end{thebibliography}
+\appendix
+
+\section{mySQL Schema}
+
+The required \texttt{mySQL} schema consists of a single database called
+\noun{}\texttt{SN} that contains two tables. One is named \texttt{\noun{SN}}\texttt{e}
+and the other is \texttt{Photo}. SNe holds the global information
+about each supernova (redshift, ra, dec, etc). The \texttt{Photo}
+table holds the individual points on the light-curve. You an add extra
+columns to the tables and other tables to your database, these are
+just the minimum required.
+
+
+\subsection{SNe Table}
+
+Here is the schema for the SNe table. 
+
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline 
+Field&
+Type&
+Null&
+Key&
+Default&
+Extra&
+Comment\tabularnewline
+\hline
+\hline 
+SNId&
+int(11)&
+NO&
+PRI&
+NULL&
+auto\_increment&
+The unique identifyer for each SN\tabularnewline
+\hline 
+name&
+varchar(20)&
+NO&
+&
+None&
+&
+A string identification (use this to retrieve)\tabularnewline
+\hline 
+z&
+float&
+YES&
+&
+NULL&
+&
+redshift\tabularnewline
+\hline 
+ra&
+float&
+YES&
+&
+NULL&
+&
+Right-ascension in decimal degrees\tabularnewline
+\hline 
+decl&
+float&
+YES&
+&
+NULL&
+&
+Declination in decimal degrees\tabularnewline
+\hline 
+obs1&
+int(11)&
+YES&
+&
+NULL&
+&
+Epoch of first obervation\tabularnewline
+\hline 
+Tmax&
+double&
+YES&
+&
+NULL&
+&
+Time of B-maximum\tabularnewline
+\hline 
+e\_Tmax&
+double&
+YES&
+&
+NULL&
+&
+error in Tmax\tabularnewline
+\hline 
+dm15&
+double&
+YES&
+&
+NULL&
+&
+decline-rate parameter\tabularnewline
+\hline 
+e\_dm15&
+double &
+YES&
+&
+NULL&
+&
+error in dm15\tabularnewline
+\hline 
+s&
+double&
+YES&
+&
+NULL&
+&
+stretch\tabularnewline
+\hline 
+e\_s&
+double&
+YES&
+&
+NULL&
+&
+error in s\tabularnewline
+\hline 
+EBVhost&
+double &
+YES&
+&
+NULL&
+&
+Host extinction\tabularnewline
+\hline 
+e\_EBVhost&
+double&
+YES&
+&
+NULL&
+&
+error in EBVhost\tabularnewline
+\hline 
+DM&
+double&
+YES&
+&
+NULL&
+&
+Distance modulus\tabularnewline
+\hline 
+e\_DM&
+double&
+YES&
+&
+NULL&
+&
+error in DM\tabularnewline
+\hline 
+rchisq&
+double&
+YES&
+&
+NULL&
+&
+reduced chi-squared\tabularnewline
+\hline
+object&
+blob&
+YES&
+&
+NULL&
+&
+storage for \texttt{super} object\tabularnewline
+\hline
+\end{tabular}
+
+
+\subsection{Photo Table}
+
+Here is the schema for the only other table needed by \texttt{pylc}.
+
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline 
+Field&
+Type&
+Null&
+Key&
+Default&
+Extra&
+Comment\tabularnewline
+\hline
+\hline 
+PhotoID&
+int(11)&
+NO&
+PRI&
+NULL&
+auto\_increment&
+unique running ID number\tabularnewline
+\hline 
+SNId&
+int(11)&
+YES&
+&
+NULL&
+&
+cross-identification to the SN\tabularnewline
+\hline 
+name&
+varchar(20)&
+NO&
+&
+NULL&
+&
+string identification\tabularnewline
+\hline 
+JD&
+double&
+YES&
+&
+NULL&
+&
+Julian Day of the observation\tabularnewline
+\hline 
+filter&
+varchar(3)&
+YES&
+&
+NULL&
+&
+filter identifyer\tabularnewline
+\hline 
+m&
+double&
+YES&
+&
+NULL&
+&
+magnitude\tabularnewline
+\hline 
+e\_m&
+double&
+YES&
+&
+NULL&
+&
+error in m\tabularnewline
+\hline 
+K&
+double&
+YES&
+&
+NULL&
+&
+K-correction\tabularnewline
+\hline 
+e\_K&
+double&
+YES&
+&
+NULL&
+&
+error in K\tabularnewline
+\hline
+\end{tabular}
+\end{document}

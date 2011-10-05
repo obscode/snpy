@@ -1,0 +1,3 @@
+This directory contains scripts that were used to compute the zero-points
+of several photometric systems.  Not needed by snpy, per se, but good to
+keep them in the repository so I can remember what I did!

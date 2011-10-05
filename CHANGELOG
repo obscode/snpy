@@ -1,0 +1,29 @@
+20Nov2007: -  Keep a CHANGELOG  ;-)
+           -  Keep track of version numbers.  We're now at 0.2
+
+26Nov2007: -  Made some fixes with Mark's help.
+	   -  Incorporated Krisciunas' JHK polynomial templates to both
+	      dm15temp and dm15temp2 generators.
+	   -  sn.plot()  now blanks out bad polynomials
+
+03Dec2007: - Needed to change the 'super' class to 'sn'.  'super' is a
+             reserved function in python to obtain a class' super-class,
+             which is super-handy.
+           - Updated the load() function to test if the saved file is
+	     using 'super' and upgrade if needed.
+	   - Added the fit_colors functionality to fit() (see docs).
+	   - Fixed how get_restbands works (normalization was bad)
+	   - set_generator() now automatically calls get_restbands
+	   - Major overhaul of mangle_kcorr().  It now recognizes the bad
+	     data masks and uses it when computing colors:  the JHK data
+	     should now be mangle-able.
+	   - Set Hsiao's opt+NIR uberspectrum (H3) as the default for
+	     k-corrections.
+	   - Updaded default behaviour of fit():  s=1 is now default, set it
+	     to None to make it vary.
+           - Fixed lc.plot()  to properly show residuals from template fits.
+
+20Jan2008:  pylc is now versioned using SVN
+06Jan2009:  pylc is now SNpy (affectionately SNOOPY).
+01Feb2009:  Begin the arduouis task of converting over to Numpy, the new
+            Scipy, and, heh what the heck, python 2.5.

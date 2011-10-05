@@ -1,0 +1,28 @@
+This directory contains the filter module that defines the filters used by 
+SNOOPY.  There are two directories of interest:  filters and standards.
+In filters, you'll find the actual filter definitions.  These are loaded
+at startup, so you can add your own custom filter set.  Simply create a
+directory to hold your filter response curves.  Each filter should have its
+own file and have two columns:  wavelength and response.  Comments can
+be preceded with a hash (#).
+
+Lastly, create a file called filters.dat, which defines the filters, one per
+line.  You need 4 columns, separated by whitespace:
+1- unique short name for your filter (this is what you'll use in SNOOPY).
+   you'll get a warning if you choose a name that's already taken.
+2- The file name for that filter
+3- The photometric zero-point for that filter
+4- The rest of the line is taken as a descriptive string, and can contain
+   spaces.
+
+The zeropoint (zp) is used to convert magnitudes to fluxes and is applied in the
+following way:
+
+mag = -2.5*log10(F) + zp
+F = photon flux 
+  = 1/(c*h) \int f_\lambda(\lambda) S_\lambda(\lambda) \lambda d\lambda
+
+  c = speed of light;  h = Planck's constant.
+
+You can start by setting zp = 0, then in SNOOPY, use the filter's compute_zpt
+member function to compute the zero-point.

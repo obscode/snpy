@@ -1,0 +1,8278 @@
+#LyX 1.6.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 345
+\begin_document
+\begin_header
+\textclass article
+\begin_preamble
+
+\usepackage{geometry}
+
+
+\geometry{verbose,letterpaper,tmargin=0.5in,bmargin=1.0in,lmargin=1in,rmargin=1in}
+
+\newcommand{\dmf}{$\Delta m_{15}\ $}
+\newcommand{\pygplot}{$\pi$-gplot}
+
+\newcommand{\apj}{{\rmfamily ApJ}}
+\newcommand{\pasp}{{\rmfamily PASP}}
+\newcommand{\apjl}{{\rmfamily ApJ}}
+\newcommand{\aj}{{\rmfamily AJ}}
+\end_preamble
+\use_default_options false
+\language english
+\inputencoding latin1
+\font_roman ae
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\paperfontsize 12
+\spacing single
+\use_hyperref false
+\papersize letterpaper
+\use_geometry true
+\use_amsmath 0
+\use_esint 0
+\cite_engine natbib_authoryear
+\use_bibtopic false
+\paperorientation portrait
+\paperwidth 8.5in
+\paperheight 11in
+\leftmargin 1in
+\topmargin 0.5in
+\rightmargin 1in
+\bottommargin 2in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\author "" 
+\author "" 
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Using SNPY
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+Soon to be officially renamed SNOOPY: SuperNovae in Object Oriented PYthon.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Author
+Chris Burns
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+The philosophy if SNPY is to provide both an interactive environment to
+ fit TypeIa supernova (SNIa) light-curves as well as a set of routines that
+ can be called within a scripting environment that would allow the user
+ to write automated fitting routines.
+ The goal is not to lock the user into one kind of method, like stretch,
+ 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+dmf
+\end_layout
+
+\end_inset
+
+ or what have you.
+ Rather, the idea is to provide generic tools and specific components of
+ established methods and let the user decide how best to fit the data.
+ In this way, the software can be thought more of as a laboratory environment
+ rather than a specific program.
+\end_layout
+
+\begin_layout Standard
+Given that this is a very modular way to program, it doesn't lend itself
+ very well to compiled languages.
+ So one has a choice of higher-level scripting languages: python, tcl, perl,
+ or even the IRAF cl.
+ In this case, Python was chosen.
+ There are many reasons for this.
+ First, I have the impression that Python is becoming more prevalent in
+ Astronomy (for example, some of the newer STSci routines in IRAF are only
+ provided through the python implementation of the cl: pyraf).
+ Second, python is designed from the ground up as an object-oriented (OOP)
+ language (unlike perl, tcl, IRAF cl or even IDL).
+ OOP is very well suited for large modular software packages.
+ Lastly, python has access to two very powerful numerical engines: scipy
+ and pyraf.
+ Scipy is a general-purpose package of scientific routines while pyraf gives
+ one access to the IRAF library of routines.
+ Together with a very large array of visualization and database modules,
+ python has everything needed to make this package work.
+ Python is also, in this author's opinion, the easiest and most intuitive
+ programming language to learn and debug.
+ The one thing python lacks is standardization, in the sense that there
+ is an overabundance of modules and solutions to specific problems.
+ In this instance, plotting and numerical arrays (vectors, matrices) have
+ many different solutions.
+ For plotting, I initially chose PGPLOT, as it has a long history in the
+ astronomical community.
+ However, it now appears that matplotlib is winning out as the most standard
+ plotting package for python, so I have integrated it in as well.
+ PGPLOT is still faster and more tested, so I recommend it, but if you prefer
+ matplotlib, you can use it instead (see installation instructions for selecting
+ plotting package).
+ For the arrays, I've chosen Numpy, which his now the de-facto array handling
+ package.
+\end_layout
+
+\begin_layout Standard
+Do you need to know Python to use SNPY? It depends what you want to do.
+ If you want to interactively fit light-curves, then you really don't need
+ to know how to program in Python.
+ If you want to write a script that automatically fits light-curves or get
+ at the underlying layers of the code then, yes, you need to learn Python.
+ Even if you don't want to program, knowing a bit of python syntax can really
+ help in the interactive shell.
+ A good place to get started with learning python is the python web page:
+ http://www.python.org 
+\begin_inset Flex URL
+status collapsed
+
+\begin_layout Plain Layout
+
+http://www.python.org
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+SNPY also uses ipython, an extended version of the python interactive shell.
+ This shell has many of its own features and tricks that you might find
+ useful.
+ More information on ipython can be found on its project web page: http://ipytho
+n.scipy.org 
+\begin_inset Flex URL
+status collapsed
+
+\begin_layout Plain Layout
+
+http://ipython.scipy.org
+\end_layout
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Section
+A Simple Example
+\end_layout
+
+\begin_layout Standard
+First, to start SNPY, you simply use the command snpy.
+ This is a script that starts up ipython and loads in the SNPY modules.
+ One important thing to keep in mind is that if you use the matplotlib graphical
+ interface and you are not using OSX, you need to pass -pylab to the snpy
+ command-line.
+ Otherwise, the graphs may not show up.
+\end_layout
+
+\begin_layout Standard
+To give an idea of what the software package looks like and how it behaves,
+ here is a quick session which shows loading the data, fitting a light-curve,
+ plotting the results and saving the parameters.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+ 
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+$ snpy -pylab
+\end_layout
+
+\begin_layout Plain Layout
+
+Python 2.5.4 (r254:67916, Aug 26 2009, 16:15:39)  
+\end_layout
+
+\begin_layout Plain Layout
+
+Type "copyright", "credits" or "license" for more information.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+IPython 0.8.4 -- An enhanced Interactive Python.
+ 
+\end_layout
+
+\begin_layout Plain Layout
+
+?         -> Introduction and overview of IPython's features.
+ %quickref -> Quick reference.
+ help      -> Python's own help system.
+ 
+\end_layout
+
+\begin_layout Plain Layout
+
+object?   -> Details about 'object'.
+ ?object also works, ?? prints more.
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+In[1]: s = get_sn('SN3331')
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+In[2]: s.summary()
+\end_layout
+
+\begin_layout Plain Layout
+
+------------------------------------------------------------------- 
+\end_layout
+
+\begin_layout Plain Layout
+
+SN SN3331 
+\end_layout
+
+\begin_layout Plain Layout
+
+z = 0.190 
+\end_layout
+
+\begin_layout Plain Layout
+
+ra= 34.56140 
+\end_layout
+
+\begin_layout Plain Layout
+
+dec= 0.79660 
+\end_layout
+
+\begin_layout Plain Layout
+
+Data in the following bands: Yc, r_s, i_s, g_s, 
+\end_layout
+
+\begin_layout Plain Layout
+
+Fit results (if any): 
+\end_layout
+
+\begin_layout Plain Layout
+
+Tmax = 53650.379 +/- 0.367 
+\end_layout
+
+\begin_layout Plain Layout
+
+dm15 = 1.156 +/- 0.024 
+\end_layout
+
+\begin_layout Plain Layout
+
+s = 1.000 +/- 0.000 
+\end_layout
+
+\begin_layout Plain Layout
+
+EBVhost = 0.106 +/- 0.025 
+\end_layout
+
+\begin_layout Plain Layout
+
+DM = 39.915 +/- 0.071 
+\end_layout
+
+\begin_layout Plain Layout
+
+NAXES 4096 4096 
+\end_layout
+
+\begin_layout Plain Layout
+
+NAXES 4096 4096
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+In [3]: s.plot() 
+\end_layout
+
+\begin_layout Plain Layout
+
+Out[3]: <pygplot.Panel instance at 0x17e0260>
+\end_layout
+
+\begin_layout Plain Layout
+
+In [4]: print s.r_s.t, s.r_s.mag 
+\end_layout
+
+\begin_layout Plain Layout
+
+[-15.00261608 -10.96844983 -10.96844983 -8.96844983 -6.01923108
+\end_layout
+
+\begin_layout Plain Layout
+
+6.98858142 6.99248767 12.97686267 14.95342517 16.04326892
+\end_layout
+
+\begin_layout Plain Layout
+
+17.96514392 19.05108142 22.93780017 26.95733142 29.94170642] 
+\end_layout
+
+\begin_layout Plain Layout
+
+[ 22.371 21.621 21.576 21.236 21.121 21.361 21.35 21.267 
+\end_layout
+
+\begin_layout Plain Layout
+
+21.647 21.441 21.847 21.655 21.88 22.011 22.263]
+\end_layout
+
+\begin_layout Plain Layout
+
+In [5]: s.fit(['g_s','r_s','i_s'], Tmax=s.Tmax) 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+In [6]: s.plot(single=1, dm=2, device='SN3331.ps/CPS') 
+\end_layout
+
+\begin_layout Plain Layout
+
+Out[6]: <pygplot.Plot instance at 0x29c9e68>
+\end_layout
+
+\begin_layout Plain Layout
+
+In [7]: s.updatesql()
+\end_layout
+
+\begin_layout Plain Layout
+
+In [8]: 
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+On input line 1, an instance of the 
+\family typewriter
+sn
+\family default
+ class
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+This used to be called the 
+\family typewriter
+super
+\family default
+ class in older versions, but 
+\family typewriter
+super
+\family default
+ has become a python keyword, so is off-limits now.
+\end_layout
+
+\end_inset
+
+ is created by giving the name of a supernova already in the database.
+ The data is retrieved from the mySQL server and loaded into the instance
+ variable 
+\family typewriter
+s
+\family default
+.
+ This object not only contains the photometric data for SN3331, it also
+ contains the fit parameters.
+ All the fitting, plotting, and utility functions are part of the instance.
+ Notice that in line 5 above, the fit function is part of the 
+\family typewriter
+s
+\family default
+ object.
+ Also notice that I restricted Tmax (time of maximum) to be the value already
+ in the instance (presumably, this would be from a previous fit).
+\end_layout
+
+\begin_layout Standard
+There are other classes besides the 
+\family typewriter
+sn
+\family default
+ class, which can be used inside SNPY.
+ For example, there is a 
+\family typewriter
+filter
+\family default
+ class that has data and functions relating to photometric band-passes.
+ There are also a couple of 
+\family typewriter
+template
+\family default
+ classes that can be used to generate light-curve templates (currently using
+ 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+dmf
+\end_layout
+
+\end_inset
+
+ as a parameter).
+ Here are a couple of examples:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+In [7] B = fset['B']
+\end_layout
+
+\begin_layout Plain Layout
+
+In [8] V = fset['V']
+\end_layout
+
+\begin_layout Plain Layout
+
+In [9] seds = getSED([1,2,3,4,5], version='H') 
+\end_layout
+
+\begin_layout Plain Layout
+
+In [10] Bmags = array([B.synthmag(sed) for sed in seds]) 
+\end_layout
+
+\begin_layout Plain Layout
+
+In [11] Vmags = array([V.synthmag(sed) for sed in seds]) 
+\end_layout
+
+\begin_layout Plain Layout
+
+In [12] t = dm15temp.template() 
+\end_layout
+
+\begin_layout Plain Layout
+
+In [13] t.mktemplate(1.5) 
+\end_layout
+
+\begin_layout Plain Layout
+
+In [14] BminusV = t.B - t.V
+\end_layout
+
+\begin_layout Plain Layout
+
+In [15] BminusVsynth = Bmags - Vmags
+\end_layout
+
+\begin_layout Plain Layout
+
+In [16] deltaBV = BminusV[16:21] - BminusVsynth
+\end_layout
+
+\begin_layout Plain Layout
+
+In [17] print deltaBV 
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Here, in the first two lines, we've setup some filters (B and V).
+ The structure 
+\family typewriter
+fset
+\family default
+ is the filter set and contains many different filters (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Filters-and-Spectra"
+
+\end_inset
+
+).
+ Then, we retrieve Eric Hsiao's template for days 1 through 5 after maximum.
+ In lines 10 and 11, we compute synthetic magnitudes for each day and generate
+ a list (this is an example where knowing python syntax can help a lot).
+ We use the array function to ensure that these are python arrays, which
+ allows us to do math on them later.
+ Line 12 constructs a template instance and line 13 generates a template
+ with 
+\begin_inset Formula $\Delta m_{15}=1.5$
+\end_inset
+
+.
+ We can then compare the B-V color obtained with Prieto's light-curve templates
+ and what you get by making synthetic magnitudes from Eric's SED template.
+ Note that the template is defined from day -15, so element 15 is day 0,
+ 16 is day 1, etc.
+\end_layout
+
+\begin_layout Section
+Data Structure
+\end_layout
+
+\begin_layout Standard
+Python is object-oriented and SNPY has been designed
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+If you can call this cobbled-together-late-at-night-while-observing code
+ a design.
+\end_layout
+
+\end_inset
+
+ with this in mind.
+ As such, the data are organized into a hierarchical structure of objects.
+ The base (or parent) object is the supernova itself (the 
+\family typewriter
+sn
+\family default
+ class).
+ It contains scalar variables like coordinates, redshift, Milky-Way reddening,
+ etc.
+ It has functions for plotting, fitting, and saving itself (see section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Data-Persistance"
+
+\end_inset
+
+).
+ It has variables that control the way the light-curves are fit.
+ 
+\end_layout
+
+\begin_layout Standard
+The 
+\family typewriter
+sn
+\family default
+ instance also contains references to a number of light-curves, one for
+ each filter (the 
+\family typewriter
+lc
+\family default
+ class), which are stored in a python dictionary called 
+\family typewriter
+data
+\family default
+.
+ The dictionary is indexed by the observed filter name.
+ These lc objects contain the data (time, magnitude, flux, errors, etc),
+ as well as functions for plotting, interpolation, and other useful tasks
+ that apply to one light-curve at a time.
+ Each 
+\family typewriter
+lc
+\family default
+ object also has a reference to a 
+\family typewriter
+filter
+\family default
+ object that defines the filter response, the zero-point, and lots of other
+ goodies.
+\end_layout
+
+\begin_layout Standard
+Lastly, the sn instance also has an object that defines the model that will
+ be used to fit the data.
+ It holds the parameter values, errors, 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+, etc.
+ It also does all the heavy lifting when fitting the model to the data.
+ Because the model is an abstract object, it can be replaced with other
+ model objects transparently (so long as the replacement model object conform
+ to the structure expected by SNPY; see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Model-class"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+The outline of the major objects is show in figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Object-structure"
+
+\end_inset
+
+.
+ This is not exhaustive
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename object_structure.001.png
+	lyxscale 50
+	width 4in
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Object structure in SNPY.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Object-structure"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Data Persistence
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Data-Persistance"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The current version of 
+\family typewriter
+SNPY
+\family default
+ gets and saves its data from three possible sources: a 
+\family typewriter
+mySQL
+\family default
+ database, a file that was created using the 
+\family typewriter
+sn.save()
+\family default
+ function, or a flat text file of the proper format.
+ A single convenience function, 
+\family typewriter
+get_sn()
+\family default
+ can be used to load a sn object from any of these sources.
+ 
+\end_layout
+
+\begin_layout Standard
+For large datasets, I highly recommend using the mySQL solution: it allows
+ for data persistence that is kept separate from one user/computer combination.
+ The major downside is you have to install mySQL (not too bad) and setup
+ a schema which matches what SNPY expects (still not too bad) and possibly
+ learning mySQL in the first place (well, you always 
+\emph on
+meant
+\emph default
+ to learn it, didn't you? This is your excuse).
+ I'm not going to explain how to install mySQL and setup a schema, that's
+ best left for the SQL documentation.
+ The required schema is detailed in Appendix 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:mySQL-Schema"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+If you don't want the bother of SQL, then you can load initial data from
+ a flat ascii data file (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:flatfile"
+
+\end_inset
+
+).
+ When you're done fitting and want to save the sn object, with all its state
+ variables, simply use the 
+\family typewriter
+sn.save('filename')
+\family default
+ function to save the 
+\family typewriter
+sn
+\family default
+ instance as a python pickle file.
+ You can later load it in using 
+\family typewriter
+get_sn('filename')
+\family default
+.
+ 
+\end_layout
+
+\begin_layout Section
+Fitting Light-curves
+\end_layout
+
+\begin_layout Standard
+All the light-curve fitting is done through a member function of the 
+\family typewriter
+sn
+\family default
+ class: 
+\family typewriter
+fit().
+
+\family default
+ You basically tell 
+\family typewriter
+fit()
+\family default
+ which filters to fit and which parameters to hold constant.
+ This function sets up some initial book-keeping, and then hands off the
+ work to a 
+\family typewriter
+model
+\family default
+ instance.
+ The 
+\family typewriter
+model
+\family default
+ class defines the model that will be used to fit the light-curves.
+ I did it this way so that adding new models (or modifying existing ones)
+ would be easier.
+ SNPY comes with two built-in models: 
+\family typewriter
+EBV_model
+\family default
+ and 
+\family typewriter
+max_model
+\family default
+, which I will explain in the next two sections.
+ At any time, you can switch between the two by using the 
+\family typewriter
+choose_model()
+\family default
+ member function of the 
+\family typewriter
+sn
+\family default
+ class (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Other-Useful-functions"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsection
+EBV_model
+\end_layout
+
+\begin_layout Standard
+This light-curve model is a variation of that given by 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2006ApJ...647..501P"
+
+\end_inset
+
+.
+ We compare the observed data in 
+\begin_inset Formula $N$
+\end_inset
+
+ filters to the following model:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \begin{eqnarray*}
+m_{X}\left(t-t_{max}\right) & = & T_{Y}\left(\left(t^{\prime}-t_{max}\right)/(1+z),\Delta m_{15}\right)+M_{Y}\left(\Delta m_{15}\right)+\mu+R_{X}E\left(B-V\right)_{gal}+\\
+ &  & R_{Y}E\left(B-V\right)_{host}+K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z),E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $m_{X}$
+\end_inset
+
+ is the observed magnitude in band 
+\begin_inset Formula $X$
+\end_inset
+
+, 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\noun off
+\color none
+
+\begin_inset Formula $t_{max}$
+\end_inset
+
+ is the time of B maximum, 
+\begin_inset Formula $\Delta m_{15}$
+\end_inset
+
+ is the decline rate parameter
+\family default
+\series default
+\shape default
+\emph default
+\bar default
+ 
+\size default
+\noun default
+
+\begin_inset CommandInset citation
+LatexCommand citep
+key "1993ApJ...413L.105P"
+
+\end_inset
+
+, 
+\begin_inset Formula $M_{Y}$
+\end_inset
+
+ is the absolute magnitude in filter 
+\begin_inset Formula $Y$
+\end_inset
+
+ in the rest-frame of the supernova, 
+\begin_inset Formula $E(B-V)_{gal}$
+\end_inset
+
+ and 
+\begin_inset Formula $E(B-V)_{host}$
+\end_inset
+
+ are the reddening due to galactic foreground and host galaxy, respectively,
+ 
+\begin_inset Formula $R_{X}$
+\end_inset
+
+ and 
+\begin_inset Formula $R_{Y}$
+\end_inset
+
+ are the total-to-selective absorptions for filters 
+\begin_inset Formula $X$
+\end_inset
+
+ and 
+\begin_inset Formula $Y$
+\end_inset
+
+, respectively, 
+\begin_inset Formula $K_{XY}$
+\end_inset
+
+ is the cross-band k-correction
+\size largest
+\noun off
+ 
+\size default
+\noun default
+from rest-frame 
+\begin_inset Formula $X$
+\end_inset
+
+ to observed filter 
+\begin_inset Formula $Y$
+\end_inset
+
+.
+ Note that the k-corrections depend on the epoch and 
+\emph on
+can
+\emph default
+ depend on the host and galaxy extinction (as these modify the shape of
+ the spectral template).
+ In the fitting, one has the choice of the spectral template of 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2002PASP..114..803N"
+
+\end_inset
+
+ or 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2007ApJ...663.1187H"
+
+\end_inset
+
+.
+ The latter is the default.
+ You can choose to allow the K-corrections to vary during the fit, keep
+ them fixed, or not use them at all.
+ See the parameters for the 
+\family typewriter
+fit()
+\family default
+ function in section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Fit"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The template 
+\begin_inset Formula $T\left(t,\Delta m_{15}\right)$
+\end_inset
+
+ can be generated from the code of  
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2006ApJ...647..501P"
+
+\end_inset
+
+ or Burns et al.
+ (in prep).
+ In the former case, you will be fitting to rest-frame 
+\begin_inset Formula $B_{s}V_{s}R_{s}I_{s}$
+\end_inset
+
+
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+The 's' subscript refers to 'standard', which is to say the Bessel filters
+ from 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "Stritzinger2005"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+ while in the latter case, you can fit to 
+\begin_inset Formula $uBVgriYJH$
+\end_inset
+
+ from the CSP data 
+\begin_inset CommandInset citation
+LatexCommand citep
+key "Folatelli2009"
+
+\end_inset
+
+.
+ You can mix and match which template generator you use: it is all a matter
+ of which filter you choose for the 
+\family typewriter
+restbands
+\family default
+ instance variable (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Doing-the-Fit"
+
+\end_inset
+
+).
+ In all, this model fits 4 parameters: 
+\family typewriter
+Tmax
+\family default
+, 
+\family typewriter
+dm15
+\family default
+, 
+\family typewriter
+EBVhost
+\family default
+, and 
+\family typewriter
+DM
+\family default
+.
+\end_layout
+
+\begin_layout Standard
+Note that to determine the host reddening, you need to fit at least two
+ distinct 
+\emph on
+restframe
+\emph default
+ filters.
+ For now, I've left the galactic and host reddening laws (
+\begin_inset Formula $R_{X}$
+\end_inset
+
+ and 
+\begin_inset Formula $R_{Y}$
+\end_inset
+
+) as member variables rather than parameters to be fit
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+So far, data I've analyzed hasn't been good enough to distinguish between
+ reddening laws.
+\end_layout
+
+\end_inset
+
+.
+ This could change in the future.
+\end_layout
+
+\begin_layout Subsection
+max_model
+\end_layout
+
+\begin_layout Standard
+An alternative to assuming some kind of relationship between the different
+ filters (i.e., some kind of reddening law as is done in the 
+\family typewriter
+EBV_model
+\family default
+), one can simply fit the maximum magnitude of each light-curve.
+ This is how the 
+\family typewriter
+max_model
+\family default
+ model works.
+ It uses the same light-curve templates as 
+\family typewriter
+EBV_model
+\family default
+, but instead fits the following model:
+\begin_inset Formula \begin{eqnarray*}
+m_{X}\left(t-t_{max}\right) & = & T_{Y}\left(\left(t^{\prime}-t_{max}\right)/(1+z),\Delta m_{15}\right)+m_{Y}+R_{X}E\left(B-V\right)_{gal}+\\
+ &  & K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z),E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $m_{Y}$
+\end_inset
+
+, the peak magnitude in filter 
+\begin_inset Formula $Y$
+\end_inset
+
+is now a parameter.
+ Of course, depending on the number of filters you fit, you will have that
+ many 
+\begin_inset Formula $m_{Y}$
+\end_inset
+
+ parameters.
+ Note that K-corrections and Milky-way extinction are performed exactly
+ as in the 
+\family typewriter
+EBV_model
+\family default
+ case.
+ Therefore, for 
+\begin_inset Formula $N$
+\end_inset
+
+ filters, max_model will have 
+\begin_inset Formula $N+2$
+\end_inset
+
+ parameters: 
+\family typewriter
+Tmax
+\family default
+, 
+\family typewriter
+dm15
+\family default
+, and 
+\begin_inset Formula $N$
+\end_inset
+
+ 
+\emph on
+f
+\family typewriter
+\emph default
+max
+\family default
+, where 
+\emph on
+f
+\emph default
+ is the rest-band filter name (so if, for instance, you fit an observed
+ light-curve to restframe 
+\begin_inset Formula $B$
+\end_inset
+
+, there will be a 
+\family typewriter
+Bmax
+\family default
+ parameter).
+\end_layout
+
+\begin_layout Standard
+
+\series bold
+NOTE:
+\series default
+ Please be aware that any non-linear fitter will only find a 
+\emph on
+local
+\emph default
+ minimum in 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+.
+ It is up to you, the user, to try different starting points in parameter
+ space and see which one gives the overall best-fit.
+ After each fit, the member variable 
+\family typewriter
+rchisq
+\family default
+ is updated with the reduced-
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+.
+ You can therefore use this to discriminate between different solutions.
+\end_layout
+
+\begin_layout Subsection
+K-corrections and Reddening coefficients
+\end_layout
+
+\begin_layout Standard
+Regardless of the method used, there are two generic problems when fitting
+ light-curves.
+ First, because you are observing a SN that is at some redshift, the observed
+ spectral energy distribution (SED) is shifted to the red compared to what
+ would be observed at zero redshift.
+ As as a result, the filters are sampling a bluer part of the SNIa spectrum.
+ K-corrections are needed to take this into account and we therefore need
+ either observed spectra of the SN or some kind of SED template to make
+ this calculation.
+ We also need to take into account, if possible, of any factors that might
+ alter the shape of the SED (like reddening).
+ Once the SED is known, it is straightforward to compute the K-correction
+ (see 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2002PASP..114..803N,2007ApJ...663.1187H"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+Second, because the SED of a SNIa is significantly different from a stellar
+ SED and also varies with time, the ratio of selective to total absorption
+ (
+\begin_inset Formula $R_{X}$
+\end_inset
+
+) is going to depend on the redshift of the SN, the epoch of observation,
+ and the amount of host reddening (and any other factor that modifies the
+ intrinsic SED).
+ Once the SED is known (or assumed), the reddening coefficient 
+\begin_inset Formula $R_{X}$
+\end_inset
+
+ can be deduced.
+\end_layout
+
+\begin_layout Standard
+The basic problem here is that we need to know the observed SED as well
+ as possible.
+ Currently, SNPY simply takes the SED of 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2002PASP..114..803N"
+
+\end_inset
+
+ or 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2007ApJ...663.1187H"
+
+\end_inset
+
+ (user's choice), as the SED.
+ This is used to compute initial k-corrections that are simply a function
+ of time.
+ If reddening information is known (from a fit value of EBVhost, for instance),
+ the reddening law of 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "1989ApJ...345..245C"
+
+\end_inset
+
+, further modified by 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "1994ApJ...422..158O"
+
+\end_inset
+
+ is applied to the SED before computing the K-correction or reddening coefficien
+t.
+ After this initial fit, the 
+\begin_inset Formula $N-1$
+\end_inset
+
+ colors of the SN are computed and these can be used to warp the SED so
+ that synthetic colors obtained from the SED match the observed colors form
+ the fit (see 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2007ApJ...663.1187H"
+
+\end_inset
+
+ ).
+ The hope is that this 
+\begin_inset Quotes eld
+\end_inset
+
+warped
+\begin_inset Quotes erd
+\end_inset
+
+ SED is the best guess at the correct SED.
+ This step in the fit process may be skipped by using the 
+\family typewriter
+mangle=0
+\family default
+ argument to the 
+\family typewriter
+fit()
+\family default
+ function.
+\end_layout
+
+\begin_layout Subsection
+Doing the Fit
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Doing-the-Fit"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The 
+\family typewriter
+fit()
+\family default
+ function is a member of the 
+\family typewriter
+sn
+\family default
+ class.
+ The only required argument is a list of filters to fit (specified as a
+ python list of strings).
+ Following this argument, you can specify values for any of the parameters,
+ which will keep them fixed during the iteration: 
+\family typewriter
+Tmax, dm15, s, EBVhost, DM
+\family default
+, and any of the
+\family typewriter
+ fmax
+\family default
+.
+ By default, the fitter will try to fit the observed filter set with the
+ same rest-band filters.
+ It is therefore important that your filter names match the filters provided
+ by the templates: 
+\family typewriter
+Bs,Vs,Rs,Is
+\family default
+ (for 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2006ApJ...647..501P"
+
+\end_inset
+
+ templates) or 
+\family typewriter
+u,B,V,g,r,i,Y,J,H
+\family default
+ (for CSP templates).
+ If your observed filter does not match any of these (either because you
+ are working at high-z and want to do a cross-band K-correction, or are
+ working in a different photometric system), you need to specify the 
+\family typewriter
+restbands
+\family default
+ for each observed filter (
+\family typewriter
+restbands
+\family default
+ is a member variable that acts like a python dictionary and maps observed
+ filters to rest filters).
+ Here is a short example:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+In [1] s = get_sn('04D1oh')
+\end_layout
+
+\begin_layout Plain Layout
+
+In [2] s.restbands['g_m'] = 'B'   ;#  Fit observed g_m data with 'B' (CSP)templat
+e
+\end_layout
+
+\begin_layout Plain Layout
+
+In [3] s.fit(['g_m'], EBVhost=0, dm15=1.1)
+\end_layout
+
+\begin_layout Plain Layout
+
+In [4] s.fit(['g_m'], EBVhost=0)
+\end_layout
+
+\begin_layout Plain Layout
+
+In [5] s.restbands['r_m'] = 'V';  s.restbands['i_m'] = 'r';  s.restbands['Jc']
+ = 'i'
+\end_layout
+
+\begin_layout Plain Layout
+
+In [6] s.fit(['g_m','r_m','i_m','Jc'], dm15=s.dm15, Tmax=s.Tmax)
+\end_layout
+
+\begin_layout Plain Layout
+
+In [7] s.fit(['g_m','r_m','i_m','Jc'])
+\end_layout
+
+\begin_layout Plain Layout
+
+In [8] save(s, "my_lovely_fit.snpy")
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+On line 1, we make a new instance.
+ On line 3, we decide to fit the megacam g filter with a rest-frame CSP
+ B template.
+ On line 3, we fit only the g_m filter and therefore restrict 
+\family typewriter
+EBVhost
+\family default
+ to 0 (since we don't have any color information).
+ We can also fix 
+\begin_inset Formula $\Delta m_{15}=1.1$
+\end_inset
+
+ for a first attempt at a fit (this can help if you have pretty low S/N
+ data).
+ On line 4, we let 
+\begin_inset Formula $\Delta m_{15}$
+\end_inset
+
+ go free.
+ On line 5, we specify more rest-band filters.
+ On line 6 we add more filters to the fit and allow the host extinction
+ to vary, though keeping 
+\begin_inset Formula $\Delta m_{15}$
+\end_inset
+
+ and 
+\begin_inset Formula $t_{max}$
+\end_inset
+
+ fixed at the values determined from the previous fit (all fitted parameters
+ and their errors are saved as member data of the 
+\family typewriter
+sn
+\family default
+ instance).
+ On line 7, we allow all parameters to vary.
+ On line 8, we save the fit to a file that can be later loaded into SNPY
+ (using something like 
+\family typewriter
+s=load(filename)
+\family default
+).
+\end_layout
+
+\begin_layout Standard
+The fit is performed using the Lavenberg-Marquardt algorithm for minimizing
+ 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+.
+ Unless you specify otherwise, all the fitting is done in flux units (SNPY
+ takes care of converting magnitudes to fluxes, if needed, for both the
+ observations and models).
+ Note that because the Lavenberg-Marquardt algorithm is an non-linear least-squa
+res solving routine, it is not guaranteed to find the global minimum 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+.
+ It is your responsibility to inspect the fit to make sure it got it right.
+\end_layout
+
+\begin_layout Standard
+Now that you have seen the basic workings, we can now move on to the details
+ of each class so that you can build your own routines inside SNPY, or write
+ python scripts that use these classes to fit light-curves.
+ 
+\end_layout
+
+\begin_layout Subsection
+Getting Help
+\end_layout
+
+\begin_layout Standard
+Python has an internal help system which utilizes comments at the beginning
+ of functions and classes (so-called docstrings).
+ Simply use the built-in help() function to get help on an item.
+ Here are some examples (output is not shown to save space):
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+In [1] help(sn)
+\end_layout
+
+\begin_layout Plain Layout
+
+In [2] help(sn.fit)
+\end_layout
+
+\begin_layout Plain Layout
+
+In [3] help(sn.plot)
+\end_layout
+
+\begin_layout Plain Layout
+
+In [4] help(lc)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Line 1 gets help about the entire 
+\family typewriter
+sn
+\family default
+ class, which will list all the functions defined therein, including internal
+ ones that are not meant to be used by end users (but of course are available
+ to be hacked, but may lack good documentation).
+ Lines 2 and 3 get more specific help on individual member functions.
+ Line 4 gets help on the 
+\family typewriter
+lc
+\family default
+ (light-curve) class.
+ You can ask for help on any python object (including variables).
+\end_layout
+
+\begin_layout Section
+The sn Object
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:The-super-Object"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Constructor and its options
+\end_layout
+
+\begin_layout Standard
+Supernova objects are created using the 
+\family typewriter
+sn
+\family default
+ constructor or using the 
+\family typewriter
+get_sn()
+\family default
+ convenience function:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+ 
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+s = sn(name, z=None, ra=None, dec=None)
+\end_layout
+
+\begin_layout Plain Layout
+
+s = get_sn('my_favorite_SN.snpy')
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The optional arguments 
+\family typewriter
+z
+\family default
+, 
+\family typewriter
+ra
+\family default
+, and 
+\family typewriter
+dec
+\family default
+ are used if the supernova does not exist in the sql database.
+ The redshift 
+\family typewriter
+z
+\family default
+ is required to do the fitting (obviously) and 
+\family typewriter
+ra
+\family default
+, 
+\family typewriter
+dec
+\family default
+ are needed to compute the galactic extinction from the Schlegel maps.
+\end_layout
+
+\begin_layout Subsection
+Creating an object from a flat file
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:flatfile"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If you don't have or want an SQL database, you can load in data from a flat
+ file.
+ To do this, simply create a text-file with the following format:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+{name} {z} {ra} {decl}
+\end_layout
+
+\begin_layout Plain Layout
+
+filter {filter1}
+\end_layout
+
+\begin_layout Plain Layout
+
+{Date1} {magnitude1} {error1}
+\end_layout
+
+\begin_layout Plain Layout
+
+{Date2} {magnitude2} {error2}
+\end_layout
+
+\begin_layout Plain Layout
+
+...
+\end_layout
+
+\begin_layout Plain Layout
+
+{DateN} {magnitudeN} {errorN}
+\end_layout
+
+\begin_layout Plain Layout
+
+filter {filter2}
+\end_layout
+
+\begin_layout Plain Layout
+
+...
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The items in {}'s are to be filled in.
+ The first line gives the name, redshift, and right-ascension and declination
+ in decimal degrees.
+ Next, you specify the name of a filter, followed by data points, one per
+ line.
+ Then you can input another filter and so on.
+ The filter names have to be recognized by SNPY (use 
+\family typewriter
+fset.list_filters()
+\family default
+ to list them).
+ See section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:default_filters"
+
+\end_inset
+
+ for instructions on how to add custom filters.
+ Once you've made this file, you simply use 
+\family typewriter
+get_sn()
+\family default
+ to make it into a 
+\family typewriter
+sn
+\family default
+ object.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+In[15]:  SN = get_sn('name_of_the_file.dat')
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatime}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Member variables
+\end_layout
+
+\begin_layout Standard
+The 
+\family typewriter
+sn
+\family default
+ object has a number of member variables that do one of 3 things: 1) contain
+ data, 2) define a LC fit, or 3) modify the instances behavior.
+ Each of these is explained in the following sections.
+ A member variable is accessed as 
+\family typewriter
+instance.variable
+\family default
+.
+ For instance:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+In[20]:  SN = sn('SN3241')
+\end_layout
+
+\begin_layout Plain Layout
+
+<output supressed>
+\end_layout
+
+\begin_layout Plain Layout
+
+In[21]:  Tmax = SN.Tmax
+\end_layout
+
+\begin_layout Plain Layout
+
+In[22]:  first_B_epoch = SN.B.MJD[0] - Tmax
+\end_layout
+
+\begin_layout Plain Layout
+
+In[23]:  Max_B_obs = max(SN.B.mag)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Data
+\end_layout
+
+\begin_layout Standard
+A 
+\family typewriter
+sn
+\family default
+ instance has a number of member variables that are not meant to be modified
+ directly: they hold data about the SN or the light-curve data.
+ That doesn't mean you 
+\emph on
+can't
+\emph default
+ modify it, but my philosophy has been to leave the observed data alone
+ and build everything into the model.
+ The following table lists these variables and a short explanation:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Tabular
+<lyxtabular version="3" rows="13" columns="3">
+<features>
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="left" valignment="top" width="75col%">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Variable
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+type
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Description
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+z
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Heliocentric redshift of the Supernova
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+The redshift is used to model the time-dilation, shifting of the SEDs, and
+ computing the K-corrections.
+ You should therefore use the heliocentric redshift of the SN, and 
+\emph on
+not
+\emph default
+ the CMB redshift.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+ra
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Right Ascension in decimal degrees
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+decl
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Declination in decimal degrees
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+data
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dictionary
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Holds the light-curve instances.
+ E.g., 
+\family typewriter
+s.data['B']
+\family default
+ is the B-band LC data instance.
+ See lc class below.
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+model
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+model
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The model instance used to do the fitting (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Model-class"
+
+\end_inset
+
+).
+ This can be changed either by hand or by using 
+\family typewriter
+self.choose_model()
+\family default
+ function (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Other-Useful-functions"
+
+\end_inset
+
+).
+ 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+bands
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+list
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A list of strings corresponding to the observed bands defined in 
+\family typewriter
+data
+\family default
+.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+filter
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+lc
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The LC data instance for band filter.
+ For example, 
+\family typewriter
+s.B
+\family default
+ is the same as 
+\family typewriter
+s.data['B']
+\family default
+.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+EBVgal
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The Milky-way 
+\begin_inset Formula $E\left(B-V\right)$
+\end_inset
+
+ from the Schlegel maps.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+e_EBVgal
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Error in 
+\family typewriter
+EBVgal
+\family default
+.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+ks
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dictionary
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A dictionary of computed k-corrections.
+ The index is the filter name, the value is an array of k-corrections, one
+ for each observed epoch.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+parameter
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Any of the parameters from the model.
+ For example, 
+\family typewriter
+s.dm15
+\family default
+ is equivalent to 
+\family typewriter
+s.model.parameters['dm15']
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+e
+\emph on
+_parameter
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Error in any of the model parameters.
+ For example, s.e_Tmax is equivalent to s.model.errors['Tmax']
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Data member variables
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:sn-member-variables"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Note that some of the member data are themselves instances of other classes,
+ most notably the 
+\family typewriter
+lc
+\family default
+ (light-curve) class and 
+\family typewriter
+model
+\family default
+ class, which are covered in sections 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Lightcurve-class"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Model-class"
+
+\end_inset
+
+, respectively.
+\end_layout
+
+\begin_layout Subsubsection
+Proxy Variables
+\end_layout
+
+\begin_layout Standard
+A number of variables that belong to other classes/structures can be accessed
+ directly from the sn instance.
+ For instance, you could refer to the B 
+\family typewriter
+lc
+\family default
+ instance in two ways: 
+\family typewriter
+s.B
+\family default
+ or 
+\family typewriter
+s.data['B']
+\family default
+.
+ You can also refer to the parameters 
+\family typewriter
+Tmax
+\family default
+ of the current model in the following three ways: 
+\family typewriter
+s.Tmax
+\family default
+ or 
+\family typewriter
+s.model.Tmax
+\family default
+ or 
+\family typewriter
+s.model.parameters['Tmax']
+\family default
+.
+ The last cases are the 'real' locations; the others are simply re-directs
+ that were added for convenience.
+ The re-directs are listed in table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:sn-member-variables"
+
+\end_inset
+
+ in italics.
+\end_layout
+
+\begin_layout Subsubsection
+Behavior-Modifying Variables
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Behaviour-Modifying-Variables"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The member variables that modify how the instance behaves are listed in
+ table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:behave_var"
+
+\end_inset
+
+.
+ They are mostly to do with how the data are fit and plotted.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Tabular
+<lyxtabular version="3" rows="12" columns="3">
+<features>
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="left" valignment="top" width="75col%">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Name
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+type
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Description
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+filter_order
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+list
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A list of strings corresponding to the order in which the filters should
+ be plotted.
+ Also useful if you want to prevent data from being plotted (simply omit
+ the filter)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+xrange,yrange
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+list
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+X and Y range to plot.
+ Example: 
+\family typewriter
+s.xrange = [-20,100]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Rv_host
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Host reddening law (default: 3.1)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Rv_gal
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Milky Way reddening law (default: 3.1)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+fit_mag
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+boolean
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+If true (1), fit in magnitude space, otherwise (0), fit in flux space.
+ Default: 0
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dm15_prior
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+boolean
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+If true (1), apply a sharp prior to keep 
+\begin_inset Formula $\Delta m_{15}$
+\end_inset
+
+ in the range [0.83,1.93].
+ This will keep the fitter from wandering off where the templates are not
+ defined.
+ Default: 1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+do_rtrue
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+boolean
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Compute 
+\begin_inset Formula $R_{true}$
+\end_inset
+
+ rather than just use 
+\begin_inset Formula $R_{v}$
+\end_inset
+
+? Default: 0 Caution: until I re-write this in C, this is going to be VERY
+ slow.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+rest-bands
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dictionary
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A dictionary, indexed by observed band with value corresponding rest-band.
+ Used to specify which template is fit to each observed filter.
+ Example: 
+\family typewriter
+s.rest-bands['u'] = 'B'
+\family default
+ means fit observed band u with B-band template.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+replot
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+boolean
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Replot the LC's after fitting or change in parameter? Default: 1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+quiet
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+boolean
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Keep it quiet (non-verbose output)? Default: 1
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+k_version
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+string
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Which SED template to use: 'H3' for Eric Hsiao's latest, 'N' for Peter Nugent,
+ '91bg' for Peter Nugent's 91bg SED.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Behavior modifying variables.
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:behave_var"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Member Functions
+\end_layout
+
+\begin_layout Standard
+These are the functions that you will use to fit light-curves, get information
+ about the fit, plot the data, etc.
+ Each function has explicit arguments (some mandatory, some optional).
+ Also, some of the member variables will alter how a function works (see
+ section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Behaviour-Modifying-Variables"
+
+\end_inset
+
+).
+ The most important functions are listed first, each with its own subsection,
+ then a final section has the less important, but useful functions.
+ Some functions are not listed as they are internal to the class.
+ Read the code if you want details about any of the inner workings.
+\end_layout
+
+\begin_layout Subsubsection
+Plot
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+\series bold
+plot(xrange=None, yrange=None, device='10/XSERVE', title=None, interactive=0,
+ single=0, dm=1, fsize=1.0, linewidth=3, symbols=None, colors=None, relative=0,
+ legend=1, mask=0, label_bad=1)
+\end_layout
+
+\begin_layout Standard
+This function simply plots the data to the screen (or other PGPLOT device
+ if requested).
+ All the arguments are optional and change the behavior of the plot.
+ You can specify 
+\family typewriter
+xrange
+\family default
+ and 
+\family typewriter
+yrange
+\family default
+ to modify the extent of the plot.
+ You can output to postscript file by specifying 
+\family typewriter
+device=
+\begin_inset Quotes erd
+\end_inset
+
+somefile.ps/CPS
+\begin_inset Quotes erd
+\end_inset
+
+
+\family default
+ (see your local PGPLOT documentation for what devices are available).
+ You can give the plot a title by providing a string to that argument, change
+ the line width and default symbol size with 
+\family typewriter
+linewidth
+\family default
+ and 
+\family typewriter
+fsize
+\family default
+, respectively.
+ 
+\end_layout
+
+\begin_layout Standard
+If you specify 
+\family typewriter
+interactive=1
+\family default
+, then the plot is interactive
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+This only applies to PGPLOT plots.
+ If you are using matplotlib, the plots are always interactive and there
+ is no need to 
+\begin_inset Quotes eld
+\end_inset
+
+quit
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+ and accepts the following key bindings when the mouse is over the plot:
+\end_layout
+
+\begin_layout Itemize
+click: print out x-y coordinates to the screen
+\end_layout
+
+\begin_layout Itemize
+'x' and 'y': Change the xrange and yrange, respectively (you need to click
+ twice)
+\end_layout
+
+\begin_layout Itemize
+'b': Change the xrange and yrange by dragging out a box (you need to click
+ twice)
+\end_layout
+
+\begin_layout Itemize
+'z' and 'Z': Zoom in and out, respectively
+\end_layout
+
+\begin_layout Itemize
+right-click: re-center the plot's view at the mouse position
+\end_layout
+
+\begin_layout Standard
+If you specify 
+\family typewriter
+single=1
+\family default
+, then all the filters are plotted on the same graph, with a magnitude offset
+ of 
+\family typewriter
+dm
+\family default
+ between them.
+\end_layout
+
+\begin_layout Standard
+You can modify the colors and symbols used for each filter by passing a
+ dictionary of filter-value pairs.
+ For example, 
+\family typewriter
+colors={'B':'blue', 'R':'red', 'I':'orange'}
+\family default
+ and 
+\family typewriter
+symbols={'B':1, 'R':2, 'I':3}.
+
+\family default
+ See the PGPLOT documentation for the number-symbol combinations or matplotlib
+ documentation for symbols and colors.
+\end_layout
+
+\begin_layout Subsubsection
+Fit
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Fit"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+\series bold
+fit(bands, {parameter values}, kcorr=1, mangle=1, method=)
+\end_layout
+
+\begin_layout Standard
+This function is the heart of the software: fitting a light-curve to the
+ data by minimizing 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+.
+ The only required argument is 
+\family typewriter
+bands
+\family default
+, a list of filters to fit.
+ So if, for example, you had data in B, V, r' (Sloan r), Jc, and Yc, you
+ would specify ['B','V','r_s','Jc','Yc'] as the first argument.
+ This will simultaneously fit the data in these filters to templates specified
+ in the rest-bands member variable.
+ So, if 
+\family typewriter
+restbands
+\family default
+={'B':'B', 'V':V', 'r_s':'R', 'Jc':'I', 'Yc':'I'}, then the data in B would
+ be fit with a B template, V with a V template, r_s with an R template,
+ Jc with an I template and Yc with an I template (not that you'd really
+ want to do this).
+ 
+\end_layout
+
+\begin_layout Standard
+The arguments {parameter values} are where you assign values to parameters
+ of the model in order to keep them fixed.
+ If a parameter is not specified, it is free to vary.
+ The current values are always used as starting points.
+ Consult the model documentation to find out what parameters there are.
+\end_layout
+
+\begin_layout Standard
+The remaining arguments are:
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $ $
+\end_inset
+
+
+\family typewriter
+kcorr
+\family default
+: If true, compute k-corrections after an initial fit to find the time of
+ maximum, then fit again.
+ If you want more control over how this is done, set 
+\family typewriter
+kcorr=0
+\family default
+, run 
+\family typewriter
+kcorr()
+\family default
+ manually, then re-fit again with 
+\family typewriter
+kcorr=0
+\family default
+.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+mangle
+\family default
+: If true, the current model of the photometry is used to construct colors
+ as a function of time.
+ The SNIa SED is 
+\begin_inset Quotes eld
+\end_inset
+
+mangled
+\begin_inset Quotes erd
+\end_inset
+
+ to match these colors before the k-corrections are computed.
+\end_layout
+
+\begin_layout Subsubsection
+Making k-corrections by hand
+\end_layout
+
+\begin_layout Standard
+
+\family typewriter
+\series bold
+kcorr(bands=None, mbands=None, mangle=1, interp=1, use_model=0, min_filter_sep=4
+00, **mopts))
+\end_layout
+
+\begin_layout Standard
+This function allows the user to compute k-corrections that are decoupled
+ from the fitting procedure (you might want to do this to have more control
+ over the k-corrections or to play around with the arguments without re-fitting
+ each time).
+ At its simplest (mangle=0), simply use the SNIa SEDs and filter functions
+ to compute k-corrections.
+ If mangle=1, then there are more options.
+\end_layout
+
+\begin_layout Standard
+The idea is that regardless of what has altered the shape of the supernova's
+ SED (extinction or intrinsic variation), the observed colors of the supernova
+ give one a constraint on the overall 
+\begin_inset Quotes eld
+\end_inset
+
+tilt
+\begin_inset Quotes erd
+\end_inset
+
+ of the spectrum.
+ In the case of many bands, you can actually solve for a higher-order fit
+ (cubic spline, etc).
+ 
+\end_layout
+
+\begin_layout Standard
+Simply call 
+\family typewriter
+kcorr
+\family default
+ and supply it with a list of N filters, from which the N-1 colors will
+ be constructed.
+ These colors, and the filter pass-bands, will be used to find a spline
+ that, when multiplied with the SED, produces the observed colors.
+ By default, these N-1 colors are constructed from bands, but if you want
+ to use only a subset, then specify them in mbands.
+\end_layout
+
+\begin_layout Standard
+To properly estimate the colors for any given day, one needs to have a model
+ for the light-curves.
+ If you choose to use a template, then fit one beforehand.
+ Otherwise, use the fit_spline() function to fit a spline (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:LCMember-Functions"
+
+\end_inset
+
+).
+ If you do nothing, GLoEs will be used to interpolate data.
+ Probably not a good idea at high redshift, where S/N is low.
+ In any case, if you wish to use the real data for the colors where possible,
+ then set interp=0.
+\end_layout
+
+\begin_layout Standard
+When using mangle=1, if you have two filters which have very similar effective
+ wavelengths, but different shapes (V and g, for instance), the splines
+ can become very badly behaved.
+ If min_filter_sep is set, then any filter whose effective wavelength is
+ closer than min_filter_sep to another is removed automatically from the
+ set of colors.
+\end_layout
+
+\begin_layout Subsubsection
+Other Useful functions
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Other-Useful-functions"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Here is a list and brief summary of other functions belonging to the sn
+ class:
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+choose_model(model)
+\family default
+\series default
+: Choose which model to use.
+ As of now, this is either 
+\begin_inset Quotes eld
+\end_inset
+
+
+\family typewriter
+EBV_model
+\family default
+
+\begin_inset Quotes erd
+\end_inset
+
+ or 
+\begin_inset Quotes eld
+\end_inset
+
+
+\family typewriter
+max_model
+\family default
+
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+closest_band(wav, tempbands=['B', 'V', 'R', 'I'])
+\family default
+\series default
+: For each filter in the data, find the closest rest-frame filter.
+ Returns one of the strings listed in 
+\family typewriter
+tempbands
+\family default
+.
+ These strings must represent a valid filter found in the 
+\family typewriter
+filters
+\family default
+ dictionary (see .
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+compute_w(band1, band2, band3):
+\family default
+\series default
+ Returns the reddening-free magnitude in the sense that: w = band1 - R(band1,ban
+d2,band3)*(band2 - band3) for for instance compute_w(V,B,V) would give:
+ w = V - Rv(B-V).
+ This is still in development.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+getEBVgal(self):
+\family default
+\series default
+ Gets the value of E(B-V) due to galactic extinction.
+ The ra and decl member variables must be set beforehand.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+get_color(band1, band2, nointerp=0):
+\family default
+\series default
+ return the observed SN color of band1 - band2.
+ Returns a 4-tuple: (MJD, band1-band2, e_band1-band2, flag).
+ Flag is one of: 0 - both bands measured at given epoch; 1 - only one band
+ measured, other interpolated; 2 - extrapolation (based on template) needed;
+ 3 - data interpolated or extrapolated beyond template's definition, so
+ not safe to use!
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+get_mag_table(bands=None):
+\family default
+\series default
+ This routine returns a table of the photometry, where the data from different
+ filters are grouped according to day of observation.
+ When data is missing, a value of 99.9 is inserted.
+ Format of table is "MJD mag1 emag1 mag2 emag2 ...
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+get_max(bands, restframe=0, deredden=0):
+\family default
+\series default
+ After a model or spline has been fit, determine the maximum magnitude,
+ error, and time of maximum for the light-curves specified in 
+\family typewriter
+bands
+\family default
+.
+ If 
+\family typewriter
+rest frame=1
+\family default
+, then remove the K-corrections, thereby converting to rest-frame filters.
+ If 
+\family typewriter
+deredden=1
+\family default
+, then remove the galactic and host extinction.
+ Otherwise, the maximum of the model array is used which, due to roundoff,
+ K-corrections, etc.
+ may not be the true maximum.
+ The function returns a 4-tuple: (
+\family typewriter
+maxes
+\family default
+, 
+\family typewriter
+e_maxes
+\family default
+, 
+\family typewriter
+T_maxes
+\family default
+, 
+\family typewriter
+restband
+\family default
+).
+ 
+\family typewriter
+maxes
+\family default
+ is an array of maxima, 
+\family typewriter
+e_maxes
+\family default
+ an array of their errors, 
+\family typewriter
+T_maxes
+\family default
+ an array of time of maxima, and 
+\family typewriter
+restband
+\family default
+ is a list of the rest-bands used to fit each filter.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+get_rest_max(bands, deredden=0):
+\family default
+\series default
+ Simply calls 
+\family typewriter
+get_max()
+\family default
+ with 
+\family typewriter
+restframe=1
+\family default
+, for backward-compatibility.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+get_restbands():
+\family default
+\series default
+ Automatically populates the rest-bands member data with filters from the
+ 
+\family typewriter
+restbands
+\family default
+ member list, whichever effective wavelength is closest to the observed
+ bands.
+ This is run automatically when the sn object is created.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+load(dictionary):
+\family default
+\series default
+ Given a previously saved dictionary (as returned by save()), re-load the
+ parameters.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+lira(Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0):
+\family default
+\series default
+ Use the Lira law to estimate the extinction.
+ The B-V color is constructed as a function of time using filters 
+\family typewriter
+Bband
+\family default
+ and 
+\family typewriter
+Vband
+\family default
+.
+ The color excess is then estimated to be the median offset between (B-V)
+ and the Lira Law in the time window 
+\family typewriter
+tmin < t < tmax
+\family default
+.
+ If 
+\family typewriter
+interpolate=1
+\family default
+, then missing data is interpolated.
+ Use 
+\family typewriter
+tmin
+\family default
+ and 
+\family typewriter
+tmax
+\family default
+ to restrict which data are used.
+ Use 
+\family typewriter
+plot=1
+\family default
+ to get a graph.
+ The function returns a 3-tuple: E(B-V), the error and the fitted slope,
+ which can be used as a diagnostic.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+mask_data():
+\family default
+\series default
+ Interactively mask out bad data and unmask the data as well.
+ The only two bindings are "A" (click): mask the data and "u" to unmask
+ the data.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+save():
+\family default
+\series default
+ This will return the parameters dictionary, which can be used to save the
+ state of the fit.
+ Use load() to re-load the parameters.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+summary():
+\family default
+\series default
+ Get a quick summary of the data for this SN, along with fitted parameters
+ (if such exist).
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+update_sql(attributes=None, dokcorr=1):
+\family default
+\series default
+ Updates the current information in the SQL database, creating a new SN
+ if needed.
+ If attributes are specified (as a list of strings), then only these attributes
+ are updated.
+ 
+\end_layout
+
+\begin_layout Section
+Light-curve class
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Lightcurve-class"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The light-curve class, 
+\family typewriter
+lc
+\family default
+, is a simpler class than sn (for now).
+ It is available for scripting by importing the 
+\family typewriter
+lc
+\family default
+ module.
+ It basically contains the data of a single filter and a few functions to
+ work with the data.
+ Of particular interest might be the spline fitting functions, which allow
+ one to make templates from well-sampled and high S/N data.
+ 
+\end_layout
+
+\begin_layout Subsection
+Member data
+\end_layout
+
+\begin_layout Standard
+Table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:lc_member_var"
+
+\end_inset
+
+ lists the member variables of the 
+\family typewriter
+lc
+\family default
+ class.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Tabular
+<lyxtabular version="3" rows="20" columns="3">
+<features>
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="4in">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+name
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+type
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+description
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+band
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+string
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+name of the filter that this instance represents
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+parent
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+sn inst.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A pointer to the 
+\family typewriter
+sn
+\family default
+ instance that contains this 
+\family typewriter
+lc
+\family default
+ instance.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+filter
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+filter inst.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Instance of the filter object that corresponds to self.band
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+MJD
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Array of observations dates, usually in Modified Julian Day
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+t
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+If Tmax has been solved, then this is an array of epochs
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+magnitude
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Array of observed magnitudes.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+e_mag
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Array of uncertainties in the magnitudes.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+K
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Array of k-corrections.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+mag
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Like magnitude, but if K are defined, then this returns the k-corrected
+ magnitudes (self.magnitude - self.K).
+ Otherwise, it is equivalent to self.magnitude.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+flux
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Automatically generated array of fluxed, based on the magnitudes and zero
+ point defined by band.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+e_flux
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Array of uncertainties in the flux.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+tck
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+list
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+3-element list defining a spline: array of knot points, array of spline
+ coefficients, and the order of the spline.
+ This can be used with scipy.integrate.splev() to evaluate the spline at any
+ point (see help page for splev).
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+model
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A model of the light-curve based on a template fit (generated automatically
+ by template()).
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+model_t
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The times for the model.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+model_sigmas
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Errors in the model.
+ Generated if do_sigma=1 in the call to template() 
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dm15, e_dm15
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+floats
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The computed value of dm15 and its error (if do_sigma=1) from the spline.
+ Generated by template()
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Tmax,e_Tmax
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+floats
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The computed value of Tmax and its error (if do_sigma=1) from the spline.
+ Generated by template()
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Mmax, e_Mmax
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+floats
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The computed value of the maximum magnitude and its error (if do_sigma=1)
+ from the spline.
+ Generated by template()
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+mask
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+int array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The mask defines which data are good.
+ If mask[i] = 1, then the data at element i is considered good (and will
+ be used in a fit), otherwise, if it is 0, the data is bad and ignored by
+ fits.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Member variables of the lc class
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:lc_member_var"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Member Functions
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:LCMember-Functions"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The most useful member functions are given below:
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+eval(self, times, recompute=0, t_tol=0.1, **args):
+\family default
+\series default
+ Interpolate (if required) the data to time 'times'.
+ If recompute=1, force a re-computation of the spline coefficients (you
+ can also use any of the arguments for mkspline() here).
+ If there is a data point closer than t_tol away from a requested time,
+ that value is used without interpolation.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+mask_emag(self, max):
+\family default
+\series default
+ Update the lc's mask to only include data with e_mag < max.
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+mask_epoch(self, tmin, tmax):
+\family default
+\series default
+ Update the lc's mask to only include data between tmin and tmax.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+mkspline(self, knots=None, k=3, s=0, fitflux=0, tmin=None, tmax=None, task=0):
+\family default
+\series default
+ Generate a spline interpolation of the data.
+ You can specify the knots, the order of the spline (k), the smoothing factor
+ (see scipy documentation: help(scipy.interpolate.splrep)).
+ To get an interpolating spline (for really smooth data), use s=0.
+ To do a least-squares fit with variable smoothing, a good start is s=N
+ (number of data points) and task=0 (routine choose the knots).
+ Then try again with task=1 (keep the knots fixed) and different values
+ of s.
+ If you want to choose the knots yourself, specify them and use task=-1.
+ If you set fitflux nonzero, the fit is performed in flux space.
+ Use tmin and tmax to restrict the portion of the light-curve to be splined
+ (defaults to whole range).
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+plot(self, device='/XSERVE', interactive=0, flux=0):
+\family default
+\series default
+ Plot the light-curve and possibly the fitting spline.
+ You can change the device to which it is plotted, have the plot be interactive
+ and also decide if you want to view the light-curve in flux units.
+ If a spline has been fit, a second panel will show the residuals.
+ If you choose an interactive plot, you an use the following key bindings
+ (some of which only work if a spline has been defined): 
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+click: print the coordinates under the cursor
+\end_layout
+
+\begin_layout Itemize
+'b': zoom in by drawing a box
+\end_layout
+
+\begin_layout Itemize
+'x' and 'y': set x and y ranges
+\end_layout
+
+\begin_layout Itemize
+'a': add a spline knot at the cursor position
+\end_layout
+
+\begin_layout Itemize
+'d': delete a spline knot closest to the cursor position
+\end_layout
+
+\begin_layout Itemize
+'m': move nearest knot point to new position
+\end_layout
+
+\begin_layout Itemize
+'s' and 'S': decrease and increase the smoothing parameter
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+fit_spline(self, method='spline', fitflux=0, do_sigma=1, Nboot=100, **args):
+\family default
+\series default
+ Make a spline template of the light-curve.
+ If do_sigma=1, the routine will perform a Monte-Carlo simulation to determine
+ the errors in the spline and the derived values of dm15, Tmax and Mmax.
+ It will perform Nboot realizations.
+ The rest of the arguments are the same as mkspline.
+ The function sets the following member variables with the results from
+ the fit: tck, model, model_t, model_sigmas, dm15, e_dm15, Tmax, e_Tmax,
+ Mmax, and e_Mmax.
+ Note that a value of -1 for any of dm15, Tmax, and Mmax indicate that there
+ was no maximum to the derived spline.
+ For more info, see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Splining"
+
+\end_inset
+
+.
+ There is a new option for splining data: method.
+ By default, a regular smoothing spline is used.
+ You can, however, choose to use a different splining routine: method='spline2'.
+ This different splining routine is due to 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "297968"
+
+\end_inset
+
+.
+ It is rather impressive in that it uses a different statistic (Durbin-Watson
+ statistic), which is less sensitive to badly estimated errors and relies
+ more on the correlation of residuals.
+ Its weakness is when you have data with large time gaps.
+ Still, it's worth a try, as it requires no smoothing parameter like Dierckx's
+ method.
+ Simply specify 
+\family typewriter
+method='spline2'
+\family default
+ and that's it! There are other parameters you can pass (see 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "297968"
+
+\end_inset
+
+ for more details), but I haven't figured them out, so it's an exercise
+ for the reader.
+\end_layout
+
+\begin_layout Standard
+Note: If you fit a spline and then use the parent sn instance's plot() function,
+ the spline will be plotted on top of the data (unless there is already
+ a model defined from a fit(), which takes precedence).
+\end_layout
+
+\begin_layout Subsection
+The Art of Splining 
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Splining"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Dierckx splines
+\end_layout
+
+\begin_layout Standard
+Splines are a great way to represent data, but they have one very serious
+ drawback: a variable number of parameters.
+ Not only do you have to specify the order of the spline (usually one chooses
+ k=3 for a cubic spline), you also have to choose how many knot points to
+ use.
+ Each knot point has two parameters: its placement on the time axis and
+ the coefficient of the spline at that knot point.
+ You can therefore have the number of knot points equal to the number of
+ data points (plus 2k end-point knots to properly define the spline on the
+ boundaries) and get a spline that's guaranteed to pass through each and
+ every point (an interpolating spline).
+ But real data has noise, so this isn't what you want.
+ At the other extreme, you could use the bare minimum of 2k+2 knots which
+ would give the smoothest spline, but then you lose any interesting structure
+ in the light-curve.
+\end_layout
+
+\begin_layout Standard
+Luckily, 
+\family typewriter
+scipy
+\family default
+ makes many of the algorithms from Paul Dierckx's book 
+\begin_inset Quotes eld
+\end_inset
+
+Curve and Surface Fitting with Splines
+\begin_inset Quotes erd
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand citep
+key "Dierckx1993"
+
+\end_inset
+
+ available.
+ These algorithms deal with automatic choice of the number and placement
+ of the spline knots.
+ They distill the problem down to one parameter: the smoothing, 
+\family typewriter
+s
+\family default
+.
+ The larger 
+\family typewriter
+s
+\family default
+, the smoother (fewer knots) the curve and the smaller, the more the spline
+ will approach an interpolating spline (s=0).
+ If the weights you provide the spline fitter are proper 1-sigma errors,
+ then setting s to the number of data points should result in a curve with
+ reduced 
+\begin_inset Formula $\chi_{\nu}^{2}\simeq1$
+\end_inset
+
+, which is what we really want.
+ The first time you fit the spline, set task=0 and the routine will choose
+ an initial set of knot points.
+ If you wish to play around with the smoothing parameter, but keep the knots
+ fixed, use task=1; otherwise, new knots will be chosen each time.
+\end_layout
+
+\begin_layout Standard
+It may be that the resulting spline doesn't 
+\begin_inset Quotes eld
+\end_inset
+
+look right
+\begin_inset Quotes erd
+\end_inset
+
+.
+ Most likely, this is due to badly estimated weights (variances).
+ The solution is to vary s until you get something that looks right, but
+ of course, this is purely subjective.
+ With proper 1-sigma errors, one can legitimately play around with s in
+ the range 
+\begin_inset Formula $N-\sqrt{2N}<s<N+\sqrt{2N}$
+\end_inset
+
+ until the spline looks acceptable
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+I tend to shy away from this, preferring to remove the subjectivity.
+ Rather, I would re-examine the weights and decide whether they are correct.
+ Playing around with s is effectively like globally increasing the errors.
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Another way to spline is to impose what you think are sensible knots.
+ In this case, simply specify them as an array with the knots argument to
+ 
+\family typewriter
+fit_spline
+\family default
+ or 
+\family typewriter
+mkspline
+\family default
+ functions and set 
+\family typewriter
+task=-1
+\family default
+.
+ In this case, the smoothing is ignored and you get the least-squares spline
+ using these knots.
+\end_layout
+
+\begin_layout Subsubsection
+Hyperspline
+\end_layout
+
+\begin_layout Standard
+The problem of choosing the correct value of s in the previous section can
+ be removed by using another set of spline routines developed by 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "297968"
+
+\end_inset
+
+.
+ Rather than using 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+ as a statistic for determining the best-fit spline, they use a statistic
+ call the Durbin-Watson statistic.
+ Without getting into the details, this statistic relies more on the auto-correl
+ation in the residuals, which to first order is insensitive to the individual
+ errors of the points.
+ In essence, you're using the pattern of the points to tell you what is
+ noise and what is a true trend.
+\end_layout
+
+\begin_layout Standard
+Of course, the Achilles-heal of this method is the presence of correlated
+ errors among the data points.
+ But this is likely also a problem with Dierckx splines.
+\end_layout
+
+\begin_layout Standard
+Another case where hyperspline has problems is when there are large gaps
+ in the data.
+ Here, you might want to split up the problem in to two (or more) segments
+ and work on them individually.
+ I hope to add this feature eventually.
+\end_layout
+
+\begin_layout Section
+Model class
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Model-class"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This class is designed to do all the work of fitting a model to data.
+ It uses the Levenberg-Marquardt least-squares algorithm for find the minimum
+ 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+.
+ It is designed to be sub-classed in order to create specific models.
+ These sub-classes will inherit the basic fitting code and so you can concentrat
+e on setting up the model.
+ In this section, I outline the basic structure of the class, so that you
+ can access the underlying machinery to do your own coding (or design your
+ own model).
+ The casual user need not worry about any of this.
+ SNPY comes with two models: 
+\family typewriter
+EBV_model
+\family default
+ and 
+\family typewriter
+max_model
+\family default
+.
+\end_layout
+
+\begin_layout Standard
+If you want to create your own model, your best bet is to simply modify
+ the existing 
+\family typewriter
+model.py
+\family default
+ module and add your own.
+ Simply create a subclass based on the 
+\family typewriter
+model
+\family default
+ class.
+ You then override 
+\family typewriter
+self.parameters
+\family default
+, 
+\family typewriter
+self.__init__()
+\family default
+, 
+\family typewriter
+self.guess()
+\family default
+, 
+\family typewriter
+self.setup()
+\family default
+, 
+\family typewriter
+self.__call__(),
+\family default
+ and 
+\family typewriter
+self.get_max()
+\family default
+.
+ Each is described in a separate section below.
+\end_layout
+
+\begin_layout Subsection
+self.parameters
+\end_layout
+
+\begin_layout Standard
+The first thing to define in the model class is the 
+\family typewriter
+self.parameters
+\family default
+ member variable.
+ This is a dictionary that contains parameter:value pairs.
+ The model will use these parameters to build the numerical model, which
+ is sent to scipy's 
+\family typewriter
+leastsq
+\family default
+ routine.
+ Another member variable that has the same keys is 
+\family typewriter
+self.errors
+\family default
+.
+ This dictionary will have the final errors of the fit stored in it.
+ As an example, here are the parameters used by the 
+\family typewriter
+EBV_model
+\family default
+ class:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="2">
+<features>
+<column alignment="center" valignment="top" width="0">
+<column alignment="left" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Variable
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Description
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Tmax
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Time of B maximum (days).
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dm15
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The decline rate parameter, 
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+dmf
+\end_layout
+
+\end_inset
+
+ (mag.)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+EBVhost
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Host 
+\begin_inset Formula $E\left(B-V\right)$
+\end_inset
+
+ reddening (mag.)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+DM
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Distance modulus (mag.)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Fit parameters of the 
+\family typewriter
+EBVmodel
+\family default
+ instance.
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:fit_param"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The model can also have a variable number of parameters, as is the case
+ in 
+\family typewriter
+max_model
+\family default
+.
+ In this case, you can dynamically set up 
+\family typewriter
+self.parameters
+\family default
+ in the 
+\family typewriter
+self.setup()
+\family default
+ function (see below).
+\end_layout
+
+\begin_layout Subsection
+self.__init__(self, parent)
+\end_layout
+
+\begin_layout Standard
+Next, you will override the 
+\family typewriter
+self.__init()
+\family default
+ function.
+ The only two arguments are 
+\family typewriter
+self
+\family default
+ and 
+\family typewriter
+parent
+\family default
+.
+ 
+\family typewriter
+self.__init__
+\family default
+ must also call the 
+\family typewriter
+model.__init__()
+\family default
+ function as part of the initialization.
+ Other than that, you are free to setup whatever member variables you want.
+ 
+\family typewriter
+self.__init__()
+\family default
+ is called when the 
+\family typewriter
+model
+\family default
+ instance is created, that is, when the 
+\family typewriter
+sn
+\family default
+ object is created or when 
+\family typewriter
+sn.choose_model()
+\family default
+ is called.
+\end_layout
+
+\begin_layout Subsection
+self.setup(self)
+\end_layout
+
+\begin_layout Standard
+There are cases when you need to do some setting up after the user has called
+ 
+\family typewriter
+sn.fit()
+\family default
+, but before the actual fitting occurs.
+ For example, in the case of 
+\family typewriter
+max_model
+\family default
+, the number of parameters depends on how many filters the user fits (each
+ filter has its own maximum).
+ So in 
+\family typewriter
+self.setup()
+\family default
+, 
+\family typewriter
+self.parameters
+\family default
+ is updated.
+ This is not needed in 
+\family typewriter
+EBV_model
+\family default
+, because it has a fixed set of parameters regardless of how many filters
+ are fit.
+ However, it 
+\emph on
+does
+\emph default
+ do some initial checking to make sure that if 
+\family typewriter
+EBVhost
+\family default
+ is a free parameter, the user has asked to fit at least two filters.
+\end_layout
+
+\begin_layout Subsection
+self.guess(self, param)
+\end_layout
+
+\begin_layout Standard
+Before the fitting starts, any un-initialized variables (those whose value
+ are 
+\family typewriter
+None
+\family default
+) need to be set to valid values, presumably close to the actual solution.
+ You must override 
+\family typewriter
+self.guess()
+\family default
+ to do this.
+ For any parameter 
+\family typewriter
+param
+\family default
+, return an initial guess for this parameter.
+ The 
+\family typewriter
+self.guess()
+\family default
+ function is called after 
+\family typewriter
+self.setup()
+\family default
+, but just before the fitting starts.
+\end_layout
+
+\begin_layout Subsection
+self.__call__(self, band, t, **args)
+\end_layout
+
+\begin_layout Standard
+This is the meat of the model.
+ Given a filter 
+\family typewriter
+band
+\family default
+ and time 
+\family typewriter
+t
+\family default
+ (which is an array of times), return the model for the light-curve as an
+ array of floats.
+ Now, the question comes up: should the model return magnitudes or fluxes?
+ The answer is: either.
+ You can choose to return a model in magnitudes or fluxes, but you need
+ to set the member variable 
+\family typewriter
+self.model_in_mags
+\family default
+ to 
+\family typewriter
+true
+\family default
+ if your model returns magnitudes, or 
+\family typewriter
+false
+\family default
+ if it returns fluxes.
+ 
+\emph on
+SNPY always does the actual least-squares fitting in fluxes
+\emph default
+.
+\end_layout
+
+\begin_layout Standard
+You can define any number of optional arguments after 
+\family typewriter
+t
+\family default
+ (replace 
+\family typewriter
+**args
+\family default
+ with your arguments).
+ You can then specify these optional arguments in the 
+\family typewriter
+sn.fit()
+\family default
+ call and they will propagate through to the 
+\family typewriter
+__call__()
+\family default
+.
+ For example, 
+\family typewriter
+EBV_model
+\family default
+ has the optional 
+\family typewriter
+calibration
+\family default
+ parameter.
+\end_layout
+
+\begin_layout Subsection
+self.get_max(self, bands, restframe=0, deredden=0)
+\end_layout
+
+\begin_layout Standard
+The last member function to override is get_max().
+ Given a set of filters (
+\family typewriter
+bands
+\family default
+), return the model's value at maximum light.
+ If the optional argument 
+\family typewriter
+restframe=1
+\family default
+, then apply a k-correction to the value.
+ If 
+\family typewriter
+deredden=1
+\family default
+, remove any reddening (galactic and host, if it is defined).
+ 
+\end_layout
+
+\begin_layout Section
+Template class
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Template-class"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+dm15temp.py
+\end_layout
+
+\begin_layout Standard
+This class is basically a wrapper to Prieto's template generator and is
+ used to generate templates for the 
+\family typewriter
+sn
+\family default
+ class.
+ It is available to scripts by importing the 
+\family typewriter
+dm15temp
+\family default
+ module.
+ The constructor doesn't need any arguments, so you simply make an instance
+ as follows:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+t = template()
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The instance then has member variables for each filter defining a template:
+ 
+\family typewriter
+t.B, t.V, t.R
+\family default
+, and 
+\family typewriter
+t.I
+\family default
+.
+ There are also errors in these quantities: 
+\family typewriter
+t.eB, t.eV, t.eR
+\family default
+, and 
+\family typewriter
+t.eI
+\family default
+.
+ The epoch is contained a variable 
+\family typewriter
+t.t
+\family default
+ Each of these variables is a python array.
+ Immediately after creating the instance, there will be no template defined.
+ One has to make it with a specific value of 
+\begin_inset Formula $\Delta m_{15}$
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+t.mktemplate(1.1)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This will run Prieto's code and insert the proper values into the member
+ variables.
+ This is all done in C, so is quite fast.
+ The only other member function is 
+\family typewriter
+t.eval(band, times, z=0).
+
+\family default
+ This function is used to evaluate the template at specific times (useful
+ for doing least-squares fitting to data).
+ Simply specify which filter as a string (
+\family typewriter
+band
+\family default
+) and an array of epochs to evaluate (
+\family typewriter
+times
+\family default
+).
+ The function returns two values: an array of interpolated values of the
+ template and a mask array.
+ This mask will be 1 for interpolation and 0 for extrapolation (where you
+ should not use the data).
+ You can also specify a redshift z so that the times are interpreted as
+ observed epochs and will be converted to rest-frame epochs before evaluating.
+\end_layout
+
+\begin_layout Subsection
+CSPtemp.py
+\end_layout
+
+\begin_layout Standard
+This is new module and constitutes a new method very similar to Prieto's
+ technique.
+ The idea is that one has a set of N well-sampled light-curves with pre-maximum
+ data, so that 
+\begin_inset Formula $\Delta m_{15}$
+\end_inset
+
+, 
+\begin_inset Formula $T_{max}$
+\end_inset
+
+, and 
+\begin_inset Formula $m_{max}$
+\end_inset
+
+ are all well determined.
+ One then has a set of data points that define a surface in the 3D parameter
+ space: 
+\begin_inset Formula $\left(t-T_{max},\Delta m_{15},m-m_{max}\right)$
+\end_inset
+
+.
+ The problem is that this surface is sparsely and heterogeneously sampled.
+ Prieto's method solves this in two steps: 1) construct spline representations
+ of the N light-curves in the 
+\begin_inset Formula $t-$
+\end_inset
+
+direction, then interpolate in the 
+\begin_inset Formula $\Delta m_{15}$
+\end_inset
+
+-direction by way of averaging the splines with an adaptive weight function.
+\end_layout
+
+\begin_layout Standard
+This new generator uses an algorithm developed by Barry Madore called GLoEs
+ (Gaussian Local Estimation).
+ In 1-D, one simply interpolates by way of a quadratic (or higher-order
+ polynomial) through all the available data points.
+ However, the weights of the points are determined using a Gaussian centered
+ at the desired interpolation point and with a width sufficient to include
+ the minimum number of points required for the polynomial.
+ In 2D, one uses an elliptical Gaussian in the same way and fits a 2D polynomial
+ to the data points.
+ The advantage is that this is done in one step and data can be added without
+ the need to re-train the fitter.
+ The disadvantages are: 1) it's a slower process and 2) the resulting templates
+ have more freedom to deviate from the idealized behaviour.
+ For instance, if one asked for a template with 
+\begin_inset Formula $\Delta m_{15}=1.15$
+\end_inset
+
+, and actually measured 
+\begin_inset Formula $\Delta m_{15}$
+\end_inset
+
+ directly, you would get a slightly different answer.
+ As such, 
+\begin_inset Formula $\Delta m_{15}$
+\end_inset
+
+ becomes a parameter, rather than a direct measurable.
+\end_layout
+
+\begin_layout Standard
+Despite these very different approaches, the 
+\family typewriter
+CSPtemp.py
+\family default
+ module behaves exactly the same as the older dm15temp.py module as far as
+ the user is concerned.
+ They can be used interchangeably.
+ However, CSPtemp.py uses the CSP dataset, so offers a different set of filters.
+\end_layout
+
+\begin_layout Subsection
+ubertemp.py
+\end_layout
+
+\begin_layout Standard
+In order to facilitate mixing-and-matching of different filters, a module
+ had to be created that would allow the user to pick either the CSP or Prieto
+ filters.
+ This is 
+\family typewriter
+ubertemp
+\family default
+.
+ The way you choose which filters to use is by name.
+ Asking for a filter in the set 
+\family typewriter
+u,B,V,g,r,i,Y,J,H
+\family default
+ will generate CSP templates.
+ Asking for a filter in the set 
+\family typewriter
+Bs,Vs,Rs,Is
+\family default
+ will generate Prieto templates (think of the 's' as 'standard' system,
+ as opposed to the CSP templates which are in the CSP natural system).
+ So, for example, you could compute a poor-man's S-correction between the
+ CSP natural B-band and the standard B-band:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+In[1]:  t = ubertemp.template()
+\end_layout
+
+\begin_layout Plain Layout
+
+In[2]:  t.mktemplate(1.4)
+\end_layout
+
+\begin_layout Plain Layout
+
+In[3]:  B_CSP = t.eval('B', arange(-10,60,1.0))
+\end_layout
+
+\begin_layout Plain Layout
+
+In[4]:  B_std = t.eval('Bs', arange(-10,60,1.0))
+\end_layout
+
+\begin_layout Plain Layout
+
+In[5]:  Scorr = B_CSP - B_std
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+As far as fitting goes, simply use the 
+\family typewriter
+restbands
+\family default
+ member variable to choose which filter you wish to fit with.
+ The model will then take care of generating the appropriate template and
+ fit it to your observations.
+\end_layout
+
+\begin_layout Section
+Filters and Spectra
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Filters-and-Spectra"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Two other useful classes are 
+\family typewriter
+filter
+\family default
+ and 
+\family typewriter
+spectrum
+\family default
+.
+ They are available for scripting by importing the 
+\family typewriter
+filters
+\family default
+ module.
+ The filter class inherits from the spectrum class, which is the more general
+ object (a filter can be considered a spectrum of sorts).
+\end_layout
+
+\begin_layout Subsection
+spectrum object
+\end_layout
+
+\begin_layout Standard
+You create a spectrum instance with two optional arguments:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+spec = spectrum(name, file)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The name is just an identifying string.
+ The file contains the spectrum as (lambda, flux) pairs, one per line.
+ The member variables are given in the following table.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Tabular
+<lyxtabular version="3" rows="9" columns="3">
+<features>
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="4in">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+name
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+type
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+description
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+name
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+string
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Descriptive name for the spectrum
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+file
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+string
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Filename of the spectral data
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+wave
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Array of wavelengths
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\family typewriter
+resp
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Array of fluxes or responses (for filters)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+flux
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float array
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Alias for 'resp'
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+comment
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+string
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Any useful comments you want to ad
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+wavemax,wavemin
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The minimum and maximum wavelengths defined by this spectrum
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+avewave
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The average wavelength (useful for filters)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Member variables of the spectrum class.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Filter object
+\end_layout
+
+\begin_layout Standard
+The filter object inherits from the spectrum object, so it has all its member
+ variables.
+ The filter is created in the same way the spectrum is, except it has one
+ additional optional argument:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+f = filter(name, file, zp)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The argument zp is the zeropoint of this filter.
+ If you know it beforehand, specify it here.
+ Otherwise, you can use the compute_zpt() member function described below.
+ The zero-point is stored as the member variable 
+\family typewriter
+f.zp
+\family default
+.
+ The filter class also adds a few extra member functions, which are described
+ below:
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+compute_zpt(spectra, mag, zeropad=0):
+\family default
+\series default
+ Given a single spectrum or list of spectrum instances (
+\family typewriter
+spectra
+\family default
+) and a list of associated magnitudes (
+\family typewriter
+mag
+\family default
+), compute the zero-points of this filter for these spectra, which are returned
+ as an array.
+ You could average the output to get a good handle on the actual zero-point.
+ If the wavelength range of the filter is not completely inside the wavelength
+ range of the spectrum, an exception is raised, unless 
+\family typewriter
+zeropad=1
+\family default
+, in which case the spectrum is assumed to be 0 outside the filter range.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+response(wavespec, flux=None, z=0, zeropad=0, photons=1):
+\family default
+\series default
+ Given an array of spectra, compute the response of the filter across the
+ spectra: 
+\begin_inset Formula $\int F(\lambda)S(\lambda)\lambda/ch\: d\lambda$
+\end_inset
+
+ (if 
+\family typewriter
+photons=1
+\family default
+), or 
+\begin_inset Formula $\int F(\lambda)S(\lambda)\: d\lambda$
+\end_inset
+
+ if 
+\family typewriter
+photons=0
+\family default
+.
+ You can either specify the spectra as arrays of spectrum instances and
+ leave 
+\family typewriter
+flux=None
+\family default
+, or else specify an array of wavelength arrays and flux arrays.
+ If the optional redshift, 
+\family typewriter
+z
+\family default
+, is given, the spectrum is red-shifted before the integration is done (actually
+, the filter is blue-shifted).
+ zeropad has the same meaning as in compute_zpt().
+ 
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+\series bold
+synth_mag(wavespec, flux=None, z=0, zeropad=0, photons=1):
+\family default
+\series default
+ Given an array of spectra, compute the synthetic magnitude through this
+ filter.
+ The zero-point must be defined in the instance (use 
+\family typewriter
+compute_zpt()
+\family default
+ if needed).
+ If a redshift is specified, the filter is blue-shifted by 
+\begin_inset Formula $1/(1+z)$
+\end_inset
+
+ before computing the response (as in 
+\family typewriter
+response()
+\family default
+).
+ Arguments are the same as 
+\family typewriter
+response()
+\family default
+.
+\end_layout
+
+\begin_layout Subsection
+Default spectra and filters
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:default_filters"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The 
+\family typewriter
+filters
+\family default
+ module has two variables: 
+\family typewriter
+fset
+\family default
+ and 
+\family typewriter
+spectra
+\family default
+.
+ 
+\family typewriter
+fset
+\family default
+ (filter set) is a dictionary-like object of pre-defined filters for your
+ use.
+ The filters have pre-defined zero-points, so can be used to compute synthetic
+ magnitudes 
+\begin_inset Quotes eld
+\end_inset
+
+out of the box
+\begin_inset Quotes erd
+\end_inset
+
+ (see the accompanying document 
+\family typewriter
+zeropoints.pdf
+\family default
+ for a discussion on how there are determined).
+ The filters are organized by observatory/telescope/filter.
+ You can list the observatories using fset.list_observatories().
+ You then use the observatory name as a member variable to get the observatory.
+ Each observatory has a function list_telescopes().
+ The telescope name is used as a member variable to get the telescope, which
+ has a list_filters() function.
+ Each filter can also have a unique string ID that can be used directly.
+ Here are some examples to give you an idea how it works.
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+print fset.list_observatories
+\end_layout
+
+\begin_layout Plain Layout
+
+print fset['B']
+\end_layout
+
+\begin_layout Plain Layout
+
+print fset.LCO.Swope.B
+\end_layout
+
+\begin_layout Plain Layout
+
+print fset.B
+\end_layout
+
+\begin_layout Plain Layout
+
+print fset.LCO.list_telescopes()
+\end_layout
+
+\begin_layout Plain Layout
+
+print fset.LCO.Swope.list_filters()
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+These filters are loaded at runtime and come from data files distributed
+ with SNPY.
+ The are located in the source distribution in the folder 
+\family typewriter
+snpy/filters/filters
+\family default
+.
+ In that folder are folders for each observatory.
+ In each observatory foder, there are folders for each telescope/instrument,
+ and in each telescope/instrument folder, there are files that contain the
+ filter bandpasses and a file named 
+\family typewriter
+filters.dat
+\family default
+.
+ Here is a portion of the folder structure:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+|-- filters
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |-- APO
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |   -- SDSS
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- filters.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- sdss_g.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- sdss_i.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- sdss_r.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- sdss_u.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- sdss_z.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |-- CFHT
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |   -- Megacam
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- filters.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- g_snls.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- i_snls.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- r_snls.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+|   |       |-- z_snls.dat
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+The filters.dat file has a table of the filters, their names, and zero-points.
+ Here is a sample of the SDSS filters.dat file:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+u_s sdss_u.dat 12.4757864 sloan u at APO 
+\end_layout
+
+\begin_layout Plain Layout
+
+g_s sdss_g.dat 14.2013159905 sloan g at APO 
+\end_layout
+
+\begin_layout Plain Layout
+
+r_s sdss_r.dat 14.2156544329 sloan r at APO 
+\end_layout
+
+\begin_layout Plain Layout
+
+i_s sdss_i.dat 13.7775438954 sloan i at APO 
+\end_layout
+
+\begin_layout Plain Layout
+
+z_s sdss_z.dat 11.8525822106 sloan z at APO
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+Columns are separated by white space.
+ The first column is a unique ID (SNPY will complain if you use an ID that
+ was previously used).
+ The next column indicates the data file that defines the filter.
+ The third column is the filter zero-point (
+\begin_inset Formula $zp$
+\end_inset
+
+), in the sense that 
+\begin_inset Formula \[
+m=-2.5\log_{10}\left(\frac{1}{ch}\int F\left(\lambda\right)S\left(\lambda\right)\lambda d\lambda\right)+zp\]
+
+\end_inset
+
+The format of the filter response files is simply two columns: wavelength
+ (in angstroms) and flux.
+\end_layout
+
+\begin_layout Standard
+The filters module also comes with some spectra in a dictionary called,
+ well,
+\family typewriter
+ spectra.
+
+\family default
+ This is not loaded in at start-up time because it can take a while to load.
+ There are three keys: Vega, Smith and Landolt.
+ Vega has several SEDs from CALSPEC.
+ Smith has the standards from 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "1996AJ....111.1748F"
+
+\end_inset
+
+.
+ Landolt has the spectrophotometric standards from 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2005PASP..117..810S"
+
+\end_inset
+
+ Each of these refers to another dictionary of standards.
+ Here's now to get their names:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+In[1]:  from snpy.filters import standards
+\end_layout
+
+\begin_layout Plain Layout
+
+In[2]:  print standards['Vega'].keys()
+\end_layout
+
+\begin_layout Plain Layout
+
+In[3]:  print standards['Smith'].keys()
+\end_layout
+
+\begin_layout Plain Layout
+
+In[4]:  print standards['Landolt'].keys()
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+of Landolt standards.
+ However, because loading all those spectra takes time and I didn't want
+ to slow down the start-up time too much, you need to call the function
+ 
+\family typewriter
+filters.load_landolt()
+\family default
+ before you can access these standards.
+\end_layout
+
+\begin_layout Section
+Coming Soon(ish)
+\end_layout
+
+\begin_layout Standard
+Here is just a list of things which I have planned for the future, but have
+ not yet implemented.
+\end_layout
+
+\begin_layout Enumerate
+Incorporate the SCP B-band template in order to compute their stretch values.
+\end_layout
+
+\begin_layout Enumerate
+Use other fitting functions besides B-splines to generate templates (polynomials
+, custom parametric functions, etc).
+\end_layout
+
+\begin_layout Enumerate
+Ability to plot the confidence intervals on the fitted parameters in different
+ cuts of parameter space.
+\end_layout
+
+\begin_layout Enumerate
+Ability to impose priors on the parameters.
+ Right now, there is only a fixed prior on 
+\begin_inset Formula $\Delta m_{15}$
+\end_inset
+
+ that can be turned on and off.
+ I'd like to implement arbitrary priors from the user.
+\end_layout
+
+\begin_layout Enumerate
+Automatically do a grid-search for the minimum 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+ and plot confidence intervals.
+\end_layout
+
+\begin_layout Enumerate
+Make a GUI (in the far far distant future and only if someone buys me a
+ really good bottle of Scotch).
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "/Users/burns/Documents/CSP/Burns2009/highz_paperI"
+options "/Users/burns/Documents/CSP/Burns2009/apj"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+\start_of_appendix
+mySQL Schema
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:mySQL-Schema"
+
+\end_inset
+
+The required 
+\family typewriter
+mySQL
+\family default
+ schema consists of a single database called
+\noun on
+ 
+\family typewriter
+\noun default
+SN
+\family default
+ that contains two tables.
+ One is named 
+\family typewriter
+\noun on
+SN
+\noun default
+e
+\family default
+ and the other is 
+\family typewriter
+Photo
+\family default
+.
+ SNe holds the global information about each supernova (redshift, ra, dec,
+ etc).
+ The 
+\family typewriter
+Photo
+\family default
+ table holds the individual points on the light-curve.
+ You an add extra columns to the tables and other tables to your database,
+ these are just the minimum required.
+\end_layout
+
+\begin_layout Subsection
+SNe Table
+\end_layout
+
+\begin_layout Standard
+Here is the schema for the SNe table.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="19" columns="6">
+<features>
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Field
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Type
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Null
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Key
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Default
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Comment
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SNId
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+int(11)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NO
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+PRI
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+The unique identifier for each SN
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+name
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+varchar(20)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NO
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+None
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+A string identification (use this to retrieve)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+z
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+redshift
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+ra
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Right-ascension in decimal degrees
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+decl
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+float
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Declination in decimal degrees
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+obs1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+int(11)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Epoch of first observation
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Tmax
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Time of B-maximum
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+e_Tmax
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+error in Tmax
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+dm15
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+decline-rate parameter
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+e_dm15
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+error in dm15
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+s
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+stretch
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+e_s
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+error in s
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+EBVhost
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double 
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Host extinction
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+e_EBVhost
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+error in EBVhost
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+DM
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Distance modulus
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+e_DM
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+error in DM
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+rchisq
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+reduced chi-squared
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+object
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+blob
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+storage for 
+\family typewriter
+sn
+\family default
+ object
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Photo Table
+\end_layout
+
+\begin_layout Standard
+Here is the schema for the only other table needed by 
+\family typewriter
+SNPY
+\family default
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="10" columns="6">
+<features>
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Field
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Type
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Null
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Key
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Default
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Comment
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+PhotoID
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+int(11)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NO
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+PRI
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+unique running ID number
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SNId
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+int(11)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+cross-identification to the SN
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+name
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+varchar(20)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NO
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+string identification
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+JD
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Julian Day of the observation
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+filter
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+varchar(3)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+filter identifier
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+m
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+magnitude
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+e_m
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+error in m
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+K
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+K-correction
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+e_K
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+double
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+YES
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+NULL
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+error in K
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
