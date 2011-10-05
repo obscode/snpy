@@ -86,6 +86,7 @@ def configuration(parent_package='', top_path=None):
                        library_dirs=libdirs)
    config.add_data_files('templates.dat','tck.pickle','bs_error.pickle')
    config.add_data_dir('templates')
+   config.add_data_dir('fits')
    config.add_scripts('generate_surf.py')
    return config
 

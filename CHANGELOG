@@ -27,3 +27,8 @@
 06Jan2009:  pylc is now SNpy (affectionately SNOOPY).
 01Feb2009:  Begin the arduouis task of converting over to Numpy, the new
             Scipy, and, heh what the heck, python 2.5.
+05Oct2011:  Incorporated the new light-curve templates based on the data 
+            released in Stritzinger et al. (2011).  Also, try to remove
+            a number of dependencies that are causing problems when porting
+            to new architectures.  Sorry, PGPLOT, but you're just too 
+            hard to maintain.

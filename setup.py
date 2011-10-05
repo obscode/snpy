@@ -164,7 +164,7 @@ if __name__ == '__main__':
             continue
          flag,mesg = get_package(package, url, options=extra_options)
          print mesg
-   setup(version='0.9.1-csp',
+   setup(version='1.0a',
          author='Chris Burns (Carnegie Observatories)',
          author_email='cburns@obs.carnegiescience.edu',
          **configuration(top_path='').todict())

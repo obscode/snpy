@@ -3,7 +3,7 @@ Author:  Chris Burns
 
 PURPOSE
 
-   SNPY (or more affectionately SNOOPY) is a Python package for fitting the
+   SNPY (or more affectionately SNooPy) is a Python package for fitting the
    light-curves of TypeIa supernovae.  It is NOT an off-the-shelf program that
    will do all the work for you from the command line.  It is meant to be run
    interactively.  It provides many tools, but does not lock you into a specific
@@ -32,7 +32,8 @@ PURPOSE
       - Compute k-corrections based on the spectral energy distribution
         template of Hsiao et al. (2007).  This includes color-matching the
         SED template to the observed filters.  You can do plain K-corrections
-        or cross-band K-corrections.
+        or cross-band K-corrections.  This is normally done as part of the fitting
+        procedure, but can be done separately.
    
       - Fit splines to light-curves to do your own analysis, independent of the
         light-curve templates.
@@ -52,9 +53,6 @@ PURPOSE
         generator
    
       - CSPtemp:  a generator for the CSP light-curve templates.
-   
-      - dust_getval:  Compute the E(B-V) by Milky way using the Schlegel
-        dust maps.
    
       - spline2:  a python wrapper to the Hyperspline (or spline2) algorithm,
         which uses the Durbin-Watson statistic rather than chi-square.  Good

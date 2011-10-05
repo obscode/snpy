@@ -289,11 +289,6 @@ dm15temp/templates/template95d.new -text
 dm15temp/templates/template96x.new -text
 dm15temp/templates/template98bu.new -text
 dm15temp/templates/template99aa.new -text
-dm15temp_dest/__init__.py -text
-dm15temp_dest/dm15temp_dest.py -text
-dm15temp_dest/generate_surf_dest.py -text
-dm15temp_dest/setup.py -text
-dm15temp_dest/tck_destiny.pickle -text
 doc/Zeropoints.pdf -text
 doc/Zeropoints.tex -text
 doc/flow.fig -text

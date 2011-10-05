@@ -831,7 +831,8 @@ class sn(object):
       pickle.dump(self, f)
       f.close()
    
-   def fit(self, bands=None, mangle=1, kcorr=1, reset_kcorrs=1, k_stretch=True, **args):
+   def fit(self, bands=None, mangle=1, kcorr=1, reset_kcorrs=1, k_stretch=True, 
+         margs={}, **args):
       '''Fit the N light curves with the currently set model (see 
       self.choose_model()).  The parameters that can be varried or held 
       fixed depending on the model being used (try help(self.model)
@@ -899,7 +900,7 @@ class sn(object):
          if mangle:
             if not self.quiet:
                print "Doing mangled k-corrections"
-            self.kcorr(bands, interp=0, use_model=1, use_stretch=k_stretch)
+            self.kcorr(bands, interp=0, use_model=1, use_stretch=k_stretch, **margs)
             if not self.quiet:
                print "Doing final fit..."
             self.model.fit(bands, **args)
