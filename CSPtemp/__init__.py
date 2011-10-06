@@ -399,6 +399,9 @@ class st_template:
       else:
          evt = times/(1+z)
 
+      if self.st <= 0:
+         return (evt*0, evt*0, num.zeros(evt.shape, dtype=num.bool))
+
       if band == 'J_K':
          s = self.st
          return(0.080 + evt/s*0.05104699 + 0.007064257*(evt/s)**2 - 0.000257906*(evt/s)**3,

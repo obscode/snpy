@@ -8,8 +8,6 @@ CSPtemp/dm15temp.c -text
 CSPtemp/dm15temp.h -text
 CSPtemp/dm15temp2.py -text
 CSPtemp/dm15temp_wrap.c -text
-CSPtemp/fits/H_mean2.fits -text svneol=unset#unset
-CSPtemp/fits/H_std2.fits -text svneol=unset#unset
 CSPtemp/fits/dm15_B_mean1.fits -text svneol=unset#unset
 CSPtemp/fits/dm15_B_mean2.fits -text svneol=unset#unset
 CSPtemp/fits/dm15_B_std1.fits -text svneol=unset#unset

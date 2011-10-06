@@ -534,10 +534,12 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
                                 relative*rel_off))
          ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y), 
                color='k', linewidth=linewidth)
-         ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y+err), 
+         l = ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y+err), 
                '--',color='k', linewidth=linewidth)
-         ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y-err), 
+         l[0].autoscale=False
+         l = ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y-err), 
                '--',color='k', linewidth=linewidth)
+         l[0].autoscale=False
       elif self.data[filter].tck is not None:
          tck = self.data[filter].tck
          t = arange(tck[0][0], tck[0][-1], 1.0)

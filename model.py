@@ -27,6 +27,14 @@ else:
 
 it_sigma = 1.0
 
+def quniform_prior(p,pmin,pmax,sigma):
+   '''A quasi-uniform prior (uniform with Gaussian tails).'''
+   norm = 1.0/((pmax - pmin)+sqrt(2*pi)*sigma)
+   if pmin < p < pmax:  return norm
+   if p <= pmin:  return norm*exp(-0.5*(p-pmin)**2/sigma**2)
+   if p >= pmax:  return norm*exp(-0.5*(p-pmax)**2/sigma**2)
+
+
 class model:
 
    model_in_mags = 1
@@ -45,6 +53,12 @@ class model:
       '''A function that is run and picks initial guesses for
       the parameter [param].'''
       raise NotImplementedError('Derived class must overide')
+
+   def prior(self):
+      '''An optional prior on the parameters.  To be filled in
+      based on implementation.  This should return the probability
+      given the current parameters.'''
+      return 1.0
 
    def setup(self):
       '''A function that does any initial setup (estimating k-correcions,
@@ -163,7 +177,12 @@ class model:
          raise RuntimeError, "All weights are zero:  fitter is in a part of parameter" +\
                 " space where the model is not valid or there is no useful data."
       res = concatenate(resids_list)
+
+      # now apply any priors:  chi2 = chi2 + 2*ln(p) -N/2log(2pi)-sum(log(sigi))
       if debug:  print "  weighted resids = ", resids_list
+      #N = len(W[m])
+      #extra = log(2*pi)-2/N*sum(log(W[m])) - 2*log(self.prior())/N
+      #res = sqrt(power(res,2) + extra)
       return(res)
 
 
@@ -711,6 +730,13 @@ class max_model(model):
          return(1.1)
 
       return(0.0)
+
+   #def prior(self):
+   #   if self.stype == 'dm15':
+   #      return quniform_prior(self.parameters['dm15'], 0.4, 2.5,0.01)
+   #   elif self.stype == 'st':
+   #      return quniform_prior(self.parameters['st'], 0.2, 1.3, 0.01)
+
 
    def __call__(self, band, t):
       if debug:  print ">>>   Now in max_model"

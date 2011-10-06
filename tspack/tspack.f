@@ -2968,6 +2968,7 @@ C
         IF (ABS(DSIG) .LE. RTOL*SIG  .OR.  (F .GE. 0.D0
      .      .AND.  F .LE. FTOL)  .OR.  ABS(F) .LE. RTOL)
      .    GO TO 7
+        IF (NIT .GT. 500) GO TO 7
 C
 C   Update SIG.
 C

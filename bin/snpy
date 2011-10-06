@@ -1,10 +1,40 @@
 #!/usr/bin/env python
+import sys,os,glob
+if sys.platform.find('linux') >= 0:
+   if getattr(sys, 'real_prefix', False):
+      import Tkinter
+      # Try out the tkinter
+      try:
+         root = Tkinter.Tk()
+         root.withdraw()
+      except:
+         # Probably can't find init.tcl.  See if we can find it
+         libdir = os.path.join(sys.real_prefix,'lib')
+         tclver = Tkinter.tkinter.TCL_VERSION
+         test_dirs = [os.path.join(libdir,'tcl'+tclver),
+                      os.path.join(libdir,'tcl',tclver),
+                      os.path.join(libdir,'tcl')]
+         for dir in test_dirs:
+            if os.path.isfile(os.path.join(dir,'init.tcl')):
+               os.environ['TCL_LIBRARY'] = dir
+               os.environ['TK_LIBRARY'] = dir.replace('tck','tk')
+               break
+         try:
+            root = Tkinter.Tk()
+            root.withdraw()
+         except:
+            print "Your python's Tkinter isn't installed or is broken.  Please"
+            print "fix it.  You might try setting TCL_LIBRARY and TK_LIBRARY"
+            print "appropriately."
+            sys.exit(1)
+
 from numpy import *
 from snpy import *
-import sys
 if "lowz" in sys.argv:
    del sys.argv[sys.argv.index("lowz")]
    sqlmod.default_sql = sqlmod.sql_lowz()
+if '-pylab' not in sys.argv:
+   sys.argv.append('-pylab')
 
 import IPython.ipapi
 
