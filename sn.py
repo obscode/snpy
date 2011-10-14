@@ -965,7 +965,7 @@ class sn(object):
    def plot(self, xrange=None, yrange=None, device=None, 
          title=None, interactive=0, single=0, dm=1, fsize=None, linewidth=None,
          symbols=None, colors=None, relative=0, legend=1, mask=1, label_bad=0,
-         flux=0, epoch=0, **pargs):
+         flux=0, epoch=1, **pargs):
       '''Plot out the supernova data in a nice format.  There are several 
       options:
          - xrange,yrange:  specify the ranges to plot as lists [xmin,xmax], 

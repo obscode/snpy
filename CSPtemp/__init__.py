@@ -58,6 +58,8 @@ debug=0
 base = os.path.dirname(globals()['__file__'])
 if base == '':  base = '.'
 
+NIR_range = [-12,10]
+
 dm15_flux = {}
 dm15_eflux = {}
 st_flux = {}

@@ -219,6 +219,7 @@ class ButtonClick:
       self.id = self.figure.canvas.mpl_connect('key_press_event', self.keypress)
       if len(self.mouse_bindings.keys()) > 1:
          self.id2 = self.figure.canvas.mpl_connect('button_press_event', self.buttonpress)
+      return self.id
 
    def disconnect(self):
       if self.id is None:  return
@@ -234,6 +235,7 @@ class ButtonClick:
 
 
    def keypress(self, event):
+      #print "key press event:", event.inaxes,event.key
       if event.inaxes is None:  return
       if event.key in self.bindings:
          return apply(self.bindings[event.key], (event,))
@@ -459,7 +461,7 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
          ax.set_autoscalex_on(False)
          ax.set_xlim(xrange)
       if yrange is not None:
-         print yrange
+         #print yrange
          ax.set_autoscaley_on(False)
          ax.set_ylim(yrange)
 
@@ -568,8 +570,9 @@ def mask_data(self):
    for b in self.data:
       # a place to store red X's
       self.data[b].pts = {}
-   bc = ButtonClick(p, bindings={'mouse1':bind_mask_data, 'u':bind_unmask_data})
-   bc.connect()
+   p.bc = ButtonClick(p.fig, bindings={'m':bind_mask_data, 'u':bind_unmask_data})
+   p.bc.connect()
+   return p
 
 def bind_mask_data(event):
    '''Mask the data that has been selected.'''
@@ -582,6 +585,7 @@ def bind_mask_data(event):
    dists = power(lc.mag[lc.mask] - event.ydata, 2) + \
            power(lc.t[lc.mask] - event.xdata, 2)
    i = argmin(dists)
+   #print i
    # need to find index in original (masked+unmasked) data
    id = indices(lc.mask.shape)[0][lc.mask][i]
    x = lc.t[id]
@@ -590,6 +594,8 @@ def bind_mask_data(event):
             
    lc.pts[id] = event.inaxes.plot(x, y, marker='x', mec='red', ms=12, mew=1, 
          linestyle='None')[0]
+   event.inaxes.get_figure().canvas.draw()
+
 
 def bind_unmask_data(event):
    '''Unmask the data that has been masked.'''
@@ -700,7 +706,6 @@ def delete_knot(event):
    deltas = absolute(ax._spl.get_data()[0] - event.xdata)
    id = argmin(deltas)
    k = self.tck[2]
-   print id
    if id <= k or id >= len(deltas) - k -1 :
       print "You can only delete interior points"
       return

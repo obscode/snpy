@@ -130,6 +130,7 @@ class lc:
       # Need this because MPL objects are not pickleable.
       odict = self.__dict__.copy()
       if 'mp' in odict:  del odict['mp']
+      if 'pts' in odict:  del odict['pts']
       return odict
 
    def time_sort(self):
