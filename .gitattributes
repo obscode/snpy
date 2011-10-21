@@ -248,6 +248,7 @@ CSPtemp/templates/SN2007af_u.dat -text
 /README -text
 /__init__.py -text
 bin/snpy -text
+bin/update-snpy -text
 dm15temp/__init__.py -text
 dm15temp/dm15temp.c -text
 dm15temp/dm15temp.h -text
@@ -672,6 +673,7 @@ lib/Eric/telluric.txt -text
 /setup.py -text
 /setup_CSP.py -text
 /sn.py -text
+/snpy-bootstrap.py -text
 /specobj.py -text
 spline2/MANIFEST -text
 spline2/Spline2UnixV6.zip -text

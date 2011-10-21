@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+
+import os,sys
+
+fallback = '''
+Sorry, this SNooPy does not seem to be installed in a virtualenv, so I don't
+know where anything is.  You'll have to update SNooPy yourself:'''
+
+fallback2 = '''
+Sorry, I can't find the SNooPy source.  I  expected to find it here:
+%s'''
+
+instructions = '''
+If you downloaded SNooPy with SVN:
+1) Go to the SNooPy *source* folder and type 'svn update'
+2) Type 'python setup.py install'
+   NOTE:  make sure you use the correct python to do this.
+
+If you downloaded a static source tarball:
+1) Get the latest source from
+   http://users.obs.carnegiescience.edu/cburns/downloads
+2) Unpack the source , change directory to the snpy folder
+   and type 'python setup.py install'
+   NOTE:  make sure you use the correct python to do this.
+'''
+
+# first check to see if we are in a virtualenv
+realprefix = getattr(sys, 'real_prefix', None)
+if realprefix is None:
+   print fallback
+   print instructions
+   sys.exit(1)
+
+
+# The prefix is the virtualenv on
+snpy_src = os.path.join(sys.prefix, 'snpy')
+if not os.path.isdir(snpy_src):
+   print fallback2 % snpy_src
+   print instructions
+   sys.exit(1)
+
+os.chdir(snpy_src)
+if os.path.isdir('.svn'):
+   ret = subprocess.call(['svn','update'])
+   if ret != 0:
+      print "SVN command failed.  Check your internet connection"
+      sys.exit(1)
+   subprocess.call([os.path.join(sys.prefix, 'bin','python'),
+      'setup.py','install'])
+else:
+   # find the correct pip command to update....
+
+   

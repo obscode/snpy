@@ -37,15 +37,13 @@ information, but making things far faster.  Now, we check to see if the tck
 in a file tck.pickle is available.  If so, then use this instead of calling
 gloes.
 
-NEWER:  We now save a smoothed surface (generated either through GLOEs or
-through GP) as FITS files.  We then use Clough-Tocher Interpolator to 
-interpolate on the grid, as this is now a part of scipy 0.9.0
 '''
 import sys,os,string
 import numpy as num
 from scipy.interpolate import CloughTocher2DInterpolator as interp2D
 from scipy.interpolate import bisplrep,bisplev
 import scipy.optimize
+import pickle
 try:
    import FITS
    have_fits = True
@@ -78,11 +76,25 @@ def load_data(band, param='dm15', gen=1):
             % (param,band,gen))
       df = st_flux
       ef = st_eflux
+   pfile = file.replace('.fits','.pickle')
    if (band,gen) not in df:
       if debug:  print "Getting data from ",file
-      if not os.path.isfile(file):
+      if not os.path.isfile(file) and not os.path.isfile(pfile):
          raise IOError, "Could not find surface data for band %s, gen %d" \
                % (band,gen)
+      # Look for previously saved pickle that's newer than the original FITS
+      # file
+      if os.path.isfile(pfile) and \
+            os.path.getctime(pfile) > os.path.getctime(file):
+         f = open(pfile)
+         df[(band,gen)] = pickle.load(f)
+         f.close()
+         f = open(pfile.replace('mean','std'))
+         ef[(band,gen)] = pickle.load(f)
+         f.close()
+         return
+
+
       if have_fits:
          h = FITS.FITS(file)
          fdata = h.data()
@@ -108,6 +120,17 @@ def load_data(band, param='dm15', gen=1):
             tx=tx, ty=ty)
       ef[(band,gen)] = bisplrep(num.ravel(x), num.ravel(y), num.ravel(edata), task=-1, 
             tx=tx, ty=ty)
+      # Try to save it as a pickle, to speed things up later
+      try:
+         f = open(pfile, 'w')
+         pickle.dump(df[(band,gen)], f)
+         f.close()
+         f = open(pfile.replace('mean','std'), 'w')
+         pickle.dump(ef[(band,gen)], f)
+         f.close()
+      except:
+         pass
+
       if debug:
          rms = num.sqrt(num.mean(num.power(bisplev(xs,ys,df[(band,gen)])-fdata.T,2)))
          mad = num.median(num.absolute(bisplev(xs,ys,df[(band,gen)])-fdata.T))
