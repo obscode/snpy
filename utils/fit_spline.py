@@ -14,7 +14,7 @@ import scipy
 
 
 def make_spline(t, m, e_m, knots=None, k=1, s=None, fitflux=0, zpt=0, 
-      tmin=-10, tmax=100, task=-1, anchor_dist=[5.0,5.0], slopes=[None,None]):
+      tmin=None, tmax=None, task=-1, anchor_dist=[5.0,5.0], slopes=[None,None]):
    '''A wrapper around splrep that makes sure the independent variable is
    monotonic and non-repeating.  Required arguments:  time (t), magnitudes
    (m) and errors (e_m).  If knots are specified, use them (if task==-1), otherwise,
@@ -28,6 +28,11 @@ def make_spline(t, m, e_m, knots=None, k=1, s=None, fitflux=0, zpt=0,
    tt = num.take(t, sids)
    mm = num.take(m, sids)
    ee_m = num.take(e_m, sids)
+
+   if tmin is None:
+      tmin = t.min()
+   if tmax is None:
+      tmax = t.max()
 
    # here's some Numeric magic.  first, find where we have repeating x-values
    Nmatrix = num.equal(tt[:,num.NewAxis], tt[num.NewAxis,:])

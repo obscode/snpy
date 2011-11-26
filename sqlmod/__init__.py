@@ -360,6 +360,6 @@ class sql_lowz(sqlbase):
    PHOTO_FILT = "FILT"
    PHOTO_K = None      # No K-corrections in the DB
    PHOTO_COND = "and MNAT is not NULL and MNAT > 0"
-   JD_OFFSET = 2999.5    # database is JD - 2453000, so +2999.5 gives MJD
+   JD_OFFSET = 52999.5    # database is JD - 2453000, so +2999.5 gives MJD
 
 default_sql = None
