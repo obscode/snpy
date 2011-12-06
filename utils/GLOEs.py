@@ -67,7 +67,8 @@ def smooth(x, y, weight, xeval, sigma=None, N=None):
             FWHMs.append(sorts2[N-1])
          else:
             raise RuntimeError, "Error:  N too large for this many points"
-      sigmas = array(FWHMs)/1.665
+      sigmas = 10*array(FWHMs)
+      print sigmas
 
    # now weight these distances with a Gaussian
    arg = -0.5*power(dists, 2)/power(sigmas[:,NewAxis],2)
@@ -90,19 +91,6 @@ def smooth(x, y, weight, xeval, sigma=None, N=None):
       e_interps.append(eparams[0])
       bs.append(params[1])
       cs.append(params[2])
-      #if debug:
-      #   p = Plot(device='11/XWIN')
-      #   p.point(x, y, symbol=4)
-      #   p.plot()
-      #   p.xrange = [p.xmin,p.xmax]
-      #   p.yrange = [p.ymin,p.ymax]
-      #   #p.error(x, y, dy1=sqrt(1.0/weight[i]), length=0)
-      #   p.line(x, params[0] + params[1]*(x-xeval[i]) + params[2]/2*power(x-xeval[i], 2))
-      #   p.line([xeval[i]-FWHMs[i],xeval[i]-FWHMs[i]],[p.ymin,p.ymax])
-      #   p.line([xeval[i]+FWHMs[i],xeval[i]+FWHMs[i]],[p.ymin,p.ymax])
-      #   p.point([xeval[i]], [params[0]], symbol=4, color='red')
-      #   p.replot()
-      #   p.close()
 
    # Convert the lists arrays
    interps,e_interps,bs,cs = map(array, [interps,e_interps,bs,cs])

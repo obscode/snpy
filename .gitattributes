@@ -247,6 +247,7 @@ CSPtemp/templates/SN2007af_u.dat -text
 /MANIFEST.in -text
 /README -text
 /__init__.py -text
+bin/lcparams -text
 bin/snpy -text
 bin/update-snpy -text
 dm15temp/__init__.py -text
@@ -670,6 +671,7 @@ filters/standards/landolt/sa99-447_mags.dat -text
 filters/standards/landolt/sa99-6.dat -text
 filters/standards/landolt/sa99-6_mags.dat -text
 filters/standards/landolt/standards.dat -text
+/interp_model.py -text
 /kcorr.py -text
 /lc.py -text
 lib/Eric/Hsiao_SED_tell.dat.gz -text

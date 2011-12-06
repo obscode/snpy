@@ -6,7 +6,7 @@ from myplotlib import PanelPlot
 
 class InteractiveFit:
 
-   def __init__(self, interp):
+   def __init__(self, interp, title=None, figsize=(12,8)):
       '''Takes a oneDcurve instance as argument.  Sets up a plot with
       fit and residuals, then sets up bindings to interactively fit.'''
 
@@ -15,22 +15,37 @@ class InteractiveFit:
       self.y = interp.ydata*1
       self.ey = interp.eydata*1
       self.mask = interp.mask.copy()
+      
+      self.title = title
+      self.figsize = figsize
 
       self.setup_graph()
       self.set_bindings()
 
-   #def __getattr__(self, key):
-   #   if key == 'mask':
-   #      return self.interp.mask
-   #   raise AttributeError, "instance has not attribute," + key
+   def __getattr__(self, key):
+      if 'interp' in self.__dict__:
+         if key in self.interp.pars:
+            return self.interp.pars[key]
+      raise AttributeError, "no such attribute %s" % key
+
+   def __setattr__(self, key, value):
+      if 'interp' in self.__dict__:
+         if key in self.interp.pars:
+            setattr(self.interp,key,value)
+            self.redraw()
+            return
+      self.__dict__[key] = value
 
 
    def setup_graph(self):
 
       self.mp = PanelPlot(1,2, pheights=[0.2,0.8], pwidths=[0.8],
-            figsize=(12,8))
+            figsize=self.figsize)
 
-      self.mp.title("Fitting " + str(self.interp))
+      if self.title is None:
+         self.mp.title("Fitting %s\ntype '?' for help" % str(self.interp))
+      else:
+         self.mp.title(self.title + "\ntype '?' for help")
       self.mp.xlabel("X")
       self.mp.axes[0].set_ylabel("residuals")
       self.mp.axes[1].set_ylabel("Y")
@@ -43,13 +58,16 @@ class InteractiveFit:
                color='red', ms=16)
       else:
          self._x1 = None
-      xs = num.linspace(self.x.min(), self.x.max(), 100)
+      xmin,xmax = self.interp.domain()
+      xs = num.linspace(xmin,xmax, 100)
       ys,m = self.interp(xs)
       self._mod, = self.mp.axes[1].plot(xs[m], ys[m], '-', color='black')
 
       # residuals plot
+      ys,m = self.interp(self.x)
+      resids = self.interp.residuals(mask=False)
       self._rp,dum,self._rl = self.mp.axes[0].errorbar(self.x, 
-            self.interp.residuals(mask=False), yerr=self.ey, capsize=0, fmt='o')
+            resids, yerr=self.ey, capsize=0, fmt='o')
       if not num.alltrue(self.interp.mask):
          self._x2, = self.mp.axes[0].plot(self.x[-self.mask], 
                self.interp.residuals(mask=False)[-self.mask], 'x', ms=16, color='red')
@@ -58,6 +76,9 @@ class InteractiveFit:
       self.mp.axes[0].axhline(0, color='black')
 
       self.mp.set_limits()
+      if not num.alltrue(m):
+         resids = resids[m]
+         self.mp.axes[0].set_ylim((resids.min(), resids.max()))
       self.mp.draw()
 
    def redraw(self):
@@ -71,15 +92,24 @@ class InteractiveFit:
       self.interp.setup = False
 
       # Update the model
-      xs = num.linspace(self.x.min(), self.x.max(), 100)
+      xmin,xmax = self.interp.domain()
+      xs = num.linspace(xmin,xmax, 100)
       ys,m = self.interp(xs)
       self._mod, = self.mp.axes[1].plot(xs[m], ys[m], '-', color='black')
 
       # Update the residuals
+      ys,m = self.interp(self.x)
+      resids = self.interp.residuals(mask=False)
       self._rp,dum,self._rl = self.mp.axes[0].errorbar(self.x, 
-            self.interp.residuals(mask=False), yerr=self.ey, capsize=0, fmt='o',
-            color='blue')
+            resids, yerr=self.ey, capsize=0, fmt='o', color='blue')
+      self.mp.set_limits()
+      if not num.alltrue(m):
+         resids = resids[m]
+         self.mp.axes[0].set_ylim((resids.min(), resids.max()))
       self.redraw_x()
+
+   def help(self):
+      self.interp.help()
 
    def redraw_x(self):
       '''Redraw the little red X's if needed'''
@@ -125,9 +155,15 @@ class InteractiveFit:
       if event.key == 'q':
          self.mp.close()
 
+   def _bind_help(self, event):
+      '''Binding for help'''
+      if event.key == '?':
+         self.help()
+
    def set_bindings(self):
       '''Sets the bindings to the figure canvas.'''
       self.mp.fig.canvas.mpl_connect('key_press_event',self._bind_x)
       self.mp.fig.canvas.mpl_connect('key_press_event',self._bind_r)
       self.mp.fig.canvas.mpl_connect('key_press_event',self._bind_q)
+      self.mp.fig.canvas.mpl_connect('key_press_event',self._bind_help)
 

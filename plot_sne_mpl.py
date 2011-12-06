@@ -829,11 +829,8 @@ def plot_lc(self, device='/XSERVE', interactive=0, epoch=1, flux=0, gloes=0,
       self.mp.axes[0].set_ylabel('residuals')
       self.mp.axes[1].set_ylabel('mag')
       p = self.mp.axes[1]
-      p.pending_move = None
       p2 = self.mp.axes[0]
       # some references so that we can get at the data from within callbacks
-      p.lc_inst = self
-      p2.lc_inst = self
       p.epoch = epoch
       p.flux = flux
       if flipaxis:
@@ -878,7 +875,8 @@ def plot_lc(self, device='/XSERVE', interactive=0, epoch=1, flux=0, gloes=0,
                self.flux - power(10,-0.4*(m_m - self.filter.zp)))
          dy = self.e_flux[self.mask*m_mask]
       elif not flux and not self.parent.model.model_in_mags:
-         p._model = p.plot(t[mask]-epoch*Tmax, -2.5*log10(m[mask]) + self.filter.zp, '-')[0]
+         p._model = p.plot(t[mask]-epoch*Tmax, -2.5*log10(m[mask]) + \
+               self.filter.zp, '-')[0]
          y = compress(self.mask*m_mask, self.mag + 2.5*log10(m_m) + self.filter.zp)
          dy = self.e_mag[self.mask*m_mask]
       elif flux:
@@ -907,49 +905,30 @@ def plot_lc(self, device='/XSERVE', interactive=0, epoch=1, flux=0, gloes=0,
          p._model = p.plot(compress(mask,t - epoch*Tmax), 
                 compress(mask, power(10, -0.4*(m - self.filter.zp))),'-')[0]
          if self.tck is not None:
-            p._spl = p.plot(self.tck[0] - epoch*Tmax, power(10, -0.4*(self.eval(self.tck[0], t_tol=None)[0] \
-               - self.filter.zp)), 'o', mfc='red')[0]
+            p._spl = p.plot(self.tck[0] - epoch*Tmax, 
+               power(10, -0.4*(self.eval(self.tck[0], t_tol=None)[0] - self.filter.zp)),
+               'o', mfc='red')[0]
          x = compress(self.mask*m_mask, self.MJD)
-         y = compress(self.mask*m_mask, self.flux - power(10, -0.4*(m_model-self.filter.zp)))
+         y = compress(self.mask*m_mask, self.flux - \
+               power(10, -0.4*(m_model-self.filter.zp)))
          dy = compress(self.mask*m_mask, self.e_flux)
          p2._errb = p2.errorbar(x - epoch*Tmax,y, yerr=dy, barsabove=True,
                capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
                ecolor='black')
       else:
          p._model = p.plot(compress(mask,t - epoch*Tmax), compress(mask,m),'-')[0]
-         if self.tck is not None:
-            p._spl = p.plot(self.tck[0] - epoch*Tmax, 
-                  self.eval(self.tck[0], t_tol=None)[0], 'o', mfc='red')[0]
          x = compress(self.mask*m_mask, self.MJD)
          y = compress(self.mask*m_mask, self.mag - m_model)
          dy = compress(self.mask*m_mask, self.e_mag)
          p2._errb = p2.errorbar(x - epoch*Tmax,y, yerr=dy, barsabove=True,
                capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
                ecolor='black')
-      # useful stats:
-      if self.tck is not None:
-         extra_title = 'Np = %d  Nk = %d  s = %.1f r-chi-sq = %.2f' % \
-            (len(self.mag), len(self.tck[0]), self.s, self.rchisq) 
-      else:
-         if self.line.N is not None:  N = self.line.N
-         else: N = -1
-         if self.line.sigma is not None:  sigma = self.line.sigma
-         else: sigma = -1
-         extra_title = 'N = %d   sigma = %.1f   r-chi-sq = %.2f' % \
-               (N,sigma,self.line.chisq())
-      self.mp._title.set_text(string.split(self.mp._title.get_text(), '\n')[0]+\
-                              '\n' + extra_title)
    self.mp.set_limits()
    if len(self.mp.axes) > 1:
       self.mp.axes[0].axhline(0)
    self.mp.draw()
-   self.mp.bc = ButtonClick(self.mp.fig, bindings={'a':add_knot, 'd':delete_knot, 
-      'm':move_knot, '-':change_s, '+':change_s, '=':change_s,
-            'n':change_N, 'N':change_N})
-   self.mp.bc.connect()
    return(self.mp)
-   
-   
+
 def plot_kcorrs(self, device='13/XW', colors=None, symbols=None):
    '''Plot the k-corrections, both mangled and un-mangled.'''
    # See  what filters we're going to use:

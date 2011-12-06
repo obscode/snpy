@@ -18,6 +18,9 @@ except:
 try:
    import pymc
    from pymc import gp as GP
+   import os
+   if 'OMP_NUM_THREADS' not in os.environ:
+      os.environ['OMP_NUM_THREADS'] = '1'
 except:
    pymc = None
 
@@ -29,6 +32,8 @@ except:
 functions = {}
 
 class oneDcurve:
+
+   num_real_keep = 100
 
    def __init__(self, x, y, ey):
 
@@ -50,6 +55,7 @@ class oneDcurve:
       self.mask = num.ones(x.shape, dtype=bool)  # mask for the data
 
       self.realization = None
+      self.realizations = []
 
       self.pars = {}
       self.setup = False
@@ -110,6 +116,28 @@ class oneDcurve:
    def __call__(self, x):
       raise NotImplementedError('Derived class must overide')
 
+   def error(self, x, N=50):
+      '''Estimate the error at the point [x].'''
+      scalar = (len(num.shape(x)) == 0)
+      x = num.atleast_1d(x)
+      
+      if len(self.realizations) < N:
+         for i in range(N-len(self.realizations)):
+            self.draw()
+         self.reset_mean()
+      earr = []
+      for i in range(N):
+         self.realization = self.realizations[i]
+         earr.append(self.__call__(x)[0])
+      self.realization = None
+      earr = num.array(earr)
+      print earr.shape
+      err = num.std(earr, axis=0)
+      if scalar:
+         return err[0]
+      else:
+         return err
+
    def draw(self):
       raise NotImplementedError('Derived class must overide')
    
@@ -151,13 +179,16 @@ class oneDcurve:
       '''Find the value of x for which the interpolator goes through [y]'''
       raise NotImplementedError('Derived class must overide')
 
+   def domain(self):
+      '''Return the valid domain for this model'''
+
    def interact(self):
       '''If we have the InteractiveFit module, spawn an interactive fitter.'''
       if InteractiveFit is not None:
-         self.ifit = InteractiveFit.InteractiveFit(self)
+         return InteractiveFit.InteractiveFit(self)
       else:
          print "Sorry, you need to have matplotlib installed to use this feature"
-         return
+         return None
 
    def help(self):
       '''Provide a help string.'''
@@ -226,7 +257,8 @@ if polynomial is not None:
       def __call__(self, x):
          '''Interpolate at point [x].  Returns a 3-tuple: (y, mask) where [y]
          is the interpolated point, and [mask] is a boolean array with the same
-         shape as [x] and is True where interpolated and False where extrapolated'''
+         shape as [x] and is True where interpolated and False where 
+         extrapolated'''
          if not self.setup:  self._setup()
          if self.realization is not None:
             res = self.realization(x)
@@ -238,9 +270,14 @@ if polynomial is not None:
       def draw(self):
          '''Generate a random realization of the spline, based on the data.'''
          y_draw = num.random.normal(self.y, self.ey)
-         self.realization = polytypes[self.type].fit(self.x, y_draw, deg=self.n,
-               w=num.power(self.ey,-1))
-    
+         self.realizations.append(\
+               polytypes[self.type].fit(self.x, y_draw, deg=self.n,
+               w=num.power(self.ey,-1)))
+         if len(self.realizations) > self.num_real_keep:
+            self.realizations = self.realizations[1:]
+         self.realization = self.realizations[-1]
+
+
       def reset_mean(self):
          self.realization = None
    
@@ -253,23 +290,31 @@ if polynomial is not None:
          dpoly = self.poly.deriv(m=n)
          return dpoly(x)
    
-      def find_extrema(self):
+      def domain(self):
+         '''Returns the valid domain of the polynomial.'''
+         dom = self.poly.domain
+         return (dom[0],dom[1])
+
+      def find_extrema(self, xmin=None, xmax=None):
          '''Find the position and values of the maxima/minima.  Returns a tuple:
             (roots,vals,ypps) where roots are the x-values where the extrema
             occur, vals are the y-values at these points, and ypps are the
-            2nd derivatives.'''
+            2nd derivatives.  optionally, restrict roots to between xmin,
+            and xmax'''
          if self.realization is not None:
             poly = self.realization
          else:
             poly = self.poly
+
+         if xmin is None:  xmin = self.poly.domain[0]
+         if xmax is None:  xmax = self.poly.domain[1]
          d1 = poly.deriv(m=1)
          d2 = poly.deriv(m=2)
          roots = d1.roots()
          # Roots can be complex.  Want only the real ones
          gids = num.iscomplex(roots)
          roots = num.real(roots[gids])
-         gids = num.greater_equal(roots, self.poly.domain[0])*\
-               num.less_equal(roots, self.poly.domain[1])
+         gids = num.greater_equal(roots, xmin)*num.less_equal(roots, xmax)
          roots = roots[gids]
          if len(roots) == 0:
             return None,None,None
@@ -408,10 +453,17 @@ if spline2 is not None:
          else:
             return evm,mask
          
+      def domain(self):
+         return (self.tck[0][0], self.tck[0][-1])
+
       def draw(self):
          '''Generate a random realization of the spline, based on the data.'''
          y_draw = num.random.normal(self.y, self.ey)
-         self.realization = spline2(self.x, y_draw, w=1.0/self.ey, **self.pars)
+         self.realizations.append(\
+               spline2(self.x, y_draw, w=1.0/self.ey, **self.pars))
+         if len(self.realizations) > self.num_real_keep:
+            self.realizations = self.realizations[1:]
+         self.realization = self.realizations[-1]
     
       def reset_mean(self):
          self.realization = None
@@ -441,15 +493,22 @@ if spline2 is not None:
          else:
             return evm
    
-      def find_extrema(self):
+      def find_extrema(self, xmin=None, xmax=None):
          '''Find the position and values of the maxima/minima.  Returns a tuple:
             (roots,vals,ypps) where roots are the x-values where the extrema
             occur, vals are the y-values at these points, and ypps are the
-            2nd derivatives.'''
+            2nd derivatives.  Optionally specify the range over which maxima
+            are valid.'''
          if self.realization:
-            return eval_extrema(self.realization)
+            vals = eval_extrema(self.realization)
          else:
-            return eval_extrema(self.tck)
+            vals = eval_extrema(self.tck)
+         gids = num.ones(vals.shape, dtype=num.bool)
+         if xmin is not None:
+            gids = gids*num.greater_equal(vals[0],xmin)
+         if xmax is not None:
+            gids = gids*num.less_equal(vals[0],xmax)
+         return (vals[0][gids], vals[1][gids], vals[2][gids])
    
       def intercept(self, y):
          '''Find the value of x for which the interpolator goes through [y]'''
@@ -555,6 +614,9 @@ class Spline(oneDcurve):
       else:
          return evm,mask
       
+   def domain(self):
+      return (self.tck[0][0], self.tck[0][-1])
+
    def draw(self):
       '''Generate a random realization of the spline, based on the data.'''
       k = self.tck[2]
@@ -562,7 +624,10 @@ class Spline(oneDcurve):
       args = self.pars.copy()
       args['task'] = -1
       args['t'] = self.tck[0][k+1:-(k+1)]
-      self.realization = splrep(self.x, y_draw, self.ey, **args)
+      self.realizations.append(splrep(self.x, y_draw, self.ey, **args))
+      if len(self.realizations) > self.num_real_keep:
+         self.realizations = self.realizations[1:]
+      self.realization = self.realizations[-1]
  
    def reset_mean(self):
       self.realization = None
@@ -592,16 +657,19 @@ class Spline(oneDcurve):
       else:
          return evm
 
-   def find_extrema(self):
+   def find_extrema(self, xmin=None, xmax=None):
       '''Find the position and values of the maxima/minima.  Returns a tuple:
          (roots,vals,ypps) where roots are the x-values where the extrema
          occur, vals are the y-values at these points, and ypps are the
-         2nd derivatives.'''
+         2nd derivatives.  Optionall, search only betwwen xmin and xmax.'''
       #evaluate the 1st derivative at k+1 intervals between the knots
+
       if self.realization:
          t,c,k = self.realization
       else:
          t,c,k = self.tck
+      if xmax is None:  xmax = t[-1]
+      if xmin is None:  xmin = t[0]
       x0s = t[k:-k]
       xs = []
       for i in range(len(x0s)-1):
@@ -616,7 +684,7 @@ class Spline(oneDcurve):
       for root in roots:
          vals.append(self.__call__(root)[0])
          curvs.append(self.deriv(root, n=2))
-      gids = num.greater_equal(roots,t[0])*num.less_equal(roots,t[-1])
+      gids = num.greater_equal(roots,xmin)*num.less_equal(roots,xmax)
       curvs = num.where(num.equal(curvs,0), 0, curvs/num.absolute(curvs))
       return roots[gids],num.array(vals)[gids],num.array(curvs)[gids]
 
@@ -654,18 +722,32 @@ if pymc is not None:
                raise TypeError, \
                      "%s is an invalid keyword argument for this method" % key
             self.pars[key] = args[key]
-         if 'func' in args:
-            self.func = args['func']
-         else:
-            self.func = lambda x:  x*0 + num.median(self.y)
+         #if 'func' in args:
+         #   self.func = args['func']
+         #else:
+         #   self.func = lambda x:  x*0 + num.median(self.y)
    
          # Make sure the data conform to the spine requirements
+         self.median = num.median(self.y)
          self._regularize()
          self._setup()
          self.realization = None
    
       def __str__(sef):
          return "Gaussian Process"
+
+      def func(self, x):
+         return x*0 + self.median
+
+      def __getstate__(self):
+         # we need to define this because Mean and Cov are not pickleable
+         dict = self.__dict__.copy()
+         if 'M' in dict:  del dict['M']
+         if 'C' in dict:  del dict['C']
+         # Setting setup to None will force re-generation of M and C
+         #  when we are unpickled
+         dict['setup'] = False
+         return dict
 
       def help(self):
          print "Parameters that affect the fit:"
@@ -739,11 +821,14 @@ if pymc is not None:
             res = self.M(x)
    
          if scalar:
-            return res[0],True
+            return res[0],self.x.min() <= x[0] <= self.x.max()
          else:
             return res,num.greater_equal(x, self.x.min())*\
                   num.less_equal(x, self.x.max())
          
+      def domain(self):
+         return (self.x.min(),self.x.max())
+
       def error(self, x):
          '''Returns the error in the interpolator at points [x].'''
          if not self.setup:
@@ -755,7 +840,7 @@ if pymc is not None:
             scalar = False
    
          x = num.atleast_1d(x)
-         res = sqrt(self.C(x))
+         res = num.sqrt(self.C(x))
    
          if scalar:
             return res[0]
@@ -781,22 +866,30 @@ if pymc is not None:
             scalar = False
          xs = num.atleast_1d(x)
          f = lambda x:  self.__call__(x)[0]
-         res = num.array([deriv(f, x, dx=self.scale/100., n=n) for x in xs])
+         res = deriv(f, xs, dx=self.scale/100., n=n)
    
          if scalar:
             return res[0]
          else:
             return res
    
-      def find_extrema(self):
+      def find_extrema(self, xmin=None, xmax=None):
          '''Find the position and values of the maxima/minima.  Returns a tuple:
             (roots,vals,ypps) where roots are the x-values where the extrema
             occur, vals are the y-values at these points, and ypps are the
-            2nd derivatives.'''
-         #evaluate the 1st derivative at sacle/10 intervals (that should be enough)
-         xs = num.arange(self.x.min(), self.x.max(), self.scale/10)
-         f = lambda x: self.__call__(x)[0]
+            2nd derivatives.  Optionally, only search for roots between
+            xmin and xmax'''
+         #evaluate the 1st derivative at sacle/10 intervals (that should be 
+         #   enough)
+         if xmin is None:  xmin = self.x.min()
+         if xmax is None:  xmax = self.x.max()
+         dx = min(self.scale/20, (xmax-xmin)/5.0)
+         xs = num.arange(xmin, xmax+dx, dx)
+         #f = lambda x: self.__call__(x)[0]
          dys = self.deriv(xs, n=1)
+         #dys = num.diff(self.__call__(xs)[0])
+         #adys = (dys[1:] + dys[:-1])/2
+         #dys = num.concatenate([[dys[0]],adys,[dys[-1]]])
          pids = num.greater(dys, 0)
          inds = num.nonzero(pids[1:] - pids[:-1])[0]
    
@@ -804,7 +897,12 @@ if pymc is not None:
             return (None,None,None)
          ret = []
          for i in range(len(inds)):
-            ret.append(brentq(self.deriv, xs[inds[i]], xs[inds[i]+1]))
+            #try:
+            res = brentq(self.deriv, xs[inds[i]], xs[inds[i]+1])
+            #res = newton(self.deriv, xs[inds[i]])
+            ret.append(res)
+            #except:
+            #   continue
          ret = num.array(ret)
          vals = self.__call__(ret)[0]
          curvs = self.deriv(ret, n=2)
@@ -843,7 +941,7 @@ def Interpolator(type, x, y, dy, **args):
    else:
       interp = functions[type][0]
       if type in polytypes:
-         args[type] = type
+         args['type'] = type
       return interp(x, y, dy, **args)
 
 def list_types():
