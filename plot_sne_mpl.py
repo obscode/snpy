@@ -6,11 +6,11 @@
 from numpy import *
 import matplotlib
 matplotlib.use('TkAgg')
+import myplotlib
 from matplotlib import pyplot,rcParams
 from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
 from matplotlib.ticker import MaxNLocator
-import myplotlib
 from snpy import kcorr
 import types, string
 from snpy.filters import fset
@@ -186,14 +186,26 @@ class click_yrange:
       self.ax.figure.canvas.draw()
       return(self.y0, self.rect.get_y()+self.rect.get_height())
 
+#class MaskData:
+#   '''Given a figure instance, oversee the key bindings in a figure that
+#   deal with masking and unmasking data.  This is done by manipulating the
+#   lightcurve (lc) instance's mask array directly.  The default bindings are
+#   'x' to both mask and unmask data.  These can be overridden by specifying
+#   the maskkey and unmaskkey attributes.'''
+#
+#   def __init__(self, figure, maskkey='x', unmaskkey='x'):
+#      self.figure = figure
+#      self.mk = maskkey
+#      self.umk = umaskkey
+
 
 class ButtonClick:
    '''Given a figure instance and an optional dictionary of key-bindings,
    oversee the key bindings in a figure.  There are a set of default
    bindings:  x:  select xrange,  y:  select yrange,  b:  select box
-   range.  These can be overridden using the bindings keyword.  Simply
-   set it to a dictionary with the button as the key and the call-back
-   function as the value.'''
+   range, 'm':  mask/unmask data.  These can be overridden using the 
+   bindings keyword.  Simply set it to a dictionary with the button as 
+   the key and the call-back function as the value.'''
 
    def __init__(self, figure, bindings={}):
       self.figure = figure
@@ -217,7 +229,7 @@ class ButtonClick:
 
    def connect(self):
       self.id = self.figure.canvas.mpl_connect('key_press_event', self.keypress)
-      if len(self.mouse_bindings.keys()) > 1:
+      if len(self.mouse_bindings.keys()) > 0:
          self.id2 = self.figure.canvas.mpl_connect('button_press_event', self.buttonpress)
       return self.id
 
@@ -229,7 +241,7 @@ class ButtonClick:
       if event.inaxes is None:  return
       if self.pending_key is not None:  return
       if 'mouse'+str(event.button) in self.mouse_bindings:
-         return apply(self.bindings['mouse'+str(event.button)], (event,))
+         return apply(self.mouse_bindings['mouse'+str(event.button)], (event,))
       #elif event.button == 1:
       #   print "%f %f" % (event.xdata, event.ydata)
 
@@ -289,6 +301,20 @@ class ButtonClick:
                self.pending.ax.set_xbound((x0,x1))
                self.pending.ax.set_ybound((y0,y1))
             self.pending = None
+      if event.key == 'm':
+         lc = getattr(event.inaxes, 'lc_inst', None)
+         if lc is None:  return
+         # Look for the first Line2D that has picker not None
+         l = [line for line in event.inaxes.lines if \
+               line.get_picker() is not None]
+         if not l:  return
+         l = l[0]
+         xs,ys = l.get_data()
+         id = argmin(power(event.xdata-xs,2) + power(event.ydata-ys,2))
+         lc.mask[id] = -lc.mask[id]
+         replot_lc(lc)
+         return
+
       if event.key == 'q':
          self.disconnect()
          return
@@ -297,14 +323,22 @@ class ButtonClick:
 
 def change_SED(event):
    fig = event.inaxes.figure
+   ax = event.inaxes
    if event.key == 'd':
-      if fig.current_day > -19:  fig.current_day += 1
+      if fig.current_day < 70:  
+         fig.current_day += 1
+         ax.set_title('Filter responses + %s SED (day %d)' % \
+               (fig.version,fig.current_day))
    elif event.key == 'D':
-      if fig.current_day < 70:  fig.current_day -= 1
+      if fig.current_day > -19:  
+         fig.current_day -= 1
+         ax.set_title('Filter responses + %s SED (day %d)' % \
+               (fig.version,fig.current_day))
    wave,flux = kcorr.get_SED(fig.current_day, version='H3')
    fig.sed_line.set_data(wave*(1+fig.z), flux/flux.max())
-   fig.sed_fill.remove()
-   fig.sed_fill = fig.axes[0].fill_between(wave*(1+fig.z), flux/flux.max(),
+   if fig.sed_fill is not None:  
+      fig.sed_fill.remove()
+      fig.sed_fill = fig.axes[0].fill_between(wave*(1+fig.z), flux/flux.max(),
          facecolor='black', alpha=0.1)
    fig.canvas.draw()
 
@@ -366,8 +400,8 @@ def plot_filters(self, bands=None, day=0, fill=0):
    ax.set_xbound((minw, maxw))
 
    pyplot.draw()
-   cb = ButtonClick(p, bindings={'d':change_SED, 'D':change_SED})
-   cb.connect()
+   p.cb = ButtonClick(p, bindings={'d':change_SED, 'D':change_SED})
+   p.cb.connect()
    return p
 
 
@@ -542,9 +576,9 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
          l = ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y-err), 
                '--',color='k', linewidth=linewidth)
          l[0].autoscale=False
-      elif self.data[filter].tck is not None:
-         tck = self.data[filter].tck
-         t = arange(tck[0][0], tck[0][-1], 1.0)
+      elif self.data[filter].interp is not None:
+         d = self.data[filter].interp.domain()
+         t = arange(d[0], d[1]+1.0, 1.0)
          mag,gids = self.data[filter].eval(t, t_tol=-1)
          if not flux:
             y = mag + single*delt - relative*rel_off
@@ -565,266 +599,30 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
    p.draw()
    return(p)
 
-def mask_data(self):
-   p = self.plot(single=0, label_bad=1, epoch=1, mask=0)
-   for b in self.data:
-      # a place to store red X's
-      self.data[b].pts = {}
-   p.bc = ButtonClick(p.fig, bindings={'m':bind_mask_data, 'u':bind_unmask_data})
-   p.bc.connect()
-   return p
-
-def bind_mask_data(event):
-   '''Mask the data that has been selected.'''
-   if event.inaxes is None:  return
-   lc = event.inaxes.lc
-
-   if not sometrue(lc.mask):
-      return
-   # find distances to valid (unmasked) data:
-   dists = power(lc.mag[lc.mask] - event.ydata, 2) + \
-           power(lc.t[lc.mask] - event.xdata, 2)
-   i = argmin(dists)
-   #print i
-   # need to find index in original (masked+unmasked) data
-   id = indices(lc.mask.shape)[0][lc.mask][i]
-   x = lc.t[id]
-   y = lc.mag[id]
-   lc.mask[id] = 0
-            
-   lc.pts[id] = event.inaxes.plot(x, y, marker='x', mec='red', ms=12, mew=1, 
-         linestyle='None')[0]
-   event.inaxes.get_figure().canvas.draw()
-
-
-def bind_unmask_data(event):
-   '''Unmask the data that has been masked.'''
-   if event.inaxes is None:  return
-   lc = even.inaxes.lc
-
-   if alltrue(lc.mask):
-      return
-   gids = logical_not(lc.mask)
-   dists = power(lc.mag[gids] - event.ydata, 2) + \
-           power(lc.t[gids] - event.xdata, 2)
-   i = argmin(dists)
-   id = indices(lc.mask.shape)[0][gids][i]
-   lc.mask[id] = 1
-   lc.pts[id].remove()
-   del lc.pts[id]
-
 def plot_lira(t, t2, t_maxes, BV, eBV, BV2, tmin, tmax, c):
    p = pyplot.figure(113)
    p.clear()
    ax = p.add_subplot(111)
-   ax.xlabel('Epoch (Vmax)')
-   ax.ylabel('B-V')
+   ax.set_xlabel('Epoch (Vmax)')
+   ax.set_ylabel('B-V')
 
-   ax.plot(t-t_maxes[0], BV, 'o', color='black')
-   ax.errorbar(t-t_maxes[0], BV, yerr=eBV, capsize=0, color='black')
-   ax.plot(t2, BV2, 'o', markercolor='red', label='B-V (deredshifted)')
+   ax.errorbar(t-t_maxes[0], BV, yerr=eBV, fmt='o', capsize=0, color='black')
+   ax.plot(t2, BV2, 'o', mfc='red', label='B-V (deredshifted)')
    ax.plot([tmin, tmax], [0.732-0.0095*(tmin-55), 0.732-0.0095*(tmax-55)], '-',
          color='blue', label='Lira Law')
-   ax.line([tmin, tmax], [c[0]+c[1]*(tmin-55), c[0]+c[1]*(tmax-55)], '-', color='red',
+   ax.plot([tmin, tmax], [c[0]+c[1]*(tmin-55), c[0]+c[1]*(tmax-55)], '-', color='red',
          label='Fit')
-   ax.legend(loc='upper right')
+   ax.legend(prop={'size':12})
    p.canvas.draw()
    return p
 
-def lc_data_conv(p, x, y):
-   '''Given a plot instance p and (x,y) coordinates, convert to the real
-   data (which can be different because of plotting as magnitudes, flux,
-   epoch or no, etc.'''
-   # first, if plotting in epochs:
-   realx = x + p.epoch*p.lc_inst.parent.Tmax
-   if not p.flux:
-      realy = power(10, -0.4*(y - p.lc_inst.filter.zp))
-   return(realx,realy)
-
-
-def add_knot(event):
-   '''Add a knot point to the spline.  This is called through the interactive interface).'''
-   if event.inaxes is None: return
-   ax = event.inaxes
-   self = ax.lc_inst
-   if self.model_type is None or self.model_type != 'spline':
-      print "Adding knots not supported for this model"
-      return
-   x,y = lc_data_conv(ax, event.xdata, event.ydata)
-   if x <= self.tck[0][0] or x >= self.tck[0][-1]:
-      print "Error, can't add knots outside the current range."
-   old_knots = self.tck[0]*1.0
-   knots = concatenate([[x],self.tck[0]])
-   knots = sort(knots)
-   self.tck = (knots, self.tck[1], self.tck[2])
-   try:
-      update_plot(self, task=-1)
-   except:
-      self.tck = (old_knots, self.tck[1], self.tck[2])
-      update_plot(self, task=-1)
-
-def move_knot(event):
-   '''Move the point closest to x to a new location.'''
-   if event.inaxes is None:  return
-   ax = event.inaxes
-   self = ax.lc_inst
-   if self.model_type is None or self.model_type != 'spline':
-      print "Moving knots not supported for this model"
-      return
-   xx,yy = ax._spl.get_data()
-   if ax.pending_move is None:
-      deltas = absolute(xx - event.xdata)
-      id = argmin(deltas)
-      ax.pending_move = click_line(ax, xx[id], yy[id])
-      ax.pending_move.connect()
-   else:
-      x0,x1,y0,y1 = ax.pending_move.close()
-      ax.pending_move = None
-      deltas = absolute(xx - x0)
-      id = argmin(deltas)
-      k = self.tck[2]
-      if id <= k or id >= len(deltas) - k -1 :
-         print "You can only move interior points"
-         return
-      x,y = lc_data_conv(ax, x1, y1)
-      old_knots = self.tck[0]*1.0
-      self.tck[0][id] = x
-      try:
-         update_plot(self, task=-1)
-      except:
-         self.tck = (old_knots, self.tck[1], self.tck[2])
-         update_plot(self, task=-1)
-
-def delete_knot(event):
-   if event.inaxes is None:  return
-   ax = event.inaxes
-   self = ax.lc_inst
-   if self.model_type is None or self.model_type != 'spline':
-      print "Deleting knots not supported for this model"
-      return
-   old_knots = self.tck[0]*1.0
-   deltas = absolute(ax._spl.get_data()[0] - event.xdata)
-   id = argmin(deltas)
-   k = self.tck[2]
-   if id <= k or id >= len(deltas) - k -1 :
-      print "You can only delete interior points"
-      return
-   list = self.tck[0].tolist()
-   del list[id]
-   self.tck = (array(list), self.tck[1], self.tck[2])
-   try:
-      update_plot(self, task=-1)
-   except:
-      self.tck = (old_knots, self.tck[1], self.tck[2])
-      update_plot(self, task=-1)
-
-def change_s(event):
-   if event.inaxes is None:  return
-   ax = event.inaxes
-   self = ax.lc_inst
-   if self.model_type == 'spline2':
-      print "Changing s not supported for this model"
-      return
-   if self.tck is not None:
-      if event.key == '-':
-         self.s -= sqrt(2*self.s)
-         if self.s < 0:  self.s = 0
-      elif event.key == '+':
-         self.s += sqrt(2*self.s)
-      else:
-         self.s = len(self.MJD)
-      update_plot(self, task=0)
-   else:
-      if self.line.N is not None:  self.line.N = None
-      if self.line.sigma is None:  self.line.sigma=3.0
-      if event.key == '+':
-         self.line.sigma *= 1.1
-      else:
-         self.line.sigma /= 1.1
-      update_plot(self, task=-2)
-
-def change_N(event):
-   if event.inaxes is None:  return
-   ax = event.inaxes
-   self = ax.lc_inst
-   if self.line.sigma is not None:  self.line.sigma = None
-   if self.line.N is None:  self.line.N = 5
-   if event.key == 'n':
-      if self.line.N > 1:  self.line.N -= 1
-   else:
-      self.line.N += 1
-   update_plot(self, task=-2)
-
-def update_plot(self, task):
-   '''Update the plot with new spline info.'''
-   inst = self.mp
-   if len(inst.axes) != 2:  return
-
-   k = self.tck[2]
-   if task == 0 or task == 1:
-      self.spline_fit(task=task, k=k, fitflux=self.model_flux,
-            s=self.s, tmin=self.tmin, tmax=self.tmax, method='spline')
-   elif task == -1:
-      t = self.tck[0][k+1:-(k+1)]
-      self.spline_fit(task=task, knots=t, k=k, fitflux=self.model_flux,
-            s=self.s, tmin=self.tmin, tmax=self.tmax, method='spline')
-   m,mask = self.eval(self._t, t_tol=None)
-   m_model,m_mask = self.eval(self.MJD, t_tol=None)
-
-   if task == -2:
-      if self.line.N is not None:  N = self.line.N
-      else: N = -1
-      if self.line.sigma is not None:  sigma = self.line.sigma
-      else: sigma = -1
-      inst._title.set_text(string.split(inst._title.get_text(), '\n')[0]+\
-            '\n' + 'N = %d   sigma = %.1f   r-chi-sq = %.2f' % \
-            (N,sigma,self.line.chisq()))
-   else:
-      inst._title.set_text(string.split(inst._title.get_text(), '\n')[0]+\
-            '\n' + 'Np = %d  Nk = %d  s = %.1f r-chi-sq = %.2f' % \
-            (len(self.mag), len(self.tck[0]), self.s, self.rchisq))
-
-   if not inst.axes[1].yaxis_inverted():
-      y = compress(self.mask, self.flux - power(10, -0.4*(m_model-self.filter.zp)))
-      inst.axes[1]._model.set_ydata(power(10, -0.4*(m - self.filter.zp)))
-      set_errorbar_ydata(inst.axes[0]._errb, y)
-      if task != -2:
-         inst.axes[1]._spl.remove()
-         inst.axes[1]._spl = inst.axes[1].plot(self.tck[0] - self._epoch*self.parent.Tmax, 
-               power(10, -0.4*(self.eval(self.tck[0], t_tol=None)[0] - \
-               self.filter.zp)), 'o', mfc='red')[0]
-   else:
-      y = compress(self.mask, self.mag - m_model)
-      inst.axes[1]._model.set_ydata(m)
-      set_errorbar_ydata(inst.axes[0]._errb, y)
-      if task != -2:
-         inst.axes[1]._spl.remove()
-         inst.axes[1]._spl = inst.axes[1].plot(self.tck[0] - self._epoch*self.parent.Tmax, 
-               self.eval(self.tck[0], t_tol=None)[0], 'o', mfc='red')[0]
-   inst.draw()
-
-def set_errorbar_ydata(err, ydata):
-   '''Given the compound obect err representing an errorbar return value,
-   set the ydata of all the components.'''
-   line = err[0]
-   old_ydata = line.get_ydata()
-   line.set_ydata(ydata)
-   dy = ydata - old_ydata
-   for line in err[1]:
-      line.set_ydata(line.get_ydata() + dy)
-   for col in err[2]:
-      paths = col.get_paths()
-      for i in range(len(paths)):
-         paths[i].vertices[:,1] += dy[i]
-
-def plot_lc(self, device='/XSERVE', interactive=0, epoch=1, flux=0, gloes=0,
-          symbol=4):
+def plot_lc(self, device='/XSERVE', epoch=1, flux=0, symbol=4):
    # clear out any previous bindings...  gotta be a better way to do this...
    if flux: 
       flipaxis = 0
    else:
       flipaxis = 1
-   if gloes or self.model_type is not None or self.band in self.parent.model._fbands:
+   if self.interp is not None or self.band in self.parent.model._fbands:
       self.mp = myplotlib.PanelPlot(1,2,pheights=[0.2,0.8], num=111)
       self.mp.axes[0].set_ylabel('residuals')
       self.mp.axes[1].set_ylabel('mag')
@@ -833,6 +631,8 @@ def plot_lc(self, device='/XSERVE', interactive=0, epoch=1, flux=0, gloes=0,
       # some references so that we can get at the data from within callbacks
       p.epoch = epoch
       p.flux = flux
+      p.lc_inst = self
+      p2.lc_inst = self
       if flipaxis:
          p.invert_yaxis()
          p2.invert_yaxis()
@@ -853,81 +653,178 @@ def plot_lc(self, device='/XSERVE', interactive=0, epoch=1, flux=0, gloes=0,
    self.mp.title('%s %s lightcurve\n' % (self.parent.name, self.band))
       
    if flux:
-      y = power(10, -0.4*(self.mag - self.filter.zp))
-      ey = y*self.e_mag/1.0857
+      y = self.flux
+      ey = self.e_flux
    else:
       y = self.mag
       ey = self.e_mag
+   # Plot the actual data (in the top panel)
    p.errorbar(self.MJD - epoch*Tmax, y, yerr=ey, barsabove=True, 
          capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
-           ecolor='black')
+           ecolor='black', picker=True)
+   if not alltrue(self.mask):
+      # Plot any masked out data s red filled symbols
+      p._x, = p.plot(self.MJD[-self.mask] - epoch*Tmax, y[-self.mask], 'o', 
+            color='red')
+   else:
+      p._x = None
 
    # Order of preference:  plot the model, else plot the spline, else
-   #  plot nothing, unless we explicitly ask for GLoEss.
+   #  plot nothing
    if self.band in self.parent.model._fbands:
       t = arange(-10,70,1.0) + Tmax
       m,em,mask = self.parent.model(self.band, t)
       m_m,m_em,m_mask = self.parent.model(self.band, self.MJD)
-      x = self.MJD[self.mask*m_mask]
+      x = self.MJD
       if flux and self.parent.model.model_in_mags:
-         p._model = p.plot(t[mask]-epoch*Tmax, power(10, -0.4*(m-self.filter.zp)), '-')[0]
-         y = compress(self.mask*m_mask, 
-               self.flux - power(10,-0.4*(m_m - self.filter.zp)))
-         dy = self.e_flux[self.mask*m_mask]
+         p._model = p.plot(t[mask]-epoch*Tmax, power(10, -0.4*(m-self.filter.zp)), '-',
+               color='black')[0]
+         y = self.flux - power(10,-0.4*(m_m - self.filter.zp))
+         dy = self.e_flux
       elif not flux and not self.parent.model.model_in_mags:
          p._model = p.plot(t[mask]-epoch*Tmax, -2.5*log10(m[mask]) + \
                self.filter.zp, '-')[0]
-         y = compress(self.mask*m_mask, self.mag + 2.5*log10(m_m) + self.filter.zp)
-         dy = self.e_mag[self.mask*m_mask]
+         y = self.mag + 2.5*log10(m_m) + self.filter.zp
+         dy = self.e_mag
       elif flux:
-         p._model = p.plot(t[mask]-epoch*Tmax,m[mask], '-')[0]
-         y = self.flux[self.mask*m_mask] - m_m[self.mask*m_mask]
-         dy = self.e_flux[self.mask*m_mask]
+         p._model = p.plot(t[mask]-epoch*Tmax,m[mask], '-',
+               color='black')[0]
+         y = self.flux - m_m
+         dy = self.e_flux
       else:
-         p._model = p.plot(t[mask]-epoch*Tmax,m[mask],'-')[0]
-         y = self.mag[self.mask*m_mask] - m_m[self.mask*m_mask]
-         dy = self.e_mag[self.mask*m_mask]
+         p._model = p.plot(t[mask]-epoch*Tmax,m[mask],'-', color='black')[0]
+         y = self.mag - m_m
+         dy = self.e_mag
 
+      # The residuals plot in the lower panel
       p2._errb = p2.errorbar(x - epoch*Tmax, y, yerr=dy, fmt='o', linestyle='None',
-            mfc='blue', capsize=0, elinewidth=1, barsabove=True, ecolor='black')
+            mfc='blue', capsize=0, elinewidth=1, barsabove=True, ecolor='black',
+            picker=True)
+      if not alltrue(self.mask):
+         p2._x, = p2.plot(x[-self.mask] - epoch*Tmax, y[-self.mask], 'o', 
+               color='red')
+      else:
+         p2._x = None
       p2.axhline(y=0)
 
-   elif gloes or self.model_type is not None:
+   elif self.interp is not None:
       if self.tmin is not None and self.tmax is not None:
          t = arange(self.tmin, self.tmax+1, 1.0)
       else:
          t = arange(self.MJD[0], self.MJD[-1] + 1, 1.0)
       self._t = t
       self._epoch = epoch
-      m,mask = self.eval(t, t_tol=None)
-      m_model,m_mask = self.eval(self.MJD, t_tol=None)
+      m,mask = self.eval(t, t_tol=-1)
+      m_model,m_mask = self.eval(self.MJD, t_tol=-1)
       if flux:
          p._model = p.plot(compress(mask,t - epoch*Tmax), 
-                compress(mask, power(10, -0.4*(m - self.filter.zp))),'-')[0]
-         if self.tck is not None:
-            p._spl = p.plot(self.tck[0] - epoch*Tmax, 
-               power(10, -0.4*(self.eval(self.tck[0], t_tol=None)[0] - self.filter.zp)),
-               'o', mfc='red')[0]
-         x = compress(self.mask*m_mask, self.MJD)
-         y = compress(self.mask*m_mask, self.flux - \
-               power(10, -0.4*(m_model-self.filter.zp)))
-         dy = compress(self.mask*m_mask, self.e_flux)
-         p2._errb = p2.errorbar(x - epoch*Tmax,y, yerr=dy, barsabove=True,
-               capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
-               ecolor='black')
+                compress(mask, power(10, -0.4*(m - self.filter.zp))),'-',
+                color='black')[0]
+         x = self.MJD
+         y = self.flux - power(10, -0.4*(m_model-self.filter.zp))
+         dy = self.e_flux
       else:
-         p._model = p.plot(compress(mask,t - epoch*Tmax), compress(mask,m),'-')[0]
-         x = compress(self.mask*m_mask, self.MJD)
-         y = compress(self.mask*m_mask, self.mag - m_model)
-         dy = compress(self.mask*m_mask, self.e_mag)
-         p2._errb = p2.errorbar(x - epoch*Tmax,y, yerr=dy, barsabove=True,
-               capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
-               ecolor='black')
+         p._model = p.plot(compress(mask,t - epoch*Tmax), compress(mask,m),'-',
+               color='black')[0]
+         x = self.MJD
+         y = self.mag - m_model
+         dy = self.e_mag
+      # The residuals
+      p2._errb = p2.errorbar(x - epoch*Tmax,y, yerr=dy, barsabove=True,
+         capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
+         ecolor='black', picker=True)
+      if not alltrue(self.mask):
+         p2._x, = p2.plot(x[-self.mask] - epoch*Tmax, y[-self.mask], 'o',
+               color='red')
+      else:
+         p2._x = None
+
    self.mp.set_limits()
    if len(self.mp.axes) > 1:
-      self.mp.axes[0].axhline(0)
+      self.mp.axes[0].axhline(0, color='black')
+      if flux:
+         self.mp.axes[0].set_ylim((y[self.mask*m_mask].min(),
+            y[self.mask*m_mask].max()))
+      else:
+         self.mp.axes[0].set_ylim((y[self.mask*m_mask].max(),
+            y[self.mask*m_mask].min()))
    self.mp.draw()
+   self.mp.bc = ButtonClick(self.mp.fig)
+   self.mp.bc.connect()
    return(self.mp)
+
+def replot_lc(self):
+   '''After mucking around, we want to update the fit, if needed.'''
+   # First, transfer the current mask to the interp's mask
+   if not pyplot.fignum_exists(111):  return
+   fig = pyplot.figure(111)
+   if fig is not self.mp.fig:
+      return
+
+   if self.interp is None:
+      p = self.mp.axes[0]
+      # Only need to deal with possible mask
+      if p._x:  p._x.remove()
+      if not alltrue(self.mask):
+         xx,yy = p.lines[0].get_data()
+         p._x, = p.plot(xx[-self.mask], yy[-self.mask], 'o', color='red')
+         self.mp.fig.canvas.draw()
+         return
+
+   self.interp.mask = self.mask
+   self.interp.setup = False
+   m,mask = self.eval(self._t, t_tol=-1)
+   m_model,m_mask = self.eval(self.MJD, t_tol=-1)
+   p = self.mp.axes[1]
+   p2 = self.mp.axes[0]
+   t = self._t
+   epoch = self._epoch
+
+   #clear out the previous stuff
+   p._model.remove()
+   p2._errb[0].remove()
+   p2._errb[2][0].remove()
+   if p._x:  p._x.remove()
+   if p2._x:  p2._x.remove()
+
+   if self.parent.Tmax is not None:
+      Tmax = self.parent.Tmax
+   else:
+      Tmax = 0
+   if p.flux:
+      p._model = p.plot(compress(mask,t - epoch*Tmax), 
+             compress(mask, power(10, -0.4*(m - self.filter.zp))),'-',
+             color='black')[0]
+      x = self.MJD
+      y = self.flux - power(10, -0.4*(m_model-self.filter.zp))
+      yy = self.flux
+      dy = self.e_flux
+   else:
+      p._model = p.plot(compress(mask,t - epoch*Tmax), compress(mask,m),'-',
+            color='black')[0]
+      x = self.MJD
+      y = self.mag - m_model
+      yy = self.mag
+      dy = self.e_mag
+   p2._errb = p2.errorbar(x - epoch*Tmax,y, yerr=dy, barsabove=True,
+      capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
+      ecolor='black')
+   if not alltrue(self.mask):
+      p._x, = p.plot(self.MJD[-self.mask] - epoch*Tmax, yy[-self.mask], 'o', 
+            color='red')
+      p2._x, = p2.plot(x[-self.mask] - epoch*Tmax, y[-self.mask], 'o',
+            color='red')
+   else:
+      p._x = None
+      p2._x = None
+   if p.flux:
+      p2.set_ylim(y[self.mask*m_mask].min(), 
+            y[self.mask*m_mask].max())
+   else:
+      p2.set_ylim(y[self.mask*m_mask].max(), 
+            y[self.mask*m_mask].min())
+   self.mp.fig.canvas.draw()
+
 
 def plot_kcorrs(self, device='13/XW', colors=None, symbols=None):
    '''Plot the k-corrections, both mangled and un-mangled.'''
@@ -955,6 +852,7 @@ def plot_kcorrs(self, device='13/XW', colors=None, symbols=None):
    if n_plots % cols:  rows += 1
    p = myplotlib.PanelPlot(1, n_plots, num=112, figsize=(6,n_plots),
         nymax=5, prunex=None)
+   p.title("Use 'm' to plot mangled SED for any point")
    p.xlabel('Epoch (days)')
    p.ylabel('K-corrections')
 
@@ -977,8 +875,8 @@ def plot_kcorrs(self, device='13/XW', colors=None, symbols=None):
 
    p.set_limits(all_equal=0)
    p.draw()
-   bc = ButtonClick(p.fig, bindings={'mouse1':plot_mangled_SED})
-   bc.connect()
+   p.bc = ButtonClick(p.fig, bindings={'m':plot_mangled_SED})
+   p.bc.connect()
    return(p)
 
 def plot_mangled_SED(event):
@@ -1012,6 +910,6 @@ def plot_mangled_SED(event):
    #wmin -= dw*0.05
 
    ax.legend()
-   ax.set_xlim(wmin,wmax)
+   #ax.set_xlim(wmin,wmax)
 
    f.canvas.draw()

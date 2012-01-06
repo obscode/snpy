@@ -109,6 +109,12 @@ class InteractiveFit:
       self.redraw_x()
 
    def help(self):
+      print "The following key bindings are in effect:"
+      print "r:   redraw the graph"
+      print "x:   flag/unflag bad data"
+      print "q:   close the graph"
+      print
+      print "You can also vary the following member variables:"
       self.interp.help()
 
    def redraw_x(self):

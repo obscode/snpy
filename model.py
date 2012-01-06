@@ -267,7 +267,7 @@ class EBV_model(model):
             raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
 
       self.calibration = self.args.get('calibration',6)
-      self.gen = self.args.get('gen',1)
+      self.gen = self.args.get('gen',2)
       for band in self._fbands:
          cal = self.args.get('cal',6)
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
@@ -507,7 +507,7 @@ class EBV_model2(model):
             raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
 
       self.calibration = self.args.get('calibration',0)
-      self.gen = self.args.get('gen',1)
+      self.gen = self.args.get('gen',2)
 
       for band in self._fbands:
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
@@ -706,7 +706,7 @@ class max_model(model):
                errs[band+"max"] = 0
       self.parameters = pars
       self.errors = errs
-      self.gen = self.args.get('gen',1)
+      self.gen = self.args.get('gen',2)
 
    def guess(self, param):
       s = self.parent
@@ -860,7 +860,7 @@ class max_model2(model):
                errs['T'+band+"max"] = 0
       self.parameters = pars
       self.errors = errs
-      self.gen = self.args.get('gen',1)
+      self.gen = self.args.get('gen',2)
 
    def guess(self, param):
       s = self.parent
@@ -1024,7 +1024,7 @@ class Rv_model(model):
             raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
 
       self.calibration = self.args.get('calibration',0)
-      self.gen = self.args.get('gen',1)
+      self.gen = self.args.get('gen',2)
       
    def guess(self, param):
       s = self.parent

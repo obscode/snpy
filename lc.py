@@ -1,14 +1,10 @@
 from numpy import *
-#import scipy.interpolate
-#from utils import fit_spline
-#import spline2
 from filters import fset
 import numpy.random as RA
 from utils import stats
 from utils import fit1dcurve
-#from numpy import bool
-#from numpy import diag
 import plotmod
+from scipy.optimize import brentq
 
 if 'gp' in fit1dcurve.functions:
    default_method = 'gp'
@@ -49,7 +45,8 @@ class lc:
       self.K = K               # k-correction to convert mag to restband
       self.debug=0             # Of course, we'll never need this!
 
-      #self.mask = ones(self.mag.shape, typecode=bool) # a way to mask out bad data from fitting
+      # a way to mask out bad data from fitting
+      self.mask = ones(self.mag.shape, dtype=bool) 
       self.filter = fset[self.band] # instance of filter object for this band
 
       #self.tck = None          # Spline solution
@@ -116,8 +113,22 @@ class lc:
                return(self.magnitude - self.K)
             except:
                raise AttributeError, "Error:  k-corrections and magnitudes incompatible"
-      else:
-         raise AttributeError, "Error:  attribute %s not defined" % (name)
+      elif self.interp is not None:
+         if name in self.interp.pars:
+            return getattr(self.interp,name)
+      raise AttributeError, "Error:  attribute %s not defined" % (name)
+
+   def __setattr__(self, name, value):
+      if 'interp' in self.__dict__:
+         if self.__dict__['interp'] is not None:
+            if name in self.__dict__['interp'].pars:
+               setattr(self.__dict__['interp'], name, value)
+               self.replot()
+               return
+      if name == 'mask':
+         if 'mask' in self.__dict__.keys():
+            raise TypeError, "lc instance's mask attribute must be modifed in-place"
+      self.__dict__[name] = value
 
    def __getstate__(self):
       # Need this because MPL objects are not pickleable.
@@ -136,11 +147,12 @@ class lc:
 
    def mask_epoch(self, tmin, tmax):
       '''Update the lc's mask to only include data between tmin and tmax.'''
-      self.mask = greater_equal(self.t, tmin)*less_equal(self.t, tmax)
+      self.mask *= greater_equal(self.t, tmin)
+      self.mask *= less_equal(self.t, tmax)
 
    def mask_emag(self, max):
       '''Update the lc's mask to only include data with e_mag < max.'''
-      self.mask = self.mask*less_equal(self.e_mag, max)
+      self.mask *= less_equal(self.e_mag, max)
 
    def eval(self, times, t_tol=-1, epoch=0):
       '''Interpolate (if required) the data to time 'times'.  If there is a data point 
@@ -170,10 +182,7 @@ class lc:
          s = sum(values, axis=1)
          evm = where(N > 0, s/w, evm)
 
-      if scalar:
-         return(evm[0],mask[0])
-      else:
-         return(evm,mask)
+      return(evm,mask)
 
    def spline_fit(self, fitflux=0, do_sigma=1, Nboot=100, keep_boot=1, method='spline2',
          **args):
@@ -203,7 +212,7 @@ class lc:
       the uncertainties in the final parameters.  Nboot controls the number of
       bootstrap interations.  There are several interpolating methods that
       can be chosen, depending on your python distribution.  To find the 
-      method available, run self.list_types().  The rest of the arguments are 
+      methods available, run self.list_types().  The rest of the arguments are 
       passed to the interpolating method.  Upon successful completion of the
       routine, the following member variables will be populated: 
          Tmax, e_Tmax: time of maximum (and error if do_sigma=1) 
@@ -217,19 +226,22 @@ class lc:
       else:
          evt = arange(self.MJD[0], self.MJD[-1])*1.0
 
-      x = self.MJD[self.mask]
+      x = self.MJD
       if fitflux:
-         y = self.flux[self.mask]
-         ey = self.e_flux[self.mask]
+         y = self.flux
+         ey = self.e_flux
       else:
-         y = self.mag[self.mask]
-         ey = self.e_mag[self.mask]
+         y = self.mag
+         ey = self.e_mag
 
-      self.interp = fit1dcurve.Interpolator(method, x, y, ey, **args)
+      self.interp = fit1dcurve.Interpolator(method, x, y, ey, self.mask, **args)
       if fitflux:
          self.model_flux = 1
       else:
          self.model_flux = 0
+
+      if compute_params:
+         self.compute_lc_params(N=Nboot)
 
    def compute_lc_params(self, N=50):
       '''Compute dm15, Tmax, Mmax, and covariances for the light-curve.'''
@@ -329,7 +341,8 @@ class lc:
             (sum(Mgids*dgids) - 1)
       return
 
-   def plot(self, device='/XSERVE', epoch=1, flux=0, symbol=4):
+   def plot(self, device='/XSERVE', interactive=True, epoch=1, flux=0, gloes=True,
+         symbol=4):
       '''Plot this light-curve.  You can specify a PGPLOT device (ignored if using
       matplotlib as plotter), the default is an X server.  If epoch=1, plot times
       relative to self.Tmax.  If flux=1, plot in flux units.  use GLoEs to smooth 
@@ -339,4 +352,8 @@ class lc:
          self.mp.bc.disconnect()
       except:
          pass
-      return plotmod.plot_lc(self, device, interactive, epoch, flux, gloes, symbol)
+      return plotmod.plot_lc(self, device, epoch, flux, symbol)
+
+   def replot(self):
+      '''Replot a figure, if it exists and belongs to this instance.'''
+      plotmod.replot_lc(self)

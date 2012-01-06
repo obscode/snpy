@@ -7,13 +7,14 @@ from snpy.utils import fit_spline
 from scipy.interpolate import splrep,splev,sproot
 from scipy.optimize import brentq, newton
 from scipy.misc import derivative as deriv
+from distutils.version import StrictVersion as sv
 try:
    from snpy.spline2 import spline2, evalsp,eval_extrema,eval_x
 except:
    spline2 = None
-try:
+if sv(num.__version__) >= sv('1.6'):
    from numpy import polynomial
-except:
+else:
    polynomial = None
 try:
    import pymc
@@ -35,7 +36,7 @@ class oneDcurve:
 
    num_real_keep = 100
 
-   def __init__(self, x, y, ey):
+   def __init__(self, x, y, ey, mask=None):
 
       x = num.atleast_1d(x)
       y = num.atleast_1d(y)
@@ -52,7 +53,10 @@ class oneDcurve:
       self.ydata = y
       self.eydata = ey
       self.vardata = num.power(ey,2)
-      self.mask = num.ones(x.shape, dtype=bool)  # mask for the data
+      if mask is None:
+         self.mask = num.ones(x.shape, dtype=bool)  # mask for the data
+      else:
+         self.mask = mask
 
       self.realization = None
       self.realizations = []
@@ -89,6 +93,34 @@ class oneDcurve:
             return
       self.__dict__[key] = value
 
+   def _regularize(self):
+      '''Given a data set, we make sure that the independent variable
+      is strinctly increasing, elminiating repeated values by an
+      average.'''
+      # x-values need to be strictly ascending.
+      sids = num.argsort(self.x)
+      x = self.x[sids]
+      y = self.y[sids]
+      ey = self.ey[sids]
+   
+      # here's some Numeric magic.  first, find where we have repeating x-values
+      Nmatrix = num.equal(x[:,num.newaxis], x[num.newaxis,:])
+      val_matrix = y[:,num.newaxis]*Nmatrix
+      e_matrix = ey[:,num.newaxis]*Nmatrix
+   
+      average = num.sum(val_matrix, axis=0)/sum(Nmatrix)
+      e_average = num.sum(e_matrix, axis=0)/sum(Nmatrix)
+      
+      # at this point, average is the original data, but with repeating data points
+      # replaced with their average.  Now, we just pick out the unique x's and
+      # the first of any repeating points:
+      gids = num.concatenate([[True], num.greater(x[1:] - x[:-1], 0.)])
+      x = x[gids]
+      y = average[gids]
+      ey = e_average[gids]
+      return x,y,ey
+   
+
    def maskpoint(self, x, y):
       '''Mask the point closest to (x,y).'''
       id = num.argmin(num.power(self.x-x,2) + num.power(self.y-y,2))
@@ -106,11 +138,11 @@ class oneDcurve:
       times the estimated standard deviation is masked.'''
       absdev = num.aboslute(self.residuals())
       if absclip is not None:
-         self.mask = num.greater(absdev, absclip)
+         self.mask *= num.greater(absdev, absclip)
          self.setup = False
       elif sigclip is not None:
          sigma = 1.49*num.median(absdev)
-         self.mask = num.greater(absdev, sigclip*sigma)
+         self.mask *= num.greater(absdev, sigclip*sigma)
          self.setup = False
 
    def __call__(self, x):
@@ -131,7 +163,6 @@ class oneDcurve:
          earr.append(self.__call__(x)[0])
       self.realization = None
       earr = num.array(earr)
-      print earr.shape
       err = num.std(earr, axis=0)
       if scalar:
          return err[0]
@@ -203,12 +234,12 @@ polytypes = {'polynomial':polynomial.Polynomial,
 if polynomial is not None:
    class Polynomial(oneDcurve):
    
-      def __init__(self, x, y, dy, **args):
+      def __init__(self, x, y, dy, mask=None, **args):
          '''Fit an Nth order polynomial to the data.  The only arguments are
          [n], the order, [x0] the zero-point, xmin and xmax the lower and
          upper limits of the fit, respectively.'''
    
-         oneDcurve.__init__(self, x, y, dy)
+         oneDcurve.__init__(self, x, y, dy, mask)
    
          self.pars = {
                'n':3,
@@ -231,10 +262,7 @@ if polynomial is not None:
          self.realization = None
 
       def help(self):
-         print 'The following parameters affect the fit:'
          print 'n:        order of the polynomial'
-         print 'type:     type of polynomial:  polynomial, chebyshev, laguerre,'
-         print '          hermite, or hermiteE'
          print 'xmin:     lower bound on data to interpolate'
          print 'xmax:     upper bound on data to interpolate'
    
@@ -243,14 +271,14 @@ if polynomial is not None:
 
       def _setup(self):
          '''Given the current set of params, setup the interpolator.'''
-         self.mask = self.mask*num.greater_equal(self.xdata, self.xmin)*\
+         mask = self.mask*num.greater_equal(self.xdata, self.xmin)*\
                num.less_equal(self.xdata, self.xmax)
    
          if self.type not in polytypes:
             raise ValueError, "Error:  the polynomial type must be one of " +\
                   ",".join(polytypes.keys())
-         self.poly = polytypes[self.type].fit(self.x, self.y, deg=self.n, 
-               w=num.power(self.ey,-1))
+         self.poly = polytypes[self.type].fit(self.xdata[mask], self.ydata[mask],
+               deg=self.n, w=num.power(self.eydata[mask],-1))
          self.setup = True
          self.realization = None
    
@@ -317,7 +345,7 @@ if polynomial is not None:
          gids = num.greater_equal(roots, xmin)*num.less_equal(roots, xmax)
          roots = roots[gids]
          if len(roots) == 0:
-            return None,None,None
+            return array([]), array([]), array([])
          vals = self.__call__(roots)
          curvs = d2(roots)
          curvs = num.where(curvs < 0, -1, curvs)
@@ -353,11 +381,11 @@ if polynomial is not None:
 if spline2 is not None:
    class HyperSpline(oneDcurve):
    
-      def __init__(self, x, y, dy, **args):
+      def __init__(self, x, y, dy, mask=None, **args):
          '''Fit a spline2 (Thijsse) to the data.  [args] can be any argument
          recognized by spline2.spline2()'''
    
-         oneDcurve.__init__(self, x, y, dy)
+         oneDcurve.__init__(self, x, y, dy, mask)
    
          self.pars = {
                'xrange':None,
@@ -377,7 +405,7 @@ if spline2 is not None:
             self.pars[key] = args[key]
    
          # Make sure the data conform to the spine requirements
-         self._regularize()
+         #self._regularize()
          self._setup()
          self.realization = None
    
@@ -385,8 +413,6 @@ if spline2 is not None:
          return "Hyperspline"
 
       def help(self):
-         print "The following parameters affect the fit.  See help(spline2) for"
-         print "more information"
          print "xrange:      tuple of (xmin,xmax) over which to fit"
          print "lopt:        Force knot optimization to start with lopt knots"
          print "degree:      order of the spline (default 3)"
@@ -397,33 +423,13 @@ if spline2 is not None:
          print "acffunc:     functional form of autocorrelation (default exp)"
          print "ksi:         specify auto-correlation length"
          print "n:           only search for autocorrelation on index scale n"
+         print
+         print "see help(spline2) for info on these parameters"
 
-      def _regularize(self):
-         # x-values need to be strictly ascending.
-         sids = num.argsort(self.x)
-         self.x = self.x[sids]
-         self.y = self.y[sids]
-         self.ey = self.ey[sids]
-   
-         # here's some Numeric magic.  first, find where we have repeating x-values
-         Nmatrix = num.equal(self.x[:,num.newaxis], self.x[num.newaxis,:])
-         val_matrix = self.y[:,num.newaxis]*Nmatrix
-         e_matrix = self.ey[:,num.newaxis]*Nmatrix
-    
-         average = num.sum(val_matrix, axis=0)/sum(Nmatrix)
-         e_average = num.sum(e_matrix, axis=0)/sum(Nmatrix)
-         
-         # at this point, average is the original data, but with repeating data points
-         # replaced with their average.  Now, we just pick out the unique x's and
-         # the first of any repeating points:
-         gids = num.concatenate([[True], num.greater(self.x[1:] - self.x[:-1], 0.)])
-         self.x = self.x[gids]
-         self.y = average[gids]
-         self.ey = e_average[gids]
-   
       def _setup(self):
          '''Given the current set of params, setup the interpolator.'''
-         self.tck = spline2(self.x, self.y, w=1.0/self.ey, **self.pars)
+         x,y,ey = self._regularize()
+         self.tck = spline2(x, y, w=1.0/ey, **self.pars)
          self.setup = True
          self.realization = None
    
@@ -522,11 +528,11 @@ if spline2 is not None:
 
 class Spline(oneDcurve):
 
-   def __init__(self, x, y, dy, **args):
+   def __init__(self, x, y, dy, mask=None, **args):
       '''Fit a scipy (Dierkx) spline to the data.  [args] can be any argument
       recognized by scipy.interpolate.splrep.'''
 
-      oneDcurve.__init__(self, x, y, dy)
+      oneDcurve.__init__(self, x, y, dy, mask)
 
       self.pars = {
             't':None,
@@ -542,7 +548,7 @@ class Spline(oneDcurve):
          self.pars[key] = args[key]
 
       # Make sure the data conform to the spine requirements
-      self._regularize()
+      #self._regularize()
       self._setup()
       self.realization = None
 
@@ -550,7 +556,6 @@ class Spline(oneDcurve):
       return "Spline"
 
    def help(self):
-      print "Parameters that affect the fit are:"
       print "k:      order of the spline (default 3)"
       print "task:   0,1,-1  (see scipy.interpolate.splrep)"
       print "s:      Smoothing length"
@@ -707,11 +712,11 @@ functions['spline'] = (Spline, "Dierckx style splines (FITPACK)")
 if pymc is not None:
    class GaussianProcess(oneDcurve):
    
-      def __init__(self, x, y, dy, **args):
+      def __init__(self, x, y, dy, mask=None, **args):
          '''Fit a GP (Gaussian Process) spline to the data.  [args] can be any argument
          recognized by scipy.interpolate.splrep.'''
    
-         oneDcurve.__init__(self, x, y, dy)
+         oneDcurve.__init__(self, x, y, dy, mask)
    
          self.pars = {
                'diff_degree':None,
@@ -729,7 +734,6 @@ if pymc is not None:
    
          # Make sure the data conform to the spine requirements
          self.median = num.median(self.y)
-         self._regularize()
          self._setup()
          self.realization = None
    
@@ -750,43 +754,16 @@ if pymc is not None:
          return dict
 
       def help(self):
-         print "Parameters that affect the fit:"
          print "scale:       Scale over which the function varies"
          print "amp:         Amplitude of typical function variations"
          print "diff_degree: Roughly, the degree of differentiability"
 
-      def _regularize(self):
-         # x-values need to be strictly ascending.  This isn't strictly required for
-         #  GP's, but we want to elminiate duplicates, so might as well.
-         sids = num.argsort(self.x)
-         self.xdata = self.xdata[sids]
-         self.ydata = self.ydata[sids]
-         self.eydata = self.eydata[sids]
-   
-         # here's some Numeric magic.  first, find where we have repeating x-values
-         Nmatrix = num.equal(self.xdata[:,num.newaxis], self.xdata[num.newaxis,:])
-         val_matrix = self.ydata[:,num.newaxis]*Nmatrix
-         e_matrix = self.eydata[:,num.newaxis]*Nmatrix
-    
-         average = num.sum(val_matrix, axis=0)/sum(Nmatrix)
-         e_average = num.sum(e_matrix, axis=0)/sum(Nmatrix)
-         
-         # at this point, average is the original data, but with repeating data points
-         # replaced with their average.  Now, we just pick out the unique x's and
-         # the first of any repeating points:
-         gids = num.concatenate([[True], num.greater(self.xdata[1:] - self.xdata[:-1], 0.)])
-         
-         self.xdata = self.xdata[gids]
-         self.ydata = average[gids]
-         self.eydata = e_average[gids]
-   
-         self.vardata = num.power(self.ey,2)
    
       def _setup(self):
          '''Given the current set of params, setup the interpolator.'''
    
          if self.diff_degree is None:
-            self.diff_degree = 2
+            self.diff_degree = 3
    
          if self.amp is None:
             self.amp = num.std(self.y)
@@ -798,7 +775,8 @@ if pymc is not None:
          self.C = GP.Covariance(GP.matern.euclidean, diff_degree=self.diff_degree,
                            amp=self.amp, scale=self.scale)
    
-         GP.observe(self.M, self.C, obs_mesh=self.x, obs_vals=self.y, obs_V=self.var)
+         x,y,dy = self._regularize()
+         GP.observe(self.M, self.C, obs_mesh=x, obs_vals=y, obs_V=num.power(dy,2))
          self.setup = True
          self.realization = None
    
@@ -894,7 +872,7 @@ if pymc is not None:
          inds = num.nonzero(pids[1:] - pids[:-1])[0]
    
          if len(inds) == 0:
-            return (None,None,None)
+            return (array([]), array([]), array([]))
          ret = []
          for i in range(len(inds)):
             #try:
@@ -933,7 +911,7 @@ else:
    GaussianProcess = None
 
 
-def Interpolator(type, x, y, dy, **args):
+def Interpolator(type, x, y, dy, mask=None, **args):
    '''Convenience function that returns a 1D interpolator of the given [type]
    if possible.'''
    if type not in functions.keys():
@@ -942,7 +920,7 @@ def Interpolator(type, x, y, dy, **args):
       interp = functions[type][0]
       if type in polytypes:
          args['type'] = type
-      return interp(x, y, dy, **args)
+      return interp(x, y, dy, mask, **args)
 
 def list_types():
    '''Returns a list of 1D interpolators that are defined at load-time.'''

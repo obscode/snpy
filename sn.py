@@ -73,6 +73,9 @@ class dict_def:
    def __repr__(self):
       return self.__str__()
 
+   def keys(self):
+      return self.dict.keys()
+
 def linterp(x0, y0, xs):
    '''do a linear interpolation for REALLY smooth data.'''
    interps = []
@@ -162,6 +165,29 @@ class sn(object):
       if 'data' in self.__dict__:
          if name in self.data:
             return(self.data[name])
+
+      if name == 'Tmax':
+         if 'model' in self.__dict__:
+            if 'Tmax' in self.__dict__['model'].parameters:
+               if self.__dict__['model'].parameters['Tmax'] is not None:
+                  return self.__dict__['model'].parameters['Tmax']
+         for f in self.data:
+            if self.restbands[f] == 'B':
+               if self.data[self.restbands[f]].Tmax is not None:
+                  return self.data[self.restbands[f]].Tmax
+         return 0.0
+
+      if name == 'dm15':
+         if 'model' in self.__dict__:
+            if 'dm15' in self.__dict__['model'].parameters:
+               if self.__dict__['model'].parameters['dm15'] is not None:
+                  return self.__dict__['model'].parameters['dm15']
+         for f in self.data:
+            if self.restbands[f] == 'B':
+               if self.data[self.restbands[f]].dm15 is not None:
+                  return self.data[self.restbands[f]].dm15
+         return None
+         
       if name == 'parameters':
          if 'model' in self.__dict__:
             return self.__dict__['model'].parameters
@@ -811,11 +837,11 @@ class sn(object):
       filter = self.filter_order[0]
 
       f = interp1d(self.data[filter].MJD, self.data[filter].mag, bounds_error=False,
-            fill_value=self.data[filter].mag.max())
+            fill_value=self.data[filter].mag.min())
       for filter in self.filter_order[1:]:
          off = offs[-1] + min_off
          while not alltrue(greater(self.data[filter].mag+off - f(self.data[filter].MJD),
-            0)):
+            0.5)):
             off += 0.5
          offs.append(off)
          if self.data[filter].MJD.shape[0] > 1:
@@ -1108,7 +1134,7 @@ class sn(object):
 
          bol_mask.append(True)
          bol.append(flx)
-      return(array(bol),array(bol_mask))
+      return(self.dadta[refband].t, array(bol),array(bol_mask))
 
    def closest_band(self, band, tempbands=None):
       '''Find the rest-frame filter in [tempbands] that is closest to the
