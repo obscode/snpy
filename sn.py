@@ -32,7 +32,7 @@ import mangle_spectrum      # SN SED mangling routines
 import pickle
 import model
 
-Version = '0.6'     # Let's keep track of this from now on.
+Version = '0.7'     # Let's keep track of this from now on.
 
 # Some useful functions in other modules which the interactive user may want:
 getSED = kcorr.get_SED
@@ -76,40 +76,19 @@ class dict_def:
    def keys(self):
       return self.dict.keys()
 
-def linterp(x0, y0, xs):
-   '''do a linear interpolation for REALLY smooth data.'''
-   interps = []
-   masks = []
-   for x in xs:
-      if x > x0[-1]:
-         i = len(x0) - 1
-         mask = 0
-      elif x < x0[0]:
-         i = 1
-         mask = 0
-      else:
-         i = nonzero(greater(x0 - x, 0))[0]
-         if i == 0:  i = 1
-         mask = 1
-      interp = (y0[i-1] - y0[i])/(x0[i-1] - x0[i])*(x - x0[i]) + y0[i]
-      interps.append(interp)
-      masks.append(mask)
-   return(array(interps), array(masks))
-
 class sn(object):
    '''This class is the meat of the program.  Create a supernova object by 
    calling the constructor with the name of the superova as the argument.  
    E.g:
-   In[1]:  s = super('SN1999T')
-   if the supernova is in the SQL database, its lightcurve data and any 
-   previously saved fitting parameters will be loaded into its member data.  
-   Once the object is created, use its member data and functions to do your 
-   work.  Of course, you can have multiple supernovae defined at the same 
-   time.'''
+   In[1]:  s = sn('SN1999T')
+   if the supernova is in the SQL database, its lightcurve data will be loaded 
+   into its member data.  Once the object is created, use its member data 
+   and functions to do your work.  Of course, you can have multiple 
+   supernovae defined at the same time.'''
 
    def __init__(self, name, source=None, ra=None, dec=None, z=0):
-      '''Create the object.  Only required parameter is the name.  If this 
-      is a new object, you can also specify ra, dec, and z.'''
+      '''Create the object.  Only required parameter is the [name].  If this 
+      is a new object, you can also specify [ra], [dec], and [z].'''
       self.__dict__['data'] = {}        # the photometric data, one for each band.
       self.__dict__['model'] = model.EBV_model(self)
       self.template_bands = ['u','B','V','g','r','i','Y','J','H','K']
@@ -221,8 +200,8 @@ class sn(object):
 
    def choose_model(self, name, stype='dm15'):
       '''A convenience function for selecting a model from the model module.
-      The model will be used when self.fit() is called and will contain
-      all the parameters and errors.'''
+      [name] is the model to use.  The model will be used when self.fit() is 
+      called and will contain all the parameters and errors.'''
       models = []
       for item in model.__dict__:
          obj = model.__dict__[item]
@@ -238,15 +217,17 @@ class sn(object):
             if b not in ['Bs','Vs','Rs','Is']]
      
    def get_mag_table(self, bands=None, dt=0.5, outfile=None):
-      '''This routine returns a table of the photometry, where the data from 
-      different filters are grouped according to day of observation.  The 
-      paramter dt controls how to group by time:  observations separated
-      by less than dt in time are grouped.  When data is missing, a value of 
-      99.9 is inserted.  The data is returned as a dictionary with the 
+      '''This routine returns a table of the photometry, where the data from
+      different filters are grouped according to day of observation.  The
+      desired filters can be specified in [bands], otherwise all filters are
+      returned.  The paramter [dt] controls how to group by time:  observations
+      separated by less than [dt] in time are grouped.  To have the output
+      sent to a file, specify a filename for [outfile].  When data is missing, a
+      value of 99.9 is inserted.  The data is returned as a dictionary with the
       following keys: 
       'MJD':  the epoch of observation
-      band :  The magnitude in band
-      e_band:  the error in band.
+      [band] :  The magnitude in filter [band]
+      e_[band]:  the error in [band].
       '''
 
       if bands is None:  bands = self.data.keys()
@@ -298,15 +279,16 @@ class sn(object):
          return(ret_data)
 
    def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0):
-      '''Use the Lira Law to derive a color excess.  Bband and Vband should be
+      '''Use the Lira Law to derive a color excess.  [Bband] and [Vband] 
+      should be
       whichever observed bands corresponds to restframe B and V, respectively.
-      Use interpolate=1 to interpolate missing data.  If interpolate=0, then
+      Use [interpolate]=1 to interpolate missing data.  If [interpolate]=0, then
       no color is computed where data is missing.  The color excess is
       estimated to be the median of the offset between the Lira line and the 
       data.  The uncertainty is 1.49 times the median absolute deviation of
       the offset data from the Lira line.  If you want to restrict the data
-      used, use tmin and tmax to define a window.  If you want a graph use
-      plot=1.  Returns a 3-tuple:  the E(B-V), error, and the fit splope (which
+      used, use [tmin] and [tmax] to define a window.  If you want a graph use
+      [plot]=1.  Returns a 3-tuple:  the E(B-V), error, and the fit splope (which
       can be used as a diagnostic).'''
 
       # find V-maximum
@@ -361,13 +343,12 @@ class sn(object):
       return self.get_max(bands, deredden=deredden, restframe=1)
 
    def get_max(self, bands, restframe=0, deredden=0):
-      '''Get the rest-frame maximum magnitue in bands based on the currently
+      '''Get the rest-frame maximum magnitue in [bands] based on the currently
       defined model or spline fits.  If you want rest-frame maxima 
-      (i.e., have the k-corrections at maximum subtracted), set restframe=1.  
+      (i.e., have the k-corrections at maximum subtracted), set [restframe]=1.  
       If you want the reddening (galactic and/or host) removed, set 
-      deredden=1.  If both a model and spline fit are defined for a filter,
-      the spline will be taken, unless you specify use_model=True.  The
-      function returns:
+      [deredden]=1.  If both a model and spline fit are defined for a filter,
+      the spline will be taken.  The function returns:
       (Tmax,Mmax,e_Mmax,rband)
       Tmax = array of times of maximum, Mmax = array of maximum magnitudes,
       e_Mamx = error in max magnitudes, rband=rest-band for each filter.'''
@@ -425,8 +406,8 @@ class sn(object):
                       function.
       '''
       if use_stretch and self.k_version != '91bg':
-         dm15 = self.__getattr__('dm15')
-         st = self.__getattr__('st')
+         dm15 = getattr(self, 'dm15', None)
+         st = getattr(self, 'st', None)
          if dm15 is None and st is None:
             raise AttributeError, "Before you can k-correct with stretch, you"+\
                   " need to solve for dm15 or st, using either a model or LC fit"
@@ -547,7 +528,7 @@ class sn(object):
    def get_mangled_SED(self, band, i):
       '''After the mangle_kcorr function has been run, you can use this function to
       retrieve the mangled SED that was used to compute the k-correction for the
-      i'th day in band's light-curve.  Returns 4 arrays:  wavelength, mangled_flux,
+      [i]'th day in [band]'s light-curve.  Returns 4 arrays:  wavelength, mangled_flux,
       original flux, and mangling function.'''
       
       if 'ks_mopts' not in self.__dict__:
@@ -558,12 +539,12 @@ class sn(object):
       return(wave,man_flux,flux,man_flux/flux)
    
    def get_color(self, band1, band2, interp=1, use_model=0, model_float=0, kcorr=0):
-      '''return the observed SN color of band1 - band2.  If interp=1, then
+      '''return the observed SN color of [band1] - [band2].  If [interp]=1, then
       on days when only one band is measured, the other is interpolated,
       otherwise, only days when both bands are measured will be returned.
-      If use_model=1, the fit model will be used, otherwise, the light-curve
-      will be interpolated using a spline solution (if it exists) or GLOEs
-      if all else fails.  Set kcorr=1 if you want the results k-corrected.
+      If [use_model]=1, the fit model will be used, otherwise, the light-curve
+      will be interpolated using a spline solution (if it exists)
+      Set [kcorr]=1 if you want the results k-corrected.
       Returns a 4-tuple:
       (MJD, band1-band2, e_band1-band2, flag).  
        -  Flag is one of:

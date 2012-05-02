@@ -5,7 +5,7 @@
 '''
 from numpy import *
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import myplotlib
 from matplotlib import pyplot,rcParams
 from matplotlib.patches import Rectangle

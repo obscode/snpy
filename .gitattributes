@@ -298,7 +298,6 @@ doc/snpy.lyx -text
 doc/snpy.pdf -text svneol=unset#unset
 filters/README -text
 filters/__init__.py -text
-filters/filters.py -text
 filters/filters/APO/SDSS/filters.dat -text
 filters/filters/APO/SDSS/sdss_g.dat -text
 filters/filters/APO/SDSS/sdss_i.dat -text
