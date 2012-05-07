@@ -67,6 +67,7 @@ CSPtemp/gloes.c -text
 CSPtemp/gloes.h -text
 CSPtemp/plot_bs_disps.py -text
 CSPtemp/setup.py -text
+CSPtemp/setup_old.py -text
 CSPtemp/tck.pickle -text
 CSPtemp/tck_destiny.pickle -text
 CSPtemp/templates.dat -text

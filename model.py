@@ -428,17 +428,19 @@ def read_table(file):
    lines = [line for line in lines if line[0] != "#"]
    lines = map(string.split, lines)
    a = {}; b = {};  c={};  Rv = {};  sig = {}
+   ea = {}; eb = {};  ec={};  eRv = {}
    for line in lines:
       id = int(line[0])
       if id not in a:
-         a[id] = {};  b[id] = {};  c[id] = {};  Rv[id] = {};  sig[id] = {}
+         a[id] = {};  b[id] = {};  c[id] = {};  sig[id] = {}
+         ea[id] = {};  eb[id] = {};  ec[id] = {}
       f = line[1]
-      a[id][f] = float(line[2])
-      b[id][f] = float(line[3])
-      c[id][f] = float(line[4])
-      Rv[id][f] = float(line[5])
-      sig[id][f] = float(line[6])
-   return(a,b,c,Rv,sig)
+      a[id][f] = float(line[2]); ea[id][f] = float(line[3])
+      b[id][f] = float(line[4]); eb[id][f] = float(line[5])
+      c[id][f] = float(line[6]); ec[id][f] = float(line[7])
+      Rv[id] = float(line[8]); eRv[id] = float(line[9])
+      sig[id][f] = float(line[10])
+   return(a,ea,b,eb,c,ec,Rv,eRv,sig)
 
 
 
@@ -477,11 +479,9 @@ class EBV_model2(model):
       self.stype = stype
       
       if stype == 'st':
-         self.a,self.b,self.c,self.Rv_host,self.sigSN = \
-               read_table(os.path.join(base,'st_calibration2.dat'))
+         self.a,self.ea,self.b,self.eb,self.c,self.ec,self.Rv_host, self.eRv_host,self.sigSN = read_table(os.path.join(base,'st_calibration2.dat'))
       else:
-         self.a,self.b,self.c,self.Rv_host,self.sigSN = \
-               read_table(os.path.join(base,'dm15_calibration2.dat'))
+         self.a,self.ea,self.b,self.eb,self.c,self.ec,self.Rv_host, self.eRv_host,self.sigSN = read_table(os.path.join(base,'dm15_calibration2.dat'))
 
       self.do_Robs = 0
       self.Robs = {}
@@ -494,11 +494,12 @@ class EBV_model2(model):
             raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
 
       self.calibration = self.args.get('calibration',0)
-      self.gen = self.args.get('gen',2)
+      self.gen = 2
 
       for band in self._fbands:
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
-               self.Rv_host[self.calibration], self.parent.Rv_gal, self.parent.k_version)
+               self.Rv_host[self.calibration], self.parent.Rv_gal, 
+               self.parent.k_version)
       
    def guess(self, param):
       s = self.parent
@@ -518,15 +519,18 @@ class EBV_model2(model):
          # choose just the average dm15:
          return(1.1)
 
+      if param == 'st':
+         return (1.0)
+
       return(0.0)
 
    def __call__(self, band, t):
-      self.template.mktemplate(self.dm15)
+      self.template.mktemplate(self.parameters[self.stype])
       t = t - self.Tmax
       rband = self.parent.restbands[band]
 
       # Now build the lc model
-      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, self.gen)
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
       # If k-corrections are there, use them
       if band in self.parent.ks_tck:   
          temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
@@ -561,7 +565,7 @@ class EBV_model2(model):
       Mmaxs = []
       eMmaxs = []
       rbands = []
-      self.template.mktemplate(self.dm15)
+      self.template.mktemplate(self.parameters[self.stype])
       for band in bands:
          rband = self.parent.restbands[band]
          # find where the template truly peaks:
@@ -605,10 +609,10 @@ class EBV_model2(model):
       if band not in self.a[calibration]:
          raise ValueError, "Error, filter %s cannot be fit with this calibration"
       if self.stype == 'st':
-         delta = self.dm15 - 1.0
+         delta = self.st - 1.0
       else:
          delta = self.dm15 - 1.1
-      return self.a[calibration][band] + self.b[calibration][band]*delta +
+      return self.a[calibration][band] + self.b[calibration][band]*delta +\
              self.c[calibration][band]*delta**2
 
    def systematics(self, calibration=1, include_Ho=False):
@@ -624,16 +628,19 @@ class EBV_model2(model):
          # make a call to get the weights
          mod,err,mask = self.__call__(band, self.parent.data[band].MJD)
          weights.append(sum(where(mask, power(err,-2), 0)))
-         ddm15 = self.dm15 - 1.1
+         if self.stype == 'st':
+            dst = self.st - 1.0
+         else:
+            dst = self.dm15 - 1.1
          Robs = kcorr.R_obs(band, self.parent.z, 0, self.EBVhost,
-               self.parent.EBVgal, self.Rv_host[calibration], self.parent.Rv_gal,
-               self.parent.k_version)
+               self.parent.EBVgal, self.Rv_host[calibration], 
+               self.parent.Rv_gal, self.parent.k_version)
          dRobs = Robs*self.eRv_host[calibration]/self.Rv_host[calibration]
-         syst_DM.append(power(ddm15*self.eb[rb][calibration],2)+\
+         syst_DM.append(power(dst*self.eb[calibration][rb],2)+\
                         power(self.EBVhost*dRobs, 2)+\
-                        power(self.eM0[rb][calibration], 2)+\
+                        power(self.ea[calibration][rb], 2)+\
                         #power(2.17*velerr/(3e5*self.parent.z),2) +\
-                        power(self.sigSN[band][calibration],2))
+                        power(self.sigSN[calibration][rb],2))
       syst_DM = array(syst_DM)
       weights = array(weights)
       systs['DM'] = sum(weights*syst_DM)/sum(weights)

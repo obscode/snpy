@@ -113,9 +113,9 @@ class lc:
                return(self.magnitude - self.K)
             except:
                raise AttributeError, "Error:  k-corrections and magnitudes incompatible"
-      elif self.interp is not None:
-         if name in self.interp.pars:
-            return getattr(self.interp,name)
+      elif 'interp' in self.__dict__ and self.__dict__['interp'] is not None:
+         if name in self.__dict__['interp'].pars:
+            return getattr(self.__dict__['interp'],name)
       raise AttributeError, "Error:  attribute %s not defined" % (name)
 
    def __setattr__(self, name, value):
