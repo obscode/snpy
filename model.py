@@ -18,12 +18,6 @@ Ia_w,Ia_f = kcorr.get_SED(0, 'H3')
 
 debug = 0
 base = os.path.dirname(globals()['__file__'])
-if os.path.isfile(os.path.join(base, 'tck3.pickle')):
-   f = open(os.path.join(base, 'tck3.pickle'))
-   tck3 = pickle.load(f)
-   f.close()
-else:
-   tck3 = None
 
 it_sigma = 1.0
 
@@ -426,10 +420,32 @@ class EBV_model(model):
       systs['EBVhost'] = 0.06
       return(systs)
 
+def read_table(file):
+   f = open(file, 'r')
+   lines = f.readlines()
+   f.close()
+   lines = map(string.strip, lines)
+   lines = [line for line in lines if line[0] != "#"]
+   lines = map(string.split, lines)
+   a = {}; b = {};  c={};  Rv = {};  sig = {}
+   for line in lines:
+      id = int(line[0])
+      if id not in a:
+         a[id] = {};  b[id] = {};  c[id] = {};  Rv[id] = {};  sig[id] = {}
+      f = line[1]
+      a[id][f] = float(line[2])
+      b[id][f] = float(line[3])
+      c[id][f] = float(line[4])
+      Rv[id][f] = float(line[5])
+      sig[id][f] = float(line[6])
+   return(a,b,c,Rv,sig)
+
+
+
 class EBV_model2(model):
    '''This model fits any number of lightcurves with CSP uBVgriYJHK templates
    or Prieto BsVsRsIs templates.  The parameters you can fit:
-      - dm15 (decline rate)
+      - dm15 or st (decline rate or stretch)
       - Tmax (time of peak B maximum)
       - DM   (distance modulus)
       - EBVhost  (host galaxy extinction)
@@ -446,56 +462,27 @@ class EBV_model2(model):
    not a parameter, but is controled by the choice of calibration
    R_V for the galactic extinction is taken from the SN object (default 3.1).'''
 
-   def __init__(self, parent, stype='dm15'):
+   def __init__(self, parent, stype='st'):
 
-      if stype != 'dm15':
-         raise ValueError, "This model only supports the dm15 parameter"
+      if stype not in ['dm15','st']:
+         raise ValueError, "This model only supports the dm15 and st parameter"
       model.__init__(self, parent)
       self.rbs = ['u','B','V','g','r','i','Y','J','H']
-      self.parameters = {'DM':None, 'dm15':None, 'EBVhost':None, 'Tmax':None}
-      self.errors = {'DM':0, 'dm15':0, 'EBVhost':0, 'Tmax':0}
-      self.template = ubertemp.template()
-      # R_V as a function of which calibration fit number (see Folatelli et
-      #  al. (2009) table 9
-      self.Rv_host = [1.95, 1.40]
-      self.eRv_host = [0.06, 0.16]
-      self.sigSN = [0.08, 0.05]
-      self.M0 = {'u':[-18.64,-18.62],
-                 'B':[-19.02,-19.02],
-                 'V':[-19.01,-19.00],
-                 'g':[-19.07,-19.07],
-                 'r':[-18.93,-18.92],
-                 'i':[-18.35,-18.32],
-                 'Y':[-18.35,-18.33],
-                 'J':[-18.44,-18.43],
-                 'H':[-18.26,-18.25]}
-      self.eM0 = {'u':[0.08,0.08],
-                  'B':[0.06,0.06],
-                  'V':[0.04,0.04],
-                  'g':[0.06,0.05],
-                  'r':[0.04,0.03],
-                  'i':[0.03,0.02],
-                  'Y':[0.02,0.02],
-                  'J':[0.02,0.02],
-                  'H':[0.02,0.02]}
-      self.b = {'u':[0.58,0.46],
-                'B':[0.32,0.32],
-                'V':[0.33,0.32],
-                'g':[0.31,0.33],
-                'r':[0.26,0.26],
-                'i':[0.14,0.11],
-                'Y':[0.10,0.10],
-                'J':[0.10,0.11],
-                'H':[0.12,0.11]}
-      self.eb = {'u':[0.32, 0.31],
-                 'B':[0.26, 0.24],
-                 'V':[0.18, 0.15],
-                 'g':[0.24, 0.22],
-                 'r':[0.15, 0.12],
-                 'i':[0.11, 0.09],
-                 'Y':[0.07, 0.07],
-                 'J':[0.07, 0.07],
-                 'H':[0.06, 0.07]}
+      self.parameters = {'DM':None, stype:None, 'EBVhost':None, 'Tmax':None}
+      self.errors = {'DM':0, stype:0, 'EBVhost':0, 'Tmax':0}
+      if stype == 'dm15':
+         self.template = ubertemp.template()
+      else:
+         self.template = ubertemp.stemplate()
+      self.stype = stype
+      
+      if stype == 'st':
+         self.a,self.b,self.c,self.Rv_host,self.sigSN = \
+               read_table(os.path.join(base,'st_calibration2.dat'))
+      else:
+         self.a,self.b,self.c,self.Rv_host,self.sigSN = \
+               read_table(os.path.join(base,'dm15_calibration2.dat'))
+
       self.do_Robs = 0
       self.Robs = {}
 
@@ -615,10 +602,14 @@ class EBV_model2(model):
       '''Given self.dm15, return the absolute magnitude at maximum for the given
       filter [band].  The calibration paramter allows you to choose which
       fit (1-6) in Folatelli et al. (2009), table 9'''
-      if band in ['u','B','V','g','r','i','Y','J','H']:
-         return self.M0[band][calibration] + (self.dm15-1.1)*self.b[band][calibration]
+      if band not in self.a[calibration]:
+         raise ValueError, "Error, filter %s cannot be fit with this calibration"
+      if self.stype == 'st':
+         delta = self.dm15 - 1.0
       else:
-         return -19.0
+         delta = self.dm15 - 1.1
+      return self.a[calibration][band] + self.b[calibration][band]*delta +
+             self.c[calibration][band]*delta**2
 
    def systematics(self, calibration=1, include_Ho=False):
       '''Returns the systematic errors in the paramters as a dictionary.  
@@ -642,7 +633,7 @@ class EBV_model2(model):
                         power(self.EBVhost*dRobs, 2)+\
                         power(self.eM0[rb][calibration], 2)+\
                         #power(2.17*velerr/(3e5*self.parent.z),2) +\
-                        power(self.sigSN[calibration],2))
+                        power(self.sigSN[band][calibration],2))
       syst_DM = array(syst_DM)
       weights = array(weights)
       systs['DM'] = sum(weights*syst_DM)/sum(weights)
