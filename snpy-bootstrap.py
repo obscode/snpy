@@ -1508,23 +1508,82 @@ def create_bootstrap_script(extra_text, python_version=''):
 
 import os,subprocess
 def after_install(options,home_dir):
+   home_dir = os.path.realpath(home_dir)
    # Test for installed software
    pip = join(home_dir, 'bin', 'pip')
-   subprocess.call([pip,'install', 'scipy'])
-   subprocess.call([pip,'install', 'pymysql'])
-   subprocess.call([pip,'install', 'pyfits'])
-   subprocess.call([pip,'install', 'matplotlib'])
-   subprocess.call([pip,'install', 'ipython==0.10.2'])
+   # First, the absolutely necessary stuff
+   print "Now going to install the manditory software..."
+   man_packages = ['scipy','pymysql','pyfits','matplotlib',
+                   'ipython>=0.10.2']
+   for package in man_packages:
+      sys.stdout.write("   Installing %s..." % package)
+      sys.stdout.flush()
+      of = open('%s.log' % package, 'w')
+      p = subprocess.Popen([pip,'install', package], stdout=of,
+            stderr=subprocess.STDOUT)
+      p.wait()
+      of.close()
+      if p.returncode != 0:
+         print "\nNuts! There was a problem installing required package",package
+         print "Check %s.log for errors to see what went wrong" % package
+         sys.exit(1)
+      sys.stdout.write("Done\n")
+   # Now, the optional stuff
+   print "Now going to try installing the optional software..."
+   opt_packages = ['pymc']
+   for package in opt_packages:
+      sys.stdout.write("   Installing %s..." % package)
+      sys.stdout.flush()
+      of = open('%s.log' % package, 'w')
+      p = subprocess.Popen([pip,'install', package], stdout=of,
+            stderr=subprocess.STDOUT)
+      p.wait()
+      of.close()
+      if p.returncode != 0:
+         print "\nOh well, there was a problem installing package",package
+         print "Check %s.log for errors to see what went wrong" % package
+      else:
+         sys.stdout.write("Done\n")
+
    # Now we install SNooPy proper
+   print "Now attempting to download/install SNooPy..."
    os.chdir(home_dir)
-   ret = subprocess.call(['svn','co','svn://cow.obs.carnegiescience.edu/snpy/branch/snpy2'])
-   if ret != 0:
+   of = open('SNooPy.log', 'w')
+   p = subprocess.Popen(['svn','co','svn://cow.obs.carnegiescience.edu/snpy/branch/snpy2','snpy'], stdout=of, stderr=subprocess.STDOUT)
+   p.wait()
+   if p.returncode != 0:
       print "Failed to download from SVN, reverting to static source"
-      subprocess.call([pip, 'install', 'snpy', '-f', 
-              'http://users.obs.carnegiescience.edu/cburns/downloads'])
+      p = subprocess.Popen([pip, 'install', 'snpy', '-f', 
+              'http://users.obs.carnegiescience.edu/cburns/downloads'],
+              stdout=of, stderr=subprocess.STDOUT)
+      p.wait()
+      if p.returncode != 0:
+         print "Failed to download/install SNooPy static source!"
+         print "Check SNooPy.log to see what went wrong"
+         of.close()
+         sys.exit(1)
    else:
-      os.chdir(join(home_dir,'snpy'))
-      subprocess.call([join(home_dir, 'bin','python'),'setup.py','install'])
+      os.chdir('snpy')
+      p = subprocess.Popen([join(home_dir, 'bin','python'),'setup.py',
+         'install'], stdout=of, stderr=subprocess.STDOUT)
+      p.wait()
+      if p.returncode != 0:
+         print "Failed to install SNooPy from SVN working copy."
+         print "Check SNooPy.log to see what went wrong"
+         of.close()
+         sys.exit(1)
+   of.close()
+   print "-"*75
+   print '''Done!  With any luck, SNooPy has been successfully installed into
+the virtual environment located in %s.  
+From now on, if you want to run SNooPy, run the following script:
+   %s/bin/snpy
+or put it in your PATH.  To keep SNooPy up-to-date, periodically run
+   %s/bin/update-snpy
+If you want to write your own scripts using the snpy module, you will
+need to use the python in SNooPy's virtual environment to run your scripts:
+   %s/bin/python''' % (home_dir,home_dir,home_dir,home_dir)
+   print "-"*75
 
 
 def convert(s):
