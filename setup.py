@@ -20,6 +20,8 @@ def configuration(parent_package='', top_path=None):
    config.add_scripts(['bin/update-snpy'])
    config.add_data_dir('typeIa')
    config.add_data_files('ipythonrc-SN')
+   config.add_data_files('st_calibration2.dat')
+   config.add_data_files('dm15_calibration2.dat')
    return config
 
 

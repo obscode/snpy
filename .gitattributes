@@ -251,6 +251,7 @@ CSPtemp/templates/SN2007af_u.dat -text
 bin/lcparams -text
 bin/snpy -text
 bin/update-snpy -text
+/dm15_calibration2.dat -text
 dm15temp/__init__.py -text
 dm15temp/dm15temp.c -text
 dm15temp/dm15temp.h -text
@@ -705,6 +706,7 @@ spline2/tests/test_spline2.py -text
 spline2/tests/test_spline2_2.py -text
 sqlmod/__init__.py -text
 sqlmod/setup.py -text
+/st_calibration2.dat -text
 /tck3.pickle -text
 tspack/__init__.py -text
 tspack/setup.py -text
