@@ -33,8 +33,8 @@ from snpy import *
 if "lowz" in sys.argv:
    del sys.argv[sys.argv.index("lowz")]
    sqlmod.default_sql = sqlmod.sql_lowz()
-#if '--pylab' not in sys.argv:
-#   sys.argv.append('--pylab')
+if '-pylab' not in sys.argv:
+   sys.argv.append('-pylab')
 
 try:
    from IPython import embed
