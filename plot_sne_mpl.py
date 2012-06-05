@@ -186,18 +186,6 @@ class click_yrange:
       self.ax.figure.canvas.draw()
       return(self.y0, self.rect.get_y()+self.rect.get_height())
 
-#class MaskData:
-#   '''Given a figure instance, oversee the key bindings in a figure that
-#   deal with masking and unmasking data.  This is done by manipulating the
-#   lightcurve (lc) instance's mask array directly.  The default bindings are
-#   'x' to both mask and unmask data.  These can be overridden by specifying
-#   the maskkey and unmaskkey attributes.'''
-#
-#   def __init__(self, figure, maskkey='x', unmaskkey='x'):
-#      self.figure = figure
-#      self.mk = maskkey
-#      self.umk = umaskkey
-
 
 class ButtonClick:
    '''Given a figure instance and an optional dictionary of key-bindings,
@@ -405,16 +393,15 @@ def plot_filters(self, bands=None, day=0, fill=0):
    return p
 
 
-def plot_sn(self, xrange=None, yrange=None, device=None, 
-      title=None, interactive=0, single=0, dm=1, fsize=12., linewidth=1,
-      symbols=None, colors=None, relative=0, legend=1, mask=1, label_bad=0,
-      flux=0, epoch=1, msize=6, **pargs):
+def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0, 
+      single=0, dm=1, fsize=12., linewidth=1, symbols=None, colors=None, 
+      relative=0, legend=1, mask=1, label_bad=0, flux=0, epoch=1, msize=6,
+      outfile=None, **pargs):
    '''Plot out the supernova data in a nice format.  There are several 
    options:
       - xrange,yrange:  specify the ranges to plot as lists [xmin,xmax], 
         [ymin,ymax]
       - title:  optional title
-      - device:  which device to use.  Useful for output to file
       - interactive:  allows for an interactive plot.
       - single:  plot out as a single (rather than panelled) plot?
       - dm:  offset in magnitudes between the lightcurves (for single plots)
@@ -597,6 +584,8 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
    #p.draw()
    p.set_limits(dox=(xrange is None), doy=(yrange is None), all_equal=1)
    p.draw()
+   if outfile is not None:
+      p.fig.savefig(outfile)
    return(p)
 
 def plot_lira(t, t2, t_maxes, BV, eBV, BV2, tmin, tmax, c):
@@ -616,7 +605,7 @@ def plot_lira(t, t2, t_maxes, BV, eBV, BV2, tmin, tmax, c):
    p.canvas.draw()
    return p
 
-def plot_lc(self, device='/XSERVE', epoch=1, flux=0, symbol=4):
+def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None):
    # clear out any previous bindings...  gotta be a better way to do this...
    if flux: 
       flipaxis = 0
@@ -751,6 +740,8 @@ def plot_lc(self, device='/XSERVE', epoch=1, flux=0, symbol=4):
    self.mp.draw()
    self.mp.bc = ButtonClick(self.mp.fig)
    self.mp.bc.connect()
+   if outfile is not None:
+      self.mp.fig.savefig(outfile)
    return(self.mp)
 
 def replot_lc(self):
@@ -826,7 +817,7 @@ def replot_lc(self):
    self.mp.fig.canvas.draw()
 
 
-def plot_kcorrs(self, device='13/XW', colors=None, symbols=None):
+def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
    '''Plot the k-corrections, both mangled and un-mangled.'''
    # See  what filters we're going to use:
    bands = self.ks.keys()
@@ -847,9 +838,6 @@ def plot_kcorrs(self, device='13/XW', colors=None, symbols=None):
       if b not in colors:  colors[b] = 1
       if b not in symbols:  symbols[b] = 4
    n_plots = len(bands)
-   cols = int(round(sqrt(n_plots)))
-   rows = (n_plots / cols)
-   if n_plots % cols:  rows += 1
    p = myplotlib.PanelPlot(1, n_plots, num=112, figsize=(6,n_plots),
         nymax=5, prunex=None)
    p.title("Use 'm' to plot mangled SED for any point")
@@ -877,6 +865,8 @@ def plot_kcorrs(self, device='13/XW', colors=None, symbols=None):
    p.draw()
    p.bc = ButtonClick(p.fig, bindings={'m':plot_mangled_SED})
    p.bc.connect()
+   if outfile is not None:
+      p.fig.savefig(outfile)
    return(p)
 
 def plot_mangled_SED(event):

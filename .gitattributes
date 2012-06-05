@@ -724,6 +724,7 @@ typeIa/Nugent_91bg_SED.fits -text svneol=unset#unset
 typeIa/Nugent_SED.fits -text svneol=unset#unset
 /ubertemp.py -text
 utils/GLOEs.py -text
+utils/IRSA_dust_getval.py -text
 utils/InteractiveFit.py -text
 utils/NED_dust_getval.py -text
 utils/__init__.py -text

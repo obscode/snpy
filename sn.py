@@ -17,7 +17,7 @@ from distutils.version import StrictVersion
 from numpy.oldnumeric import *       # Vectors
 import ubertemp             # a template class that contains these two
 import kcorr                # Code for generating k-corrections
-import utils.NED_dust_getval as dust_getval
+import utils.IRSA_dust_getval as dust_getval
 
 from utils import stats     # some convenient stats functions
 from utils import fit_poly  # polynomial fitter
@@ -31,6 +31,7 @@ from filters import standards as spectra # spectra.
 import mangle_spectrum      # SN SED mangling routines
 import pickle
 import model
+from utils.fit1dcurve import list_types
 
 Version = '0.7'     # Let's keep track of this from now on.
 
@@ -99,7 +100,6 @@ class sn(object):
       self.ra = ra              # Coordinates
       self.decl = dec
       self.filter_order = None  # The order in which to plot the filters
-      self.device = '10/XS'   # Device to output plot to
       self.xrange = None 
       self.yrange = None        # Impose any global plotting ranges?
       #self.Rv_host = 3.1        # Ratio of total to selective absorption in 
@@ -429,6 +429,7 @@ class sn(object):
          s = 1.0
       else:
          s = 1.0
+      self.ks_s = s
 
       if bands is None:  bands = self.data.keys()
       if mbands is None:  mbands = [b for b in bands]
@@ -508,7 +509,6 @@ class sn(object):
       #   But there may be two observations separated by less than a day,
       #   in which case, they share the same k-correction.  So figure that out
       self.ks_mopts = {}
-      self.ks_s = s
       for i in range(len(bands)):
          b = bands[i]
          self.ks_tck[b] = fit_spline.make_spline(res['MJD'], kcorrs[:,i],
@@ -969,17 +969,16 @@ class sn(object):
       '''
       return plotmod.mask_data(self)
    
-   def plot(self, xrange=None, yrange=None, device=None, 
+   def plot(self, xrange=None, yrange=None,  
          title=None, interactive=0, single=0, dm=1, fsize=None, linewidth=None,
          symbols=None, colors=None, relative=0, legend=1, mask=1, label_bad=0,
-         flux=0, epoch=1, **pargs):
+         flux=0, epoch=1, outfile=None, **pargs):
       '''Plot out the supernova data in a nice format.  There are several 
       options:
          - xrange,yrange:  specify the ranges to plot as lists [xmin,xmax], 
            [ymin,ymax]
          - title:  optional title
-         - device:  which device to use.  Useful for output to file
-         - interactive:  allows for an interactive plot.
+         - interactive:  allows for an interactive plot (PGPLOT only).
          - single:  plot out as a single (rather than panelled) plot?
          - dm:  offset in magnitudes between the lightcurves (for single plots)
          - fsize:  override the font size used to plot the graphs
@@ -990,20 +989,25 @@ class sn(object):
          - legend:  do we plot the legend?
          - mask:  Omit plotting masked out data?
          - label_bad:  label the masked data with red x's?
+         - flux:  (boolean) plot in flux units?
+         - epoch:  (boolean) plot time relative to Tmax?
+         - outfile:  if supplied, save the plot to [outfile]
       '''
 
-      return plotmod.plot_sn(self, xrange, yrange, device, 
+      return plotmod.plot_sn(self, xrange, yrange,
          title, interactive, single, dm, fsize, linewidth,
          symbols, colors, relative, legend, mask, label_bad,
-         flux, epoch, **pargs)
+         flux, epoch, outfile, **pargs)
 
-   def plot_kcorrs(self, device='13/XS', colors=None, symbols=None):
+   def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
       '''Plot the derived k-corrections after they have been computed.
       Both mangled and un-mangled k-corrections will be plotted as
       lines and points, respectively.  If mangling was used to
-      do the k-corrections, clicking on a point will bring up
-      another plot showing the original and mangled spectrum.'''
-      return plotmod.plot_kcorrs(self, device, colors, symbols)
+      do the k-corrections, clicking 'm' on a point will bring up
+      another plot showing the original and mangled spectrum. You can
+      specify colors and symbols with [colors] and [symbols].  If
+      [outfile] is proviced, output the graph to [outfile]'''
+      return plotmod.plot_kcorrs(self, colors, symbols)
 
    def bolometric(self, bands, lam1=None, lam2=None, refband=None, 
          normband=None, remangle=0, extrap_red='RJ', extrap_blue=None, 
@@ -1017,7 +1021,10 @@ class sn(object):
       the cadence (so should be the band with the *least* coverage.
       Photometry will be interpolated to this cadence.  The bolometric
       flux will be normalized to match the data in normband (default is
-      to use the first filter in bands).'''
+      to use the first filter in bands).  To extrapolate the red end of
+      the spectrum using Rayleigh-Jeans, use extrap_red='RJ', otherwise
+      set it to None.  To specify a function of wavelength for the blue
+      end, use [extrap_blue].  Specifying [outfile] will save the graph.'''
       for b in bands:  
          if b not in self.data:
             raise AttributeError, "band %s not defined in data set" % (b)

@@ -24,11 +24,19 @@ def line_bbox(line):
    bbox.update_from_data_xy(line.get_xydata())
    return(bbox)
 
+def img_bbox(img):
+   '''extract a bounding box form an image object.'''
+   bbox = transforms.Bbox.unit()
+   x0,x1,y0,y1 = img.get_extent()
+   bbox.set_points(array([[x0,y0],[x1,y1]]))
+   return(bbox)
+
 def axis_bbox(axis):
    '''Given an axis, find the bounding box for all the data therein.'''
-   bboxs = [line_bbox(line) for line in axis.lines if getattr(line,'autoscale',True)]
+   bboxs = [line_bbox(line) for line in axis.lines if line.get_transform() is axis.transData]
    bboxs += [patch.get_bbox() for patch in axis.patches]
    bboxs += [col.get_datalim(axis.transData) for col in axis.collections]
+   bboxs += [img_bbox(img) for img in axis.images]
    if len(bboxs) >= 1:
       return transforms.Bbox.union(bboxs)
    else:

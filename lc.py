@@ -285,7 +285,7 @@ class lc:
                for attrib in ['Tmax','Mmax','dm15','e_Tmax','e_Mmax',
                      'e_dm15','cov_Tmax_dm15','cov_Tmax_Mmax',
                      'cov_Mmax_dm15']:
-                  self.__dic__[attrib] = None
+                  self.__dict__[attrib] = None
                return
             Tmaxs.append(-1)
             Mmaxs.append(-1)
@@ -341,18 +341,17 @@ class lc:
             (sum(Mgids*dgids) - 1)
       return
 
-   def plot(self, device='/XSERVE', interactive=True, epoch=1, flux=0, gloes=True,
-         symbol=4):
-      '''Plot this light-curve.  You can specify a PGPLOT device (ignored if using
-      matplotlib as plotter), the default is an X server.  If epoch=1, plot times
-      relative to self.Tmax.  If flux=1, plot in flux units.  use GLoEs to smooth 
-      the data and produce a model.  You can specify the symbol to plot with 'symbol'.'''
+   def plot(self, epoch=1, flux=0, gloes=True, symbol=4, outfile=None):
+      '''Plot this light-curve.  If epoch=1, plot times relative to self.Tmax.
+      If flux=1, plot in flux units.  If [gloes], use GLoEs to smooth 
+      the data and produce a model.  You can specify the symbol to plot with 'symbol'.
+      If you provide [outfile], the graph will be saved to [outfile]'''
       # first, do some cleanup if we're using matplotlib:
       try:
          self.mp.bc.disconnect()
       except:
          pass
-      return plotmod.plot_lc(self, device, epoch, flux, symbol)
+      return plotmod.plot_lc(self, epoch, flux, symbol)
 
    def replot(self):
       '''Replot a figure, if it exists and belongs to this instance.'''

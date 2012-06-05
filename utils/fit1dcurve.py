@@ -345,7 +345,7 @@ if polynomial is not None:
          gids = num.greater_equal(roots, xmin)*num.less_equal(roots, xmax)
          roots = roots[gids]
          if len(roots) == 0:
-            return array([]), array([]), array([])
+            return num.array([]), num.array([]), num.array([])
          vals = self.__call__(roots)
          curvs = d2(roots)
          curvs = num.where(curvs < 0, -1, curvs)
@@ -872,7 +872,7 @@ if pymc is not None:
          inds = num.nonzero(pids[1:] - pids[:-1])[0]
    
          if len(inds) == 0:
-            return (array([]), array([]), array([]))
+            return (num.array([]), num.array([]), num.array([]))
          ret = []
          for i in range(len(inds)):
             #try:

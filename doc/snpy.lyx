@@ -1,4 +1,4 @@
-#LyX 1.6.3 created this file. For more info see http://www.lyx.org/
+#LyX 1.6.9 created this file. For more info see http://www.lyx.org/
 \lyxformat 345
 \begin_document
 \begin_header
@@ -64,12 +64,12 @@
 \begin_body
 
 \begin_layout Title
-Using SNPY
+Using SNooPy
 \begin_inset Foot
-status collapsed
+status open
 
 \begin_layout Plain Layout
-Soon to be officially renamed SNOOPY: SuperNovae in Object Oriented PYthon.
+SuperNovae in object oriented Python.
 \end_layout
 
 \end_inset
@@ -86,7 +86,7 @@ Introduction
 \end_layout
 
 \begin_layout Standard
-The philosophy if SNPY is to provide both an interactive environment to
+The philosophy if SNooPy is to provide both an interactive environment to
  fit TypeIa supernova (SNIa) light-curves as well as a set of routines that
  can be called within a scripting environment that would allow the user
  to write automated fitting routines.
@@ -148,7 +148,7 @@ Given that this is a very modular way to program, it doesn't lend itself
 \end_layout
 
 \begin_layout Standard
-Do you need to know Python to use SNPY? It depends what you want to do.
+Do you need to know Python to use SNooPy? It depends what you want to do.
  If you want to interactively fit light-curves, then you really don't need
  to know how to program in Python.
  If you want to write a script that automatically fits light-curves or get
@@ -171,7 +171,8 @@ http://www.python.org
 \end_layout
 
 \begin_layout Standard
-SNPY also uses ipython, an extended version of the python interactive shell.
+SNooPy also uses ipython, an extended version of the python interactive
+ shell.
  This shell has many of its own features and tricks that you might find
  useful.
  More information on ipython can be found on its project web page: http://ipytho
@@ -195,12 +196,13 @@ A Simple Example
 \end_layout
 
 \begin_layout Standard
-First, to start SNPY, you simply use the command snpy.
- This is a script that starts up ipython and loads in the SNPY modules.
- One important thing to keep in mind is that if you use the matplotlib graphical
- interface and you are not using OSX, you need to pass -pylab to the snpy
- command-line.
- Otherwise, the graphs may not show up.
+First, to start SNooPy, you simply use the command 
+\family typewriter
+snpy
+\family default
+.
+ This is a script that starts up ipython and loads in the SNooPy modules.
+ 
 \end_layout
 
 \begin_layout Standard
@@ -222,7 +224,7 @@ begin{verbatim}
 
 \begin_layout Plain Layout
 
-$ snpy -pylab
+$ snpy
 \end_layout
 
 \begin_layout Plain Layout
@@ -265,7 +267,7 @@ object?   -> Details about 'object'.
 
 \begin_layout Plain Layout
 
-In[1]: s = get_sn('SN3331')
+In[1]: s = get_sn('SN2006X.txt')
 \end_layout
 
 \begin_layout Plain Layout
@@ -274,77 +276,7 @@ In[1]: s = get_sn('SN3331')
 
 \begin_layout Plain Layout
 
-In[2]: s.summary()
-\end_layout
-
-\begin_layout Plain Layout
-
-------------------------------------------------------------------- 
-\end_layout
-
-\begin_layout Plain Layout
-
-SN SN3331 
-\end_layout
-
-\begin_layout Plain Layout
-
-z = 0.190 
-\end_layout
-
-\begin_layout Plain Layout
-
-ra= 34.56140 
-\end_layout
-
-\begin_layout Plain Layout
-
-dec= 0.79660 
-\end_layout
-
-\begin_layout Plain Layout
-
-Data in the following bands: Yc, r_s, i_s, g_s, 
-\end_layout
-
-\begin_layout Plain Layout
-
-Fit results (if any): 
-\end_layout
-
-\begin_layout Plain Layout
-
-Tmax = 53650.379 +/- 0.367 
-\end_layout
-
-\begin_layout Plain Layout
-
-dm15 = 1.156 +/- 0.024 
-\end_layout
-
-\begin_layout Plain Layout
-
-s = 1.000 +/- 0.000 
-\end_layout
-
-\begin_layout Plain Layout
-
-EBVhost = 0.106 +/- 0.025 
-\end_layout
-
-\begin_layout Plain Layout
-
-DM = 39.915 +/- 0.071 
-\end_layout
-
-\begin_layout Plain Layout
-
-NAXES 4096 4096 
-\end_layout
-
-\begin_layout Plain Layout
-
-NAXES 4096 4096
+In[2]: s.fit()
 \end_layout
 
 \begin_layout Plain Layout
@@ -353,47 +285,7 @@ NAXES 4096 4096
 
 \begin_layout Plain Layout
 
-In [3]: s.plot() 
-\end_layout
-
-\begin_layout Plain Layout
-
-Out[3]: <pygplot.Panel instance at 0x17e0260>
-\end_layout
-
-\begin_layout Plain Layout
-
-In [4]: print s.r_s.t, s.r_s.mag 
-\end_layout
-
-\begin_layout Plain Layout
-
-[-15.00261608 -10.96844983 -10.96844983 -8.96844983 -6.01923108
-\end_layout
-
-\begin_layout Plain Layout
-
-6.98858142 6.99248767 12.97686267 14.95342517 16.04326892
-\end_layout
-
-\begin_layout Plain Layout
-
-17.96514392 19.05108142 22.93780017 26.95733142 29.94170642] 
-\end_layout
-
-\begin_layout Plain Layout
-
-[ 22.371 21.621 21.576 21.236 21.121 21.361 21.35 21.267 
-\end_layout
-
-\begin_layout Plain Layout
-
-21.647 21.441 21.847 21.655 21.88 22.011 22.263]
-\end_layout
-
-\begin_layout Plain Layout
-
-In [5]: s.fit(['g_s','r_s','i_s'], Tmax=s.Tmax) 
+In[3]: s.summary()
 \end_layout
 
 \begin_layout Plain Layout
@@ -402,22 +294,134 @@ In [5]: s.fit(['g_s','r_s','i_s'], Tmax=s.Tmax)
 
 \begin_layout Plain Layout
 
-In [6]: s.plot(single=1, dm=2, device='SN3331.ps/CPS') 
+--------------------------------------------------------------------------------
+ 
 \end_layout
 
 \begin_layout Plain Layout
 
-Out[6]: <pygplot.Plot instance at 0x29c9e68>
+SN  SN2006X 
 \end_layout
 
 \begin_layout Plain Layout
 
-In [7]: s.updatesql()
+z = 0.005          ra=185.72500         dec= 15.80920  
 \end_layout
 
 \begin_layout Plain Layout
 
-In [8]: 
+Data in the following bands: B,  g,  i,  H,  K,  J,  r,  u,  V,  Y,   
+\end_layout
+
+\begin_layout Plain Layout
+
+Fit results (if any):    
+\end_layout
+
+\begin_layout Plain Layout
+
+   Observed B fit to restbad B
+\end_layout
+
+\begin_layout Plain Layout
+
+   Observed g fit to restbad g
+\end_layout
+
+\begin_layout Plain Layout
+
+   Observed i fit to restbad i
+\end_layout
+
+\begin_layout Plain Layout
+
+   Observed H fit to restbad H
+\end_layout
+
+\begin_layout Plain Layout
+
+   Observed K fit to restbad K
+\end_layout
+
+\begin_layout Plain Layout
+
+   Observed J fit to restbad J
+\end_layout
+
+\begin_layout Plain Layout
+
+   Observed r fit to restbad r
+\end_layout
+
+\begin_layout Plain Layout
+
+   Observed u fit to restbad u
+\end_layout
+
+\begin_layout Plain Layout
+
+   Observed V fit to restbad V
+\end_layout
+
+\begin_layout Plain Layout
+
+   Observed Y fit to restbad Y
+\end_layout
+
+\begin_layout Plain Layout
+
+   EBVhost = 1.518  +/-  0.014
+\end_layout
+
+\begin_layout Plain Layout
+
+   Tmax = 53786.288  +/-  0.126
+\end_layout
+
+\begin_layout Plain Layout
+
+   DM = 31.316  +/-  0.024
+\end_layout
+
+\begin_layout Plain Layout
+
+   dm15 = 1.091  +/-  0.026 
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+In [4]: s.plot(single=1)
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+[Plot of SN2006X is shown on screen with all filters on a single graph]
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+In [5]: s.save('SN2006X.snpy')
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\begin_layout Plain Layout
+
+In [6]: 
 \end_layout
 
 \begin_layout Plain Layout
@@ -455,23 +459,40 @@ super
 
 \end_inset
 
- is created by giving the name of a supernova already in the database.
- The data is retrieved from the mySQL server and loaded into the instance
- variable 
+ is created by giving the name of a file containing the SN light-curves
+ in the flat ASCII format (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:flatfile"
+
+\end_inset
+
+).
+ The data is retrieved from the file and loaded into the instance variable
+ 
 \family typewriter
 s
 \family default
 .
- This object not only contains the photometric data for SN3331, it also
+ This object not only contains the photometric data for SN2006X, it also
  contains the fit parameters.
  All the fitting, plotting, and utility functions are part of the instance.
- Notice that in line 5 above, the fit function is part of the 
+ Notice that in line 2 above, the fit function is part of the 
 \family typewriter
 s
 \family default
  object.
- Also notice that I restricted Tmax (time of maximum) to be the value already
- in the instance (presumably, this would be from a previous fit).
+ On line 3, I ask for a summary of the fit, which shows the best-fit values
+ of the parameters and tells us which rest-frame filters were used to fit
+ the observed filters.
+ Note that SNooPy handles the K-corrections (or cross-band K-corrections)
+ as part of the fitting process.
+ On line 4, we make a plot, which shows up on screen (and has buttons to
+ save to a file if you wish).
+ Finally, on line 6, I save the instance to file so that I can load it up
+ at a later time (saving as an instance saves all the fitting parameters,
+ K-corrections, etc.
+ as well as the light-curve data).
 \end_layout
 
 \begin_layout Standard
@@ -479,7 +500,7 @@ There are other classes besides the
 \family typewriter
 sn
 \family default
- class, which can be used inside SNPY.
+ class, which can be used inside SNooPy.
  For example, there is a 
 \family typewriter
 filter
@@ -503,7 +524,11 @@ dmf
 
 \end_inset
 
- as a parameter).
+ and 
+\begin_inset Formula $s_{BV}$
+\end_inset
+
+ as parameters).
  Here are a couple of examples:
 \end_layout
 
@@ -530,7 +555,7 @@ In [8] V = fset['V']
 
 \begin_layout Plain Layout
 
-In [9] seds = getSED([1,2,3,4,5], version='H') 
+In [9] seds = getSED([1,2,3,4,5]) 
 \end_layout
 
 \begin_layout Plain Layout
@@ -545,7 +570,7 @@ In [11] Vmags = array([V.synthmag(sed) for sed in seds])
 
 \begin_layout Plain Layout
 
-In [12] t = dm15temp.template() 
+In [12] t = CSPtemp.template() 
 \end_layout
 
 \begin_layout Plain Layout
@@ -586,7 +611,7 @@ end{verbatim}
 \end_layout
 
 \begin_layout Standard
-Here, in the first two lines, we've setup some filters (B and V).
+Here, in the first two lines, we've setup some filters (CSP B and V).
  The structure 
 \family typewriter
 fset
@@ -621,7 +646,7 @@ Data Structure
 \end_layout
 
 \begin_layout Standard
-Python is object-oriented and SNPY has been designed
+Python is object-oriented and SNooPy has been designed
 \begin_inset Foot
 status collapsed
 
@@ -683,6 +708,20 @@ filter
 \family default
  object that defines the filter response, the zero-point, and lots of other
  goodies.
+ There is also a shortcut for accessing the 
+\family typewriter
+lc
+\family default
+ instances: you can refer to them as member variables.
+ So 
+\family typewriter
+s.data['B']
+\family default
+ and 
+\family typewriter
+s.B
+\family default
+ are equivalent.
 \end_layout
 
 \begin_layout Standard
@@ -695,8 +734,8 @@ Lastly, the sn instance also has an object that defines the model that will
 , etc.
  It also does all the heavy lifting when fitting the model to the data.
  Because the model is an abstract object, it can be replaced with other
- model objects transparently (so long as the replacement model object conform
- to the structure expected by SNPY; see section 
+ model objects transparently (so long as the replacement model object conforms
+ to the structure expected by SNooPy; see section 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "sec:Model-class"
@@ -739,7 +778,7 @@ status open
 \begin_inset Caption
 
 \begin_layout Plain Layout
-Object structure in SNPY.
+Object structure in SNooPy.
 \begin_inset CommandInset label
 LatexCommand label
 name "fig:Object-structure"
@@ -751,10 +790,6 @@ name "fig:Object-structure"
 
 \end_inset
 
-
-\end_layout
-
-\begin_layout Plain Layout
 
 \end_layout
 
@@ -777,7 +812,7 @@ name "sec:Data-Persistance"
 \begin_layout Standard
 The current version of 
 \family typewriter
-SNPY
+SNooPy
 \family default
  gets and saves its data from three possible sources: a 
 \family typewriter
@@ -800,7 +835,7 @@ get_sn()
 For large datasets, I highly recommend using the mySQL solution: it allows
  for data persistence that is kept separate from one user/computer combination.
  The major downside is you have to install mySQL (not too bad) and setup
- a schema which matches what SNPY expects (still not too bad) and possibly
+ a schema which matches what SNooPy expects (still not too bad) and possibly
  learning mySQL in the first place (well, you always 
 \emph on
 meant
@@ -846,6 +881,14 @@ get_sn('filename')
  
 \end_layout
 
+\begin_layout Standard
+WARNING: because the pickle file will contain the entire data structure
+ of the SN object, there is no guarantee that pickle files will be loadable
+ by different versions of SNooPy.
+ In fact, I can pretty-much guarantee that major upgrades of SNooPy will
+ result in non-compatibility in pickled files.
+\end_layout
+
 \begin_layout Section
 Fitting Light-curves
 \end_layout
@@ -864,7 +907,7 @@ fit().
 \family typewriter
 fit()
 \family default
- which filters to fit and which parameters to hold constant.
+ which filters to fit (or all by default) and which parameters to hold constant.
  This function sets up some initial book-keeping, and then hands off the
  work to a 
 \family typewriter
@@ -878,9 +921,9 @@ model
  class defines the model that will be used to fit the light-curves.
  I did it this way so that adding new models (or modifying existing ones)
  would be easier.
- SNPY comes with two built-in models: 
+ SNooPy comes with three built-in models: 
 \family typewriter
-EBV_model
+EBV_model, EBV_model2,
 \family default
  and 
 \family typewriter
@@ -903,6 +946,33 @@ reference "sub:Other-Useful-functions"
 \end_inset
 
 ).
+ As of SNooPy version 2, you can fit the 
+\family typewriter
+EBV_model2
+\family default
+ and 
+\family typewriter
+max_model
+\family default
+ using either 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+dmf
+\end_layout
+
+\end_inset
+
+ or a new stretch-like parameter 
+\begin_inset Formula $s_{BV}$
+\end_inset
+
+ which is introduced in the CSP's most recent analysis paper (Burns et al.,
+ (in prep)).
 \end_layout
 
 \begin_layout Subsection
@@ -1075,8 +1145,14 @@ key "2006ApJ...647..501P"
 
 \end_inset
 
- or Burns et al.
- (in prep).
+ or 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "Burns2011"
+
+\end_inset
+
+.
  In the former case, you will be fitting to rest-frame 
 \begin_inset Formula $B_{s}V_{s}R_{s}I_{s}$
 \end_inset
@@ -1174,6 +1250,44 @@ So far, data I've analyzed hasn't been good enough to distinguish between
 \end_layout
 
 \begin_layout Subsection
+EBV_model2
+\end_layout
+
+\begin_layout Standard
+This is the same model as EBV_model, except that it can fit both 
+\begin_inset Formula $\dmf$
+\end_inset
+
+- and 
+\begin_inset Formula $s_{BV}$
+\end_inset
+
+-based templates.
+ And instead of the calibration presented in 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "2010AJ....139..120F"
+
+\end_inset
+
+, the calibration from the upcoming CSP analysis paper (Burns et al, in
+ prep) is used.
+ When using the 
+\family typewriter
+choose_model
+\family default
+ function to select this model, you can specify 
+\family typewriter
+stype='dm15'
+\family default
+ or 
+\family typewriter
+stype='st' 
+\family default
+to select the two different light-curve parameters.
+\end_layout
+
+\begin_layout Subsection
 max_model
 \end_layout
 
@@ -1262,6 +1376,20 @@ f
 Bmax
 \family default
  parameter).
+ As with the 
+\family typewriter
+EBV_model2
+\family default
+ model, you can choose which light-curve parameter you wish to use by specifying
+ the 
+\family typewriter
+stype
+\family default
+ argument to 
+\family typewriter
+choose_model
+\family default
+().
 \end_layout
 
 \begin_layout Standard
@@ -1339,7 +1467,7 @@ Second, because the SED of a SNIa is significantly different from a stellar
 \begin_layout Standard
 The basic problem here is that we need to know the observed SED as well
  as possible.
- Currently, SNPY simply takes the SED of 
+ Currently, SNooPy simply takes the SED of 
 \begin_inset CommandInset citation
 LatexCommand citet
 key "2002PASP..114..803N"
@@ -1576,7 +1704,7 @@ sn
 \family default
  instance).
  On line 7, we allow all parameters to vary.
- On line 8, we save the fit to a file that can be later loaded into SNPY
+ On line 8, we save the fit to a file that can be later loaded into SNooPy
  (using something like 
 \family typewriter
 s=load(filename)
@@ -1591,7 +1719,7 @@ The fit is performed using the Lavenberg-Marquardt algorithm for minimizing
 \end_inset
 
 .
- Unless you specify otherwise, all the fitting is done in flux units (SNPY
+ Unless you specify otherwise, all the fitting is done in flux units (SNooPy
  takes care of converting magnitudes to fluxes, if needed, for both the
  observations and models).
  Note that because the Lavenberg-Marquardt algorithm is an non-linear least-squa
@@ -1605,8 +1733,8 @@ res solving routine, it is not guaranteed to find the global minimum
 
 \begin_layout Standard
 Now that you have seen the basic workings, we can now move on to the details
- of each class so that you can build your own routines inside SNPY, or write
- python scripts that use these classes to fit light-curves.
+ of each class so that you can build your own routines inside SNooPy, or
+ write python scripts that use these classes to fit light-curves.
  
 \end_layout
 
@@ -1861,7 +1989,7 @@ The items in {}'s are to be filled in.
  Next, you specify the name of a filter, followed by data points, one per
  line.
  Then you can input another filter and so on.
- The filter names have to be recognized by SNPY (use 
+ The filter names have to be recognized by SNooPy (use 
 \family typewriter
 fset.list_filters()
 \family default
@@ -1922,8 +2050,8 @@ The
 \family typewriter
 sn
 \family default
- object has a number of member variables that do one of 3 things: 1) contain
- data, 2) define a LC fit, or 3) modify the instances behavior.
+ object has a number of member variables that do one of three things: 1)
+ contain data, 2) define a LC fit, or 3) modify the instance's behavior.
  Each of these is explained in the following sections.
  A member variable is accessed as 
 \family typewriter
@@ -2301,7 +2429,11 @@ lc
 \begin_inset Text
 
 \begin_layout Plain Layout
-The LC data instance for band filter.
+The LC data instance for band 
+\emph on
+filter
+\emph default
+.
  For example, 
 \family typewriter
 s.B
@@ -2628,7 +2760,7 @@ status open
 
 \begin_layout Plain Layout
 \begin_inset Tabular
-<lyxtabular version="3" rows="12" columns="3">
+<lyxtabular version="3" rows="9" columns="3">
 <features>
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="0">
@@ -2731,35 +2863,6 @@ s.xrange = [-20,100]
 \begin_inset Text
 
 \begin_layout Plain Layout
-Rv_host
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-float
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Host reddening law (default: 3.1)
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
 Rv_gal
 \end_layout
 
@@ -2819,81 +2922,7 @@ If true (1), fit in magnitude space, otherwise (0), fit in flux space.
 \begin_inset Text
 
 \begin_layout Plain Layout
-dm15_prior
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-boolean
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-If true (1), apply a sharp prior to keep 
-\begin_inset Formula $\Delta m_{15}$
-\end_inset
-
- in the range [0.83,1.93].
- This will keep the fitter from wandering off where the templates are not
- defined.
- Default: 1
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-do_rtrue
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-boolean
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-Compute 
-\begin_inset Formula $R_{true}$
-\end_inset
-
- rather than just use 
-\begin_inset Formula $R_{v}$
-\end_inset
-
-? Default: 0 Caution: until I re-write this in C, this is going to be VERY
- slow.
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-rest-bands
+restbands
 \end_layout
 
 \end_inset
@@ -2911,13 +2940,16 @@ dictionary
 \begin_inset Text
 
 \begin_layout Plain Layout
-A dictionary, indexed by observed band with value corresponding rest-band.
+A dictionary-like object, indexed by observed band with value corresponding
+ rest-band.
  Used to specify which template is fit to each observed filter.
  Example: 
 \family typewriter
-s.rest-bands['u'] = 'B'
+s.restbands['u'] = 'B'
 \family default
  means fit observed band u with B-band template.
+ If not explicitly set, it is assumed that a restband with the same name
+ as the observed band is used.
 \end_layout
 
 \end_inset
@@ -3006,6 +3038,11 @@ string
 \begin_layout Plain Layout
 Which SED template to use: 'H3' for Eric Hsiao's latest, 'N' for Peter Nugent,
  '91bg' for Peter Nugent's 91bg SED.
+ Default: H3, unless 
+\begin_inset Formula $\dmf>1.7$
+\end_inset
+
+, in which case '91bg' is used.
 \end_layout
 
 \end_inset
@@ -3073,9 +3110,8 @@ Plot
 
 \family typewriter
 \series bold
-plot(xrange=None, yrange=None, device='10/XSERVE', title=None, interactive=0,
- single=0, dm=1, fsize=1.0, linewidth=3, symbols=None, colors=None, relative=0,
- legend=1, mask=0, label_bad=1)
+plot(xrange=None, yrange=None, title=None, single=0, dm=1, fsize=1.0, linewidth=3
+, symbols=None, colors=None, relative=0, legend=1, mask=0, label_bad=1)
 \end_layout
 
 \begin_layout Standard
@@ -3120,56 +3156,6 @@ fsize
 \begin_layout Standard
 If you specify 
 \family typewriter
-interactive=1
-\family default
-, then the plot is interactive
-\begin_inset Foot
-status open
-
-\begin_layout Plain Layout
-This only applies to PGPLOT plots.
- If you are using matplotlib, the plots are always interactive and there
- is no need to 
-\begin_inset Quotes eld
-\end_inset
-
-quit
-\begin_inset Quotes erd
-\end_inset
-
-.
-\end_layout
-
-\end_inset
-
- and accepts the following key bindings when the mouse is over the plot:
-\end_layout
-
-\begin_layout Itemize
-click: print out x-y coordinates to the screen
-\end_layout
-
-\begin_layout Itemize
-'x' and 'y': Change the xrange and yrange, respectively (you need to click
- twice)
-\end_layout
-
-\begin_layout Itemize
-'b': Change the xrange and yrange by dragging out a box (you need to click
- twice)
-\end_layout
-
-\begin_layout Itemize
-'z' and 'Z': Zoom in and out, respectively
-\end_layout
-
-\begin_layout Itemize
-right-click: re-center the plot's view at the mouse position
-\end_layout
-
-\begin_layout Standard
-If you specify 
-\family typewriter
 single=1
 \family default
 , then all the filters are plotted on the same graph, with a magnitude offset
@@ -3192,8 +3178,12 @@ colors={'B':'blue', 'R':'red', 'I':'orange'}
 symbols={'B':1, 'R':2, 'I':3}.
 
 \family default
- See the PGPLOT documentation for the number-symbol combinations or matplotlib
- documentation for symbols and colors.
+ See the 
+\family typewriter
+matplotlib
+\family default
+ documentation for the number-symbol combinations or matplotlib documentation
+ for symbols and colors.
 \end_layout
 
 \begin_layout Subsubsection
@@ -3211,7 +3201,7 @@ name "sub:Fit"
 
 \family typewriter
 \series bold
-fit(bands, {parameter values}, kcorr=1, mangle=1, method=)
+fit(bands=None, {parameter values}, kcorr=1, mangle=1, method='tspline')
 \end_layout
 
 \begin_layout Standard
@@ -3221,11 +3211,11 @@ This function is the heart of the software: fitting a light-curve to the
 \end_inset
 
 .
- The only required argument is 
+ If you wish to restrict which filters are fit, specify 
 \family typewriter
 bands
 \family default
-, a list of filters to fit.
+, a list of filters to fit, otherwise all filters are fit.
  So if, for example, you had data in B, V, r' (Sloan r), Jc, and Yc, you
  would specify ['B','V','r_s','Jc','Yc'] as the first argument.
  This will simultaneously fit the data in these filters to templates specified
@@ -3294,6 +3284,28 @@ mangled
 \end_inset
 
  to match these colors before the k-corrections are computed.
+\end_layout
+
+\begin_layout Itemize
+method: If mangling, then the functional form to use when mangling.
+ Currently, a tension spline ('
+\family typewriter
+tspline
+\family default
+') and Cardelli law ('
+\family typewriter
+ccm
+\family default
+') are the two options.
+ '
+\family typewriter
+ccm
+\family default
+' is safer (smoother, fewer parameters), but not as versatile as '
+\family typewriter
+tspline
+\family default
+'.
 \end_layout
 
 \begin_layout Subsubsection
@@ -3367,9 +3379,13 @@ reference "sub:LCMember-Functions"
 \end_layout
 
 \begin_layout Standard
-When using mangle=1, if you have two filters which have very similar effective
- wavelengths, but different shapes (V and g, for instance), the splines
- can become very badly behaved.
+When using 
+\family typewriter
+mangle=1
+\family default
+, if you have two filters which have very similar effective wavelengths,
+ but different shapes (V and g, for instance), the splines can become very
+ badly behaved.
  If min_filter_sep is set, then any filter whose effective wavelength is
  closer than min_filter_sep to another is removed automatically from the
  set of colors.
@@ -3731,9 +3747,22 @@ lc
  module.
  It basically contains the data of a single filter and a few functions to
  work with the data.
- Of particular interest might be the spline fitting functions, which allow
- one to make templates from well-sampled and high S/N data.
- 
+ Of particular interest might be the light-curve fitting functions, which
+ allow one to make templates from well-sampled and high S/N data.
+ Depending on the version of 
+\family typewriter
+numpy
+\family default
+ and if you have 
+\family typewriter
+pymc
+\family default
+ installed, you can fit light-curves with splines, polynomials, and Gaussian
+ Processes (if you have 
+\family typewriter
+pymc
+\family default
+ installed).
 \end_layout
 
 \begin_layout Subsection
@@ -4458,66 +4487,78 @@ mask_epoch(self, tmin, tmax):
 
 \family typewriter
 \series bold
-mkspline(self, knots=None, k=3, s=0, fitflux=0, tmin=None, tmax=None, task=0):
+template(self, fitflux=False, do_sigma=True, Nboot=50, method=default_method,
+ compute_params=True, **args):
 \family default
 \series default
- Generate a spline interpolation of the data.
- You can specify the knots, the order of the spline (k), the smoothing factor
- (see scipy documentation: help(scipy.interpolate.splrep)).
- To get an interpolating spline (for really smooth data), use s=0.
- To do a least-squares fit with variable smoothing, a good start is s=N
- (number of data points) and task=0 (routine choose the knots).
- Then try again with task=1 (keep the knots fixed) and different values
- of s.
- If you want to choose the knots yourself, specify them and use task=-1.
- If you set fitflux nonzero, the fit is performed in flux space.
- Use tmin and tmax to restrict the portion of the light-curve to be splined
- (defaults to whole range).
- 
+ Generate a smooth interpolation template of the data.
+ You can choose which method to use by specifying method.
+ To get a list of methods available for your setup, use the 
+\family typewriter
+list_types()
+\family default
+ function.
+ If you wish to fit the flux domain, specify fitflux=True.
+ If you set
+\family typewriter
+ compute_params=True
+\family default
+, the interpolator will attempt to measure the following light-curve characteris
+tics and save them as member variables.
+ In order to compute errors in these values, the algorithm may need to do
+ bootstrap errors, in which case, 
+\family typewriter
+Nboot
+\family default
+ is the number of iterations to use.
+ The computed variables are:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+
+\family typewriter
+self.Tmax
+\family default
+ and 
+\family typewriter
+self.e_Tmax
+\family default
+: The time of earliest maximum for the light-curve, with error.
 \end_layout
 
 \begin_layout Itemize
 
 \family typewriter
-\series bold
-plot(self, device='/XSERVE', interactive=0, flux=0):
+self.Mmax
 \family default
-\series default
- Plot the light-curve and possibly the fitting spline.
- You can change the device to which it is plotted, have the plot be interactive
- and also decide if you want to view the light-curve in flux units.
- If a spline has been fit, a second panel will show the residuals.
- If you choose an interactive plot, you an use the following key bindings
- (some of which only work if a spline has been defined): 
-\end_layout
-
-\begin_deeper
-\begin_layout Itemize
-click: print the coordinates under the cursor
+ and 
+\family typewriter
+self.e_Mmax
+\family default
+: The magnitude at self.Tmax, with error
 \end_layout
 
 \begin_layout Itemize
-'b': zoom in by drawing a box
+
+\family typewriter
+self.dm15
+\family default
+ and
+\family typewriter
+ self.e_dm15
+\family default
+: The Phillips parameter (change in magnitude between Tmax and day 15 in
+ the rest frame of the SN), with error.
 \end_layout
 
-\begin_layout Itemize
-'x' and 'y': set x and y ranges
-\end_layout
-
-\begin_layout Itemize
-'a': add a spline knot at the cursor position
-\end_layout
-
-\begin_layout Itemize
-'d': delete a spline knot closest to the cursor position
-\end_layout
-
-\begin_layout Itemize
-'m': move nearest knot point to new position
-\end_layout
-
-\begin_layout Itemize
-'s' and 'S': decrease and increase the smoothing parameter
+\begin_layout Standard
+In the following section, I describe the different interpolation methods
+ and their parameters, which you can specify in the call to 
+\family typewriter
+template()
+\family default
+.
 \end_layout
 
 \end_deeper
@@ -4525,67 +4566,23 @@ click: print the coordinates under the cursor
 
 \family typewriter
 \series bold
-fit_spline(self, method='spline', fitflux=0, do_sigma=1, Nboot=100, **args):
+plot(self, flux=0):
 \family default
 \series default
- Make a spline template of the light-curve.
- If do_sigma=1, the routine will perform a Monte-Carlo simulation to determine
- the errors in the spline and the derived values of dm15, Tmax and Mmax.
- It will perform Nboot realizations.
- The rest of the arguments are the same as mkspline.
- The function sets the following member variables with the results from
- the fit: tck, model, model_t, model_sigmas, dm15, e_dm15, Tmax, e_Tmax,
- Mmax, and e_Mmax.
- Note that a value of -1 for any of dm15, Tmax, and Mmax indicate that there
- was no maximum to the derived spline.
- For more info, see section 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "sub:Splining"
-
-\end_inset
-
-.
- There is a new option for splining data: method.
- By default, a regular smoothing spline is used.
- You can, however, choose to use a different splining routine: method='spline2'.
- This different splining routine is due to 
-\begin_inset CommandInset citation
-LatexCommand citet
-key "297968"
-
-\end_inset
-
-.
- It is rather impressive in that it uses a different statistic (Durbin-Watson
- statistic), which is less sensitive to badly estimated errors and relies
- more on the correlation of residuals.
- Its weakness is when you have data with large time gaps.
- Still, it's worth a try, as it requires no smoothing parameter like Dierckx's
- method.
- Simply specify 
-\family typewriter
-method='spline2'
-\family default
- and that's it! There are other parameters you can pass (see 
-\begin_inset CommandInset citation
-LatexCommand citet
-key "297968"
-
-\end_inset
-
- for more details), but I haven't figured them out, so it's an exercise
- for the reader.
+ Plot the light-curve and possibly the fitting spline.
+ If an interpolatiing template has been fit, a second panel will show the
+ residuals.
+ 
 \end_layout
 
 \begin_layout Standard
-Note: If you fit a spline and then use the parent sn instance's plot() function,
- the spline will be plotted on top of the data (unless there is already
- a model defined from a fit(), which takes precedence).
+Note: If you fit a template and then use the parent sn instance's plot()
+ function, the spline will be plotted on top of the data (unless there is
+ already a model defined from a fit(), which takes precedence).
 \end_layout
 
 \begin_layout Subsection
-The Art of Splining 
+The Art of Interpolating 
 \begin_inset CommandInset label
 LatexCommand label
 name "sub:Splining"
@@ -4593,6 +4590,112 @@ name "sub:Splining"
 \end_inset
 
 
+\end_layout
+
+\begin_layout Subsubsection
+Gaussian Processes
+\end_layout
+
+\begin_layout Standard
+If you have installed the pymc package, it comes with an interpolating package
+ that uses Gaussian Processes (GP).
+ GP's are fantastic for interpolating when you may have missing data (gaps).
+ This is usually where other fitters like Dierckx splines and hypersplines
+ (see next sections) go awry.
+ 
+\end_layout
+
+\begin_layout Standard
+I'm not going to explain everythign about GP's, but suffice it to say that
+ GP's are like 
+\begin_inset Quotes eld
+\end_inset
+
+fuzzy functions
+\begin_inset Quotes erd
+\end_inset
+
+.
+ They have a mean value (mean function) and a error (covariance function).
+ In SNooPy's implementation, we employ the Matern covariance function, which
+ has 3 parameters: 
+\family typewriter
+scale
+\family default
+, 
+\family typewriter
+amp
+\family default
+ (amplitude), and 
+\family typewriter
+diff_degree
+\family default
+ (degree if differentiability).
+ These are conceptually very easy to understand: scale is the scale over
+ which the function typically varies (on the x-axis).
+ Amplitude is the amount by which the function varies on these scales.
+ The degree of differentiability is the 
+\begin_inset Quotes eld
+\end_inset
+
+smoothness
+\begin_inset Quotes erd
+\end_inset
+
+ of the function.
+ These are the only 3 parameters you need to specify to the template() function
+ to get a fit (or don't specify them at all and take the defaults, which
+ are pretty good for light-curves).
+ If the fucntion does not capture the full behaviour of the light-curve
+ (too smooth), try decreasing the scale and increase the amplitude.
+ If it captures too much of the 
+\begin_inset Quotes eld
+\end_inset
+
+noise
+\begin_inset Quotes erd
+\end_inset
+
+, increase the scale, lower the amplitde and/or increase the diff_degree.
+\end_layout
+
+\begin_layout Standard
+Here is an example:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+s.B.template(method='gp', scale=10, amp=s.B.mag.std(), diff_degree=3)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The downside to GP's is that they are slower to solve than the other interpolati
+on methods.
+ But I feel that the error estimates that come out (especially in the regions
+ with gaps) are much more robust.
 \end_layout
 
 \begin_layout Subsubsection
@@ -4700,21 +4803,51 @@ I tend to shy away from this, preferring to remove the subjectivity.
 \begin_layout Standard
 Another way to spline is to impose what you think are sensible knots.
  In this case, simply specify them as an array with the knots argument to
- 
+ the 
 \family typewriter
-fit_spline
+template()
 \family default
- or 
-\family typewriter
-mkspline
-\family default
- functions and set 
+ function and set 
 \family typewriter
 task=-1
 \family default
 .
  In this case, the smoothing is ignored and you get the least-squares spline
  using these knots.
+ For example:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+s.B.template(method='spline', task=0, s=len(s.B.mag))
+\end_layout
+
+\begin_layout Plain Layout
+
+s.B.template(method='spline', task=1, s=len(s.B.mag) - sqrt(2*len(s.B.mag)))
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsubsection
@@ -4745,7 +4878,9 @@ ation in the residuals, which to first order is insensitive to the individual
 \end_layout
 
 \begin_layout Standard
-Of course, the Achilles-heal of this method is the presence of correlated
+This spline method, when it works, is the most automatic of the interpolation
+ methods, requiring no parameters (at least initially).
+ Of course, the Achilles-heal of this method is the presence of correlated
  errors among the data points.
  But this is likely also a problem with Dierckx splines.
 \end_layout
@@ -4756,6 +4891,77 @@ Another case where hyperspline has problems is when there are large gaps
  Here, you might want to split up the problem in to two (or more) segments
  and work on them individually.
  I hope to add this feature eventually.
+ The parameter you'll most likely need to play with is 
+\family typewriter
+lopt
+\family default
+ (set the initial number of knots).
+ Set it higher if you find the spline is too smooth.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Polynomials
+\end_layout
+
+\begin_layout Standard
+If you have a sufficiently recent version of numpy, you'll have access to
+ several types of polynomials: 
+\family typewriter
+polynomial
+\family default
+, 
+\family typewriter
+chebyshev
+\family default
+, 
+\family typewriter
+laguerre
+\family default
+, 
+\family typewriter
+hermite
+\family default
+, and 
+\family typewriter
+hermiteE
+\family default
+.
+ Simply use any of these as the method argument to template().
+ The polynomials have only one free parameter: 
+\family typewriter
+n
+\family default
+, the order of the polynomial.
+ For example to fit a Chebyshev polynomial:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+s.B.template(method='chebyshev', n=5)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
@@ -4784,7 +4990,7 @@ e on setting up the model.
  can access the underlying machinery to do your own coding (or design your
  own model).
  The casual user need not worry about any of this.
- SNPY comes with two models: 
+ SNooPy comes with two models: 
 \family typewriter
 EBV_model
 \family default
@@ -5204,7 +5410,7 @@ false
  if it returns fluxes.
  
 \emph on
-SNPY always does the actual least-squares fitting in fluxes
+SNooPy always does the actual least-squares fitting in fluxes
 \emph default
 .
 \end_layout
@@ -6224,10 +6430,10 @@ end{verbatim}
 
 \begin_layout Standard
 These filters are loaded at runtime and come from data files distributed
- with SNPY.
+ with SNooPy.
  The are located in the source distribution in the folder 
 \family typewriter
-snpy/filters/filters
+SNooPy/filters/filters
 \family default
 .
  In that folder are folders for each observatory.
@@ -6391,8 +6597,8 @@ end{verbatim}
 \end_inset
 
 Columns are separated by white space.
- The first column is a unique ID (SNPY will complain if you use an ID that
- was previously used).
+ The first column is a unique ID (SNooPy will complain if you use an ID
+ that was previously used).
  The next column indicates the data file that defines the filter.
  The third column is the filter zero-point (
 \begin_inset Formula $zp$
@@ -6450,7 +6656,7 @@ begin{verbatim}
 
 \begin_layout Plain Layout
 
-In[1]:  from snpy.filters import standards
+In[1]:  from SNooPy.filters import standards
 \end_layout
 
 \begin_layout Plain Layout
@@ -6536,8 +6742,8 @@ Make a GUI (in the far far distant future and only if someone buys me a
 \begin_layout Standard
 \begin_inset CommandInset bibtex
 LatexCommand bibtex
-bibfiles "/Users/burns/Documents/CSP/Burns2009/highz_paperI"
-options "/Users/burns/Documents/CSP/Burns2009/apj"
+bibfiles "highz_paperI"
+options "apj"
 
 \end_inset
 
@@ -7692,7 +7898,7 @@ Photo Table
 \begin_layout Standard
 Here is the schema for the only other table needed by 
 \family typewriter
-SNPY
+SNooPy
 \family default
 .
 \end_layout
