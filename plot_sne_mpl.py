@@ -333,7 +333,7 @@ def change_SED(event):
 
 
 def plot_filters(self, bands=None, day=0, fill=0):
-   '''Plot the filter responses, both the observed ones and the restbands
+   '''Plot the filt responses, both the observed ones and the restbands
    defined in the sn instance in the rest frame of the SN.  If bands is specified,
    only plot those.  Specify which SED to plot using day.'''
    p = pyplot.figure(112)
@@ -347,7 +347,7 @@ def plot_filters(self, bands=None, day=0, fill=0):
    p.version = self.k_version
    p.z = self.z
 
-   # Next, for each filter, plot the response and rest band closest to it:
+   # Next, for each filt, plot the response and rest band closest to it:
    if bands is None:  bands = self.data.keys()
    if type(bands) is types.StringType:
       bands = [bands]
@@ -428,8 +428,8 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
    else:
       bands = self.data.keys()
       eff_wavs = []
-      for filter in bands:
-         eff_wavs.append(fset[filter].ave_wave)
+      for filt in bands:
+         eff_wavs.append(fset[filt].ave_wave)
       eff_wavs = asarray(eff_wavs)
       ids = argsort(eff_wavs)
       self.filter_order = [bands[i] for i in ids]
@@ -488,7 +488,7 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
 
    i = 0
    offsets = self.lc_offsets()
-   for filter in bands:
+   for filt in bands:
       # Add extra space, if needed
       #delt = max(i*dm, i*dm + maxes[0] - maxes[i])
       #delt = round(delt, 1)
@@ -496,63 +496,63 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
       if not single:
          ax = p.axes[i]
          # make a reference to the lightcruve we are plotting.
-         ax.lc = self.data[filter]
+         ax.lc = self.data[filt]
       else:
          ax = p.axes[0]
-      label = filter
+      label = filt
       ax.mylabels = []
       if not single:
          ax.mylabels.append(ax.text(0.9, 0.9, label, transform=ax.transAxes, 
             horizontalalignment='right', fontsize=fsize, 
             verticalalignment='top'))
       if mask:
-         x = self.data[filter].MJD[self.data[filter].mask]
+         x = self.data[filt].MJD[self.data[filt].mask]
          if not flux:
-            y = self.data[filter].mag[self.data[filter].mask] + \
+            y = self.data[filt].mag[self.data[filt].mask] + \
                   single*delt - relative*rel_off
-            ey = self.data[filter].e_mag[self.data[filter].mask]
+            ey = self.data[filt].e_mag[self.data[filt].mask]
          else:
-            y = self.data[filter].flux[self.data[filter].mask]* \
+            y = self.data[filt].flux[self.data[filt].mask]* \
                   power(10, -0.4*(single*delt-relative*rel_off))
-            ey = self.data[filter].e_flux[self.data[filter].mask]
+            ey = self.data[filt].e_flux[self.data[filt].mask]
       else:
-         x = self.data[filter].MJD
+         x = self.data[filt].MJD
          if not flux:
-            y = self.data[filter].mag + single*delt - relative*rel_off
-            ey = self.data[filter].e_mag
+            y = self.data[filt].mag + single*delt - relative*rel_off
+            ey = self.data[filt].e_mag
          else:
-            y = self.data[filter].flux* \
+            y = self.data[filt].flux* \
                   power(10, -0.4*(single*delt-relative*rel_off))
-            ey = self.data[filter].e_flux
+            ey = self.data[filt].e_flux
 
       if self.Tmax is None:  
          Tmax = 0
       else:
          Tmax = self.Tmax
       ax.errorbar(x-Tmax*epoch, y, yerr=ey, barsabove=True, capsize=0,
-            elinewidth=1, fmt=symbols[filter], ms=msize, 
-            mfc=colors[filter], label=filter+'+'+'%.1f' % delt, linestyle='None',
+            elinewidth=1, fmt=symbols[filt], ms=msize, 
+            mfc=colors[filt], label=filt+'+'+'%.1f' % delt, linestyle='None',
               ecolor='black')
       if label_bad:
-         gids = equal(self.data[filter].mask, 0)
+         gids = equal(self.data[filt].mask, 0)
          if sometrue(gids):
-            x = self.data[filter].MJD[gids] - Tmax*epoch
+            x = self.data[filt].MJD[gids] - Tmax*epoch
             if not flux:
-               y = self.data[filter].mag[gids] + \
+               y = self.data[filt].mag[gids] + \
                      single*delt - relative*rel_off
             else:
-               y = self.data[filter].flux[gids]* \
+               y = self.data[filt].flux[gids]* \
                      power(10, -0.4*(single*delt-relative*rel_off))
             ax.plot(x, y, marker='x', mec='red', ms=12, mew=1, linestyle='')
 
       # Now check to see if there is a model to plot:
-      if self.model.Tmax is not None and filter in self.model._fbands:
+      if self.model.Tmax is not None and filt in self.model._fbands:
          t = arange(-10,70,1.0) + self.Tmax
-         mag,err,gids = self.model(filter, t)
+         mag,err,gids = self.model(filt, t)
          if not flux:
             y = mag + single*delt - relative*rel_off
          else:
-            zp = fset[filter].zp
+            zp = fset[filt].zp
             y = power(10, -0.4*(mag - zp + single*delt - \
                                 relative*rel_off))
          ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y), 
@@ -563,14 +563,14 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
          l = ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y-err), 
                '--',color='k', linewidth=linewidth)
          l[0].autoscale=False
-      elif self.data[filter].interp is not None:
-         d = self.data[filter].interp.domain()
+      elif self.data[filt].interp is not None:
+         d = self.data[filt].interp.domain()
          t = arange(d[0], d[1]+1.0, 1.0)
-         mag,gids = self.data[filter].eval(t, t_tol=-1)
+         mag,gids = self.data[filt].eval(t, t_tol=-1)
          if not flux:
             y = mag + single*delt - relative*rel_off
          else:
-            zp = fset[filter].zp
+            zp = fset[filt].zp
             y = power(10, -0.4*(mag - zp + single*delt - \
                       relative*rel_off))
          ax.plot(t[gids] - self.Tmax*epoch, y[gids], color='k',
@@ -578,8 +578,7 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
       i = i + 1
 
       if single and legend:
-         ax.legend(loc='lower right', numpoints=1, ncol=1, prop={'size':'small'})
-         ax.text(0.05,0.05,self.name,transform=ax.transAxes)
+         ax.legend(loc='upper right', numpoints=1,ncol=2, prop={'size':'small'})
    
    #p.draw()
    p.set_limits(dox=(xrange is None), doy=(yrange is None), all_equal=1)
@@ -828,8 +827,8 @@ def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
    if symbols is None:  symbols = symbol_dict()
 
    eff_wavs = []
-   for filter in bands:
-      eff_wavs.append(fset[filter].ave_wave)
+   for filt in bands:
+      eff_wavs.append(fset[filt].ave_wave)
    eff_wavs = asarray(eff_wavs)
    ids = argsort(eff_wavs)
    bands = [bands[i] for i in ids]
@@ -853,7 +852,7 @@ def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
       k,k_m = map(array, kcorr.kcorr(rest_days.tolist(), self.restbands[b], 
          b, self.z, self.EBVgal, 0.0, version=self.k_version))
       k_m = equal(k_m, 1)
-      p.axes[i].filter = b
+      p.axes[i].filt = b
       p.axes[i].inst = self
       p.axes[i].plot(days[k_m],k[k_m], '-', color=colors[b])
       p.axes[i].plot(x[self.ks_mask[b]], self.ks[b][self.ks_mask[b]], 
@@ -876,7 +875,7 @@ def plot_mangled_SED(event):
    ax = f.add_subplot(111)
    ax.set_xlabel('Wavelength (Angstroms)')
    ax.set_ylabel('Flux')
-   band = event.inaxes.filter
+   band = event.inaxes.filt
    self = event.inaxes.inst
 
    x = event.xdata;  y = event.ydata

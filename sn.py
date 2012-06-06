@@ -972,7 +972,7 @@ class sn(object):
    def plot(self, xrange=None, yrange=None,  
          title=None, interactive=0, single=0, dm=1, fsize=None, linewidth=None,
          symbols=None, colors=None, relative=0, legend=1, mask=1, label_bad=0,
-         flux=0, epoch=1, outfile=None, **pargs):
+         flux=0, epoch=1, msize=6, outfile=None, **pargs):
       '''Plot out the supernova data in a nice format.  There are several 
       options:
          - xrange,yrange:  specify the ranges to plot as lists [xmin,xmax], 
@@ -997,7 +997,7 @@ class sn(object):
       return plotmod.plot_sn(self, xrange, yrange,
          title, interactive, single, dm, fsize, linewidth,
          symbols, colors, relative, legend, mask, label_bad,
-         flux, epoch, outfile, **pargs)
+         flux, epoch, msize, outfile, **pargs)
 
    def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
       '''Plot the derived k-corrections after they have been computed.
