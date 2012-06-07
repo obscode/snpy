@@ -18,6 +18,11 @@ from snpy import mangle_spectrum
 
 #rcParams['font.family'] = 'serif'
 rcParams['font.size'] = 12
+dpi = rcParams['figure.dpi']
+
+# Set these so we're never more than this size in pixels.
+max_width = 1024
+max_height = 768
 
 class color_dict(dict):
    colors = {'B':'blue', 'V':'orange','R':'red','I':'#fa8072','G':'green',
@@ -396,7 +401,7 @@ def plot_filters(self, bands=None, day=0, fill=0):
 def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0, 
       single=0, dm=1, fsize=12., linewidth=1, symbols=None, colors=None, 
       relative=0, legend=1, mask=1, label_bad=0, flux=0, epoch=1, msize=6,
-      outfile=None, **pargs):
+      outfile=None):
    '''Plot out the supernova data in a nice format.  There are several 
    options:
       - xrange,yrange:  specify the ranges to plot as lists [xmin,xmax], 
@@ -462,7 +467,9 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
       cols = int(round(sqrt(n_plots)))
       rows = (n_plots / cols)
       if n_plots % cols:  rows += 1
-      p = myplotlib.PanelPlot(cols, rows, num=110, figsize=(8,8.*rows/cols))
+      figwidth = min(8*dpi,max_width)*1.0/dpi
+      figheight = min(8.*rows/cols*dpi, max_height)*1.0/dpi
+      p = myplotlib.PanelPlot(cols, rows, num=110, figsize=(figwidth,figheight))
    else:
       p = myplotlib.SimplePlot(num=110, figsize=(8,8))
 

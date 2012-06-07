@@ -1,5 +1,23 @@
 #!/Users/cburns/snpy2/bin/python
 import sys,os,glob
+
+if '-h' in sys.argv or '-help' in sys.argv:
+   print '''
+SNooPy Startup Script.
+
+Usage:  snpy [lowz] [-gui gui]
+
+        -lowz:  use the low-z (LCO) database for querying
+        -gui gui:  select gui to use.  By default, 'tk' is
+                   used on Linux and 'osx' on Macs.  You
+                   can try 'tk' on Mac, but it tends to be 
+                   less reliable'''
+
+gui = None
+if '-gui' in sys.argv:
+   id = sys.argv.index('-gui')+1
+   gui = sys.argv[id]
+
 if sys.platform.find('linux') >= 0:
    if getattr(sys, 'real_prefix', False):
       import Tkinter
@@ -27,20 +45,24 @@ if sys.platform.find('linux') >= 0:
             print "fix it.  You might try setting TCL_LIBRARY and TK_LIBRARY"
             print "appropriately."
             sys.exit(1)
+      if gui is None: gui = 'tk'
+   elif sys.platform.find('darwin') >= 0:
+      if gui is None: gui = 'osx'
+
 
 from numpy import *
+
+try:
+   from IPython.frontend.terminal.embed import InteractiveShellEmbed
+except:
+   print "You don't have an up-to-date version of ipython."
+   print "SNooPy requires version 0.12 or greater"
+   sys.exit(1)
+
+ipshell=InteractiveShellEmbed(banner1='Welcome to SNooPy')
+ipshell.enable_pylab(gui=gui)
 from snpy import *
 if "lowz" in sys.argv:
    del sys.argv[sys.argv.index("lowz")]
    sqlmod.default_sql = sqlmod.sql_lowz()
-if '-pylab' not in sys.argv:
-   sys.argv.append('-pylab')
-
-try:
-   from IPython import embed
-   embed()
-   
-except:
-   import IPython.ipapi
-
-   IPython.ipapi.launch_new_instance(globals())
+ipshell()
