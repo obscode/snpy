@@ -13,7 +13,7 @@ Usage:  snpy [lowz] [-gui gui]
                    can try 'tk' on Mac, but it tends to be 
                    less reliable'''
 
-gui = None
+gui = 'tk'
 if '-gui' in sys.argv:
    id = sys.argv.index('-gui')+1
    gui = sys.argv[id]
@@ -45,9 +45,6 @@ if sys.platform.find('linux') >= 0:
             print "fix it.  You might try setting TCL_LIBRARY and TK_LIBRARY"
             print "appropriately."
             sys.exit(1)
-      if gui is None: gui = 'tk'
-   elif sys.platform.find('darwin') >= 0:
-      if gui is None: gui = 'osx'
 
 
 from numpy import *

@@ -27,6 +27,14 @@ class sqlbase:
    PHOTO_TABLE = "Photo"   # SQL Table of photometry
    PHOTO_ID = "name"       # Unique SN ID field in PHOTO_TABLE
    PHOTO_FILT = "filter"   # SQL field for filter name in PHOTO_TABLE
+   SPEC_TABLE = None       # SQL Table of spectroscopy
+   SPEC_INFO = None        # SQL Table of spectal info
+   SPEC_JD = "JD"          # SQL field in SPEC_INFO that gives JD
+   SPEC_LAMB = "LAMBDA"    # SQL fieldin SPEC_TABLE that gives wavelength
+   SPEC_FLUX = "FLUX"      # SQL field in SPEC_TABLE that gives flux
+   SPEC_INDEX = "FILE"     # SQL index common to SPEC_INFO and SPEC_TABLE for JOINS
+   SPEC_NAME = "SN"  
+
 
    # dictonary of SQL-sn object attributes ATTR_KEYS[attr] refers to the column
    # name in the SQL table SN_TABLE that corresponds to attribute attr in the
@@ -251,6 +259,36 @@ class sqlbase:
             data[key][-1] = numpy.array(data[key][-1])
       return(data)
 
+   def get_SN_spectra(self):
+      '''Get the spectra form the SQL database.  Returns a tuple:
+      (JDs, waves, fluxes)
+      JDs is 1D array of Julian Dates
+      waves is a list of 1D arrays of wavelengths
+      fluxes is a list of 1D arrays of fluxes.'''
+      if not self.connected:
+         raise RuntimeError, "Not connected to SQL database."
+      slct1 = '''SELECT %s,%s from %s where %s=%%s''' % \
+            (self.SPEC_JD,self.SPEC_INDEX,self.SPEC_INFO,self.SPEC_NAME)
+      slct2 = '''SELECT %s,%s from %s where %s=%%s and %s=%%s''' % \
+            (self.SPEC_LAMB,self.SPEC_FLUX, self.SPEC_TABLE,self.SPEC_NAME,
+             self.SPEC_INDEX)
+      N = self.c.execute(slct1, (self.name))
+      if N == 0:
+         raise ValueError, "No spectroscopy for %s found" % \
+                  (self.name)
+      list = self.c.fetchall()
+
+      JDs = []
+      waves = []
+      fluxes = []
+      for jd,file in list:
+         JDs.append(jd)
+         self.c.execute(slct2, (self.name, file))
+         data = self.c.fetchall()
+         waves.append(numpy.array([datum[0] for datum in data]))
+         fluxes.append(numpy.array([datum[1] for datum in data]))
+      return(numpy.array(JDs),waves,fluxes)
+
    def update_photometry(self, filter, times, attr, values, tol=1e-6):
       '''Update an entries in the SN photometry table.  The affected rows are
       those for which filter matches and the times parameter is less than
@@ -331,6 +369,9 @@ class sql_highz(sqlbase):
    passwd = None
    db = "SN"
    port = 3306
+
+   SPEC_TABLE = "SPECTRA"
+   SPEC_INFO = "SP_INFO"
 
    FILTER_KEYS = {'Bs':'B',
                   'Vs':'V'}

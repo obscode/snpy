@@ -1514,7 +1514,7 @@ def after_install(options,home_dir):
    # First, the absolutely necessary stuff
    print "Now going to install the manditory software..."
    man_packages = ['scipy','pymysql','pyfits','matplotlib',
-                   'ipython>=0.10.2']
+                   'ipython>=0.12']
    for package in man_packages:
       sys.stdout.write("   Installing %s..." % package)
       sys.stdout.flush()

@@ -317,6 +317,10 @@ filters/filters/CTIO/0.9meter/CTIO_R.dat -text
 filters/filters/CTIO/0.9meter/CTIO_U.dat -text
 filters/filters/CTIO/0.9meter/CTIO_V.dat -text
 filters/filters/CTIO/0.9meter/filters.dat -text
+filters/filters/CTIO/2MASS/H_2mass.dat -text
+filters/filters/CTIO/2MASS/J_2mass.dat -text
+filters/filters/CTIO/2MASS/Ks_2mass.dat -text
+filters/filters/CTIO/2MASS/filters.dat -text
 filters/filters/CTIO/4meter/I4m -text
 filters/filters/CTIO/4meter/R4m -text
 filters/filters/CTIO/4meter/filters.dat -text
