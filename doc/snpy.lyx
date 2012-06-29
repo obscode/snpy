@@ -1255,7 +1255,16 @@ EBV_model2
 
 \begin_layout Standard
 This is the same model as EBV_model, except that it can fit both 
-\begin_inset Formula $\dmf$
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+dmf
+\end_layout
+
 \end_inset
 
 - and 
@@ -1556,8 +1565,8 @@ fit()
 sn
 \family default
  class.
- The only required argument is a list of filters to fit (specified as a
- python list of strings).
+ The first argument is a list of observed filters to fit (or by default,
+ fit them all).
  Following this argument, you can specify values for any of the parameters,
  which will keep them fixed during the iteration: 
 \family typewriter
@@ -3039,7 +3048,7 @@ string
 Which SED template to use: 'H3' for Eric Hsiao's latest, 'N' for Peter Nugent,
  '91bg' for Peter Nugent's 91bg SED.
  Default: H3, unless 
-\begin_inset Formula $\dmf>1.7$
+\begin_inset Formula $\Delta m_{15}>1.7$
 \end_inset
 
 , in which case '91bg' is used.
@@ -6615,13 +6624,33 @@ The format of the filter response files is simply two columns: wavelength
 \end_layout
 
 \begin_layout Standard
+You can add your own filters by making the appropriate folders.
+ You can either add filters to an existing observatory/instrument folder
+ or make one of your own.
+ However, you must do this in the source folder (not the install folder
+ in 
+\family typewriter
+site-packages
+\family default
+).
+ After you have added your filters, run the 
+\family typewriter
+setup.py
+\family default
+ script in the root of the SNooPy folder (
+\family typewriter
+python setup.py install
+\family default
+).
+\end_layout
+
+\begin_layout Standard
 The filters module also comes with some spectra in a dictionary called,
  well,
 \family typewriter
  spectra.
 
 \family default
- This is not loaded in at start-up time because it can take a while to load.
  There are three keys: Vega, Smith and Landolt.
  Vega has several SEDs from CALSPEC.
  Smith has the standards from 
@@ -6656,22 +6685,17 @@ begin{verbatim}
 
 \begin_layout Plain Layout
 
-In[1]:  from SNooPy.filters import standards
+In[1]:  print spectra['Vega'].keys()
 \end_layout
 
 \begin_layout Plain Layout
 
-In[2]:  print standards['Vega'].keys()
+In[2]:  print spectra['Smith'].keys()
 \end_layout
 
 \begin_layout Plain Layout
 
-In[3]:  print standards['Smith'].keys()
-\end_layout
-
-\begin_layout Plain Layout
-
-In[4]:  print standards['Landolt'].keys()
+In[3]:  print spectra['Landolt'].keys()
 \end_layout
 
 \begin_layout Plain Layout
@@ -6683,14 +6707,52 @@ end{verbatim}
 
 \end_inset
 
-of Landolt standards.
- However, because loading all those spectra takes time and I didn't want
- to slow down the start-up time too much, you need to call the function
- 
-\family typewriter
-filters.load_landolt()
-\family default
- before you can access these standards.
+Because these are spectum objects, you can do things like compute synthetic
+ magnitudes from any of the filters in SNooPy.
+ For example:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+In[1]:  Bvega = fset['B'].synth_mag(spectra['Vega']['VebaB'])
+\end_layout
+
+\begin_layout Plain Layout
+
+In[2]:  Bvega = fset['V'].synth_mag(spectra['Vega']['VebaB'])
+\end_layout
+
+\begin_layout Plain Layout
+
+In[3]:  print Bvega, Vvega, Bvega-Vvega 
+\end_layout
+
+\begin_layout Plain Layout
+
+0.0418920257375 0.0160448066956 0.0258472190419
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section

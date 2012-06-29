@@ -1124,16 +1124,20 @@ class sn(object):
          bol.append(flx)
       return(self.dadta[refband].t, array(bol),array(bol_mask))
 
-   def closest_band(self, band, tempbands=None):
+   def closest_band(self, band, tempbands=None, lowz=0.15):
       '''Find the rest-frame filter in [tempbands] that is closest to the
-      observed filter [band].  If tempbands is None, defaults to self.template_bands.'''
-      if self.z < 0.15:  return band
+      observed filter [band].  If tempbands is None, defaults to 
+      self.template_bands.  In the case where the redshift of the
+      SN is below [lowz], if [band] is in [tempbands], use [band]
+      regardless of whether another band is closer.'''
+      if tempbands is None:
+         tempbands = self.template_bands
+      if self.z < lowz and band in tempbands:  return band
+
       resps = []
       # normalize responses to the area under the filter response curve
       norm = fset[band].response(fset[band].wave, fset[band].wave*0.0+1.0, z=0,
             zeropad=1, photons=0)
-      if tempbands is None:
-         tempbands = self.template_bands
       for temp in tempbands:
          norm2 = fset[temp].response(fset[temp].wave, fset[temp].wave*0.0+1.0, z=0,
                            zeropad=1, photons=0)
@@ -1259,6 +1263,8 @@ def import_lc(file):
       emags[f] = array(emags[f])
       s.data[f] = lc(s, f, MJD[f], mags[f], emags[f])
       s.data[f].time_sort()
+
+   s.get_restbands()
 
    return(s)
 
