@@ -31,7 +31,7 @@ from filters import standards as spectra # spectra.
 import mangle_spectrum      # SN SED mangling routines
 import pickle
 import model
-from utils.fit1dcurve import list_types
+from utils.fit1dcurve import list_types,regularize
 
 Version = '0.7'     # Let's keep track of this from now on.
 
@@ -817,7 +817,9 @@ class sn(object):
       offs = [0]
       filter = self.filter_order[0]
 
-      f = interp1d(self.data[filter].MJD, self.data[filter].mag, bounds_error=False,
+      x,y,ey = regularize(self.data[filter].MJD, self.data[filter].mag,
+            self.data[filter].e_mag)
+      f = interp1d(x,y, bounds_error=False, 
             fill_value=self.data[filter].mag.min())
       for filter in self.filter_order[1:]:
          off = offs[-1] + min_off
@@ -826,10 +828,12 @@ class sn(object):
             off += 0.5
          offs.append(off)
          if self.data[filter].MJD.shape[0] > 1:
-            f = interp1d(self.data[filter].MJD, self.data[filter].mag+off, bounds_error=False,
+            x,y,ey = regularize(self.data[filter].MJD, self.data[filter].mag,
+               self.data[filter].e_mag)
+            f = interp1d(x,y+off, bounds_error=False,
                            fill_value=self.data[filter].mag.max())
          else:
-            f = lambda x:  self.data[filter].mag+off
+            f = lambda x:  self.data[filter].mag.mean()+off
       return offs
 
 

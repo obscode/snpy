@@ -32,6 +32,32 @@ except:
 
 functions = {}
 
+def regularize(x, y, ey):
+   '''Given (x,y,dy) pairs of points, make sure the data is strictly
+   monatonic with respect to x and elimitate repeated values.'''
+   # x-values need to be strictly ascending.
+   sids = num.argsort(x)
+   x = x[sids]
+   y = y[sids]
+   ey = ey[sids]
+   
+   # here's some Numeric magic.  first, find where we have repeating x-values
+   Nmatrix = num.equal(x[:,num.newaxis], x[num.newaxis,:])
+   val_matrix = y[:,num.newaxis]*Nmatrix
+   e_matrix = ey[:,num.newaxis]*Nmatrix
+   
+   average = num.sum(val_matrix, axis=0)/sum(Nmatrix)
+   e_average = num.sum(e_matrix, axis=0)/sum(Nmatrix)
+   
+   # at this point, average is the original data, but with repeating data points
+   # replaced with their average.  Now, we just pick out the unique x's and
+   # the first of any repeating points:
+   gids = num.concatenate([[True], num.greater(x[1:] - x[:-1], 0.)])
+   x = x[gids]
+   y = average[gids]
+   ey = e_average[gids]
+   return x,y,ey
+
 class oneDcurve:
 
    num_real_keep = 100

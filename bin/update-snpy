@@ -42,12 +42,25 @@ if not os.path.isdir(snpy_src):
 
 os.chdir(snpy_src)
 if os.path.isdir('.svn'):
-   ret = subprocess.call(['svn','update'])
+   print "Trying to update from repository..."
+   ret = subprocess.call(['svn','update','--accept','theirs-full'])
    if ret != 0:
       print "SVN command failed.  Check your internet connection"
       sys.exit(1)
-   subprocess.call([os.path.join(sys.prefix, 'bin','python'),
-      'setup.py','install'])
+   print "Success!"
+   of = open('SNooPy.build.log','w')
+   print "Building updated SNooPy source code..."
+   p = subprocess.Popen([os.path.join(sys.prefix, 'bin','python'),'setup.py',
+      'install'], stdout=of, stderr=subprocess.STDOUT)
+   #subprocess.call([os.path.join(sys.prefix, 'bin','python'),
+   #   'setup.py','install'])
+   p.wait()
+   if p.returncode != 0:
+      print "Failed to build the updated SNooPy source code!"
+      print "Check the output SNooPy.build.log file to see what went wrong"
+      of.close()
+      sys.exit(1)
+   print "Success!  SNooPy is now up to date"
 else:
    # find the correct pip command to update....
    print "Sorry, the SNooPy source does not appear to be an SVN working"
