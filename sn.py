@@ -152,8 +152,8 @@ class sn(object):
                   return self.__dict__['model'].parameters['Tmax']
          for f in self.data:
             if self.restbands[f] == 'B':
-               if self.data[self.restbands[f]].Tmax is not None:
-                  return self.data[self.restbands[f]].Tmax
+               if self.data[f].Tmax is not None:
+                  return self.data[f].Tmax
          return 0.0
 
       if name == 'dm15':
