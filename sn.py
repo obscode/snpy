@@ -11,7 +11,7 @@ else:
 have_sql = sqlmod.have_sql
    
 import types
-import plotmod
+import plot_sne_mpl as plotmod
 from lc import lc           # the light-curve class
 from distutils.version import StrictVersion
 from numpy.oldnumeric import *       # Vectors
@@ -163,8 +163,8 @@ class sn(object):
                   return self.__dict__['model'].parameters['dm15']
          for f in self.data:
             if self.restbands[f] == 'B':
-               if self.data[self.restbands[f]].dm15 is not None:
-                  return self.data[self.restbands[f]].dm15
+               if self.data[f].dm15 is not None:
+                  return self.data[f].dm15
          return None
          
       if name == 'parameters':
