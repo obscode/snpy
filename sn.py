@@ -33,7 +33,7 @@ import pickle
 import model
 from utils.fit1dcurve import list_types,regularize
 
-Version = '2.0a'     # Let's keep track of this from now on.
+Version = '2.0b'     # Let's keep track of this from now on.
 
 # Some useful functions in other modules which the interactive user may want:
 getSED = kcorr.get_SED
