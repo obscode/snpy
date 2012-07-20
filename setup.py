@@ -51,7 +51,7 @@ if __name__ == '__main__':
    from numpy.distutils.misc_util import Configuration
    from numpy.distutils.system_info import get_info
 
-   setup(version='1.0a',
+   setup(version='2.0a',
          author='Chris Burns (Carnegie Observatories)',
          author_email='cburns@obs.carnegiescience.edu',
          **configuration(top_path='').todict())
