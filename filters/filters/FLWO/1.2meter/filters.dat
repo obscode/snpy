@@ -1,8 +1,8 @@
-U_4sh_harris U_4sh_harris.dat 14.2184 FLWO 1.2m+4Shooter Harris U filter
-B_4sh_harris B_4sh_harris.dat 15.3936 FLWO 1.2m+4Shooter Harris B filter
-V_4sh_harris V_4sh_harris.dat 14.9964 FLWO 1.2m+4Shooter Harris V filter
-R_4sh_harris R_4sh_harris.dat 15.0661 FLWO 1.2m+4Shooter Harris R filter
-I_4sh_harris I_4sh_harris.dat 14.4977 FLWO 1.2m+4Shooter Harris I filter
+U4sh U_4sh_harris.dat 14.2184 FLWO 1.2m+4Shooter Harris U filter
+B4sh B_4sh_harris.dat 15.3936 FLWO 1.2m+4Shooter Harris B filter
+V4sh V_4sh_harris.dat 14.9964 FLWO 1.2m+4Shooter Harris V filter
+R4sh R_4sh_harris.dat 15.0661 FLWO 1.2m+4Shooter Harris R filter
+I4sh I_4sh_harris.dat 14.4977 FLWO 1.2m+4Shooter Harris I filter
 Bk B_keplercam.dat 15.4004 FLWO 1.2m+Keplercam B filter
 Vk V_keplercam.dat 14.9821 FLWO 1.2m+Keplercam V filter
 rk rprime_keplercam.dat 15.2228 FLWO 1.2m+Keplercam r' filter

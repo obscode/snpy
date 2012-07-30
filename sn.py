@@ -819,8 +819,12 @@ class sn(object):
 
       x,y,ey = regularize(self.data[filter].MJD, self.data[filter].mag,
             self.data[filter].e_mag)
-      f = interp1d(x,y, bounds_error=False, 
-            fill_value=self.data[filter].mag.min())
+      if len(x) < 3:
+         mn = y.mean()
+         f = lambda x:  mn
+      else:
+         f = interp1d(x,y, bounds_error=False, 
+               fill_value=self.data[filter].mag.min())
       for filter in self.filter_order[1:]:
          off = offs[-1] + min_off
          while not alltrue(greater(self.data[filter].mag+off - f(self.data[filter].MJD),
