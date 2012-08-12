@@ -293,7 +293,9 @@ dm15temp/templates/template98bu.new -text
 dm15temp/templates/template99aa.new -text
 doc/Zeropoints.pdf -text
 doc/Zeropoints.tex -text
+doc/apj.bst -text
 doc/flow.fig -text
+doc/highz_paperI.bib -text
 doc/object_structure.001.png -text
 doc/pylc.tex -text
 doc/snpy.lyx -text
