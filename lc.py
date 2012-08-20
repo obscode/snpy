@@ -206,7 +206,7 @@ class lc:
       fit1dcurve.list_types()
 
    def template(self, fitflux=False, do_sigma=True, Nboot=50, method=default_method,
-         compute_params=True, **args):
+         compute_params=True, interactive=False, **args):
       '''Make an interpolating template of the lightcurve.  If fitflux, then fit in 
       flux-space.  If do-sigma, do a monte-carlo simulation to get an idea of
       the uncertainties in the final parameters.  Nboot controls the number of
@@ -235,6 +235,8 @@ class lc:
          ey = self.e_mag
 
       self.interp = fit1dcurve.Interpolator(method, x, y, ey, self.mask, **args)
+      if interactive:
+         self.mp = plotmod.launch_int_fit(self, fitflux=fitflux)
       if fitflux:
          self.model_flux = 1
       else:

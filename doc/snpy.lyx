@@ -1,5 +1,5 @@
-#LyX 1.6.9 created this file. For more info see http://www.lyx.org/
-\lyxformat 345
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
 \begin_document
 \begin_header
 \textclass article
@@ -19,18 +19,26 @@
 \newcommand{\aj}{{\rmfamily AJ}}
 \end_preamble
 \use_default_options false
+\maintain_unincluded_children false
 \language english
+\language_package default
 \inputencoding latin1
+\fontencoding global
 \font_roman ae
 \font_sans default
 \font_typewriter default
 \font_default_family default
+\use_non_tex_fonts false
 \font_sc false
 \font_osf false
 \font_sf_scale 100
 \font_tt_scale 100
 
 \graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
 \paperfontsize 12
 \spacing single
 \use_hyperref false
@@ -38,9 +46,18 @@
 \use_geometry true
 \use_amsmath 0
 \use_esint 0
+\use_mhchem 1
+\use_mathdots 1
 \cite_engine natbib_authoryear
 \use_bibtopic false
+\use_indices false
 \paperorientation portrait
+\suppress_date false
+\use_refstyle 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
 \paperwidth 8.5in
 \paperheight 11in
 \leftmargin 1in
@@ -50,15 +67,16 @@
 \secnumdepth 3
 \tocdepth 3
 \paragraph_separation indent
-\defskip medskip
+\paragraph_indentation default
 \quotes_language english
 \papercolumns 1
 \papersides 1
 \paperpagestyle default
 \tracking_changes false
 \output_changes false
-\author "" 
-\author "" 
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
 \end_header
 
 \begin_body
@@ -996,9 +1014,11 @@ key "2006ApJ...647..501P"
 \end_layout
 
 \begin_layout Standard
-\begin_inset Formula \begin{eqnarray*}
+\begin_inset Formula 
+\begin{eqnarray*}
 m_{X}\left(t-t_{max}\right) & = & T_{Y}\left(\left(t^{\prime}-t_{max}\right)/(1+z),\Delta m_{15}\right)+M_{Y}\left(\Delta m_{15}\right)+\mu+R_{X}E\left(B-V\right)_{gal}+\\
- &  & R_{Y}E\left(B-V\right)_{host}+K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z),E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)\end{eqnarray*}
+ &  & R_{Y}E\left(B-V\right)_{host}+K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z),E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)
+\end{eqnarray*}
 
 \end_inset
 
@@ -1317,9 +1337,11 @@ max_model
 EBV_model
 \family default
 , but instead fits the following model:
-\begin_inset Formula \begin{eqnarray*}
+\begin_inset Formula 
+\begin{eqnarray*}
 m_{X}\left(t-t_{max}\right) & = & T_{Y}\left(\left(t^{\prime}-t_{max}\right)/(1+z),\Delta m_{15}\right)+m_{Y}+R_{X}E\left(B-V\right)_{gal}+\\
- &  & K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z),E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)\end{eqnarray*}
+ &  & K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z),E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)
+\end{eqnarray*}
 
 \end_inset
 
@@ -2147,7 +2169,7 @@ status open
 \begin_layout Plain Layout
 \begin_inset Tabular
 <lyxtabular version="3" rows="13" columns="3">
-<features>
+<features tabularvalignment="middle">
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="0">
 <column alignment="left" valignment="top" width="75col%">
@@ -2770,7 +2792,7 @@ status open
 \begin_layout Plain Layout
 \begin_inset Tabular
 <lyxtabular version="3" rows="9" columns="3">
-<features>
+<features tabularvalignment="middle">
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="0">
 <column alignment="left" valignment="top" width="75col%">
@@ -3803,7 +3825,7 @@ status open
 \begin_layout Plain Layout
 \begin_inset Tabular
 <lyxtabular version="3" rows="20" columns="3">
-<features>
+<features tabularvalignment="middle">
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="4in">
@@ -4615,7 +4637,7 @@ If you have installed the pymc package, it comes with an interpolating package
 \end_layout
 
 \begin_layout Standard
-I'm not going to explain everythign about GP's, but suffice it to say that
+I'm not going to explain everything about GP's, but suffice it to say that
  GP's are like 
 \begin_inset Quotes eld
 \end_inset
@@ -4655,7 +4677,7 @@ smoothness
  These are the only 3 parameters you need to specify to the template() function
  to get a fit (or don't specify them at all and take the defaults, which
  are pretty good for light-curves).
- If the fucntion does not capture the full behaviour of the light-curve
+ If the function does not capture the full behaviour of the light-curve
  (too smooth), try decreasing the scale and increase the amplitude.
  If it captures too much of the 
 \begin_inset Quotes eld
@@ -5089,7 +5111,7 @@ status collapsed
 \begin_layout Plain Layout
 \begin_inset Tabular
 <lyxtabular version="3" rows="5" columns="2">
-<features>
+<features tabularvalignment="middle">
 <column alignment="center" valignment="top" width="0">
 <column alignment="left" valignment="top" width="0">
 <row>
@@ -5879,7 +5901,7 @@ status open
 \begin_layout Plain Layout
 \begin_inset Tabular
 <lyxtabular version="3" rows="9" columns="3">
-<features>
+<features tabularvalignment="middle">
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="4in">
@@ -6614,8 +6636,10 @@ Columns are separated by white space.
 \end_inset
 
 ), in the sense that 
-\begin_inset Formula \[
-m=-2.5\log_{10}\left(\frac{1}{ch}\int F\left(\lambda\right)S\left(\lambda\right)\lambda d\lambda\right)+zp\]
+\begin_inset Formula 
+\[
+m=-2.5\log_{10}\left(\frac{1}{ch}\int F\left(\lambda\right)S\left(\lambda\right)\lambda d\lambda\right)+zp
+\]
 
 \end_inset
 
@@ -6871,7 +6895,7 @@ Here is the schema for the SNe table.
 \begin_layout Standard
 \begin_inset Tabular
 <lyxtabular version="3" rows="19" columns="6">
-<features>
+<features tabularvalignment="middle">
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="0">
@@ -7968,7 +7992,7 @@ SNooPy
 \begin_layout Standard
 \begin_inset Tabular
 <lyxtabular version="3" rows="10" columns="6">
-<features>
+<features tabularvalignment="middle">
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="0">
 <column alignment="center" valignment="top" width="0">

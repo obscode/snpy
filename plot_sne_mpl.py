@@ -15,6 +15,7 @@ from snpy import kcorr
 import types, string
 from snpy.filters import fset
 from snpy import mangle_spectrum
+from snpy.utils import InteractiveFit
 
 #rcParams['font.family'] = 'serif'
 rcParams['font.size'] = 12
@@ -909,3 +910,53 @@ def plot_mangled_SED(event):
    #ax.set_xlim(wmin,wmax)
 
    f.canvas.draw()
+
+def bind_c(event):
+   if event.key == 'c':
+      # re-compute the lc params.
+      if not event.inaxes:  return
+      event.inaxes.lc.compute_lc_params()
+      draw_lc_params(event.inaxes.lc, event.inaxes)
+      event.inaxes.figure.canvas.draw()
+
+def draw_lc_params(self, ax):
+   # draw lines that indicate the light-curve parameters
+   for t in getattr(self, '_lc_labs', []):
+      t.remove()
+   self._lc_labs = []
+   if self.Mmax and self.Tmax:
+      t = ax.axhline(self.Mmax, color='0.5');  self._lc_labs.append(t)
+      t = ax.text(self.Tmax, self.Mmax, "$T_{max} = %.1f$" % self.Tmax,
+         rotation=90, va='top', ha='right', color='0.5')
+      self._lc_labs.append(t)
+      t = ax.axvline(self.Tmax, color='0.5');  self._lc_labs.append(t)
+      t = ax.text(self.Tmax+15*(1+self.parent.z), self.Mmax, "$M_{max} = %.2f$" % self.Mmax,
+         va='top', ha='right', color='0.5')
+      self._lc_labs.append(t)
+   if self.Mmax and self.dm15:
+      t = ax.axhline(self.Mmax + self.dm15, color='0.5');  self._lc_labs.append(t)
+      self._lc_labs.append(t)
+      t = ax.text(self.Tmax+15*(1+self.parent.z), self.Mmax+self.dm15+0.1,
+         "$\Delta m_{15} = %.2f$" % self.dm15, va='top', ha='right', 
+         color='0.5')
+      self._lc_labs.append(t)
+      
+
+def launch_int_fit(self, fitflux=False):
+   '''Launch an interacive interpolator.'''
+   if not fitflux:
+      ylabel = 'mag'
+   else:
+      ylabel = 'flux'
+
+   mfit = InteractiveFit.InteractiveFit(self.interp, fignum=111, draw=False,
+         xlabel='Epoch', ylabel=ylabel)
+   if not fitflux:
+      mfit.mp.axes[0].invert_yaxis()
+      mfit.mp.axes[1].invert_yaxis()
+   mfit.mp.axes[0].lc = self
+   mfit.mp.axes[1].lc = self
+   mfit.mp.fig.canvas.mpl_connect('key_press_event', bind_c)
+   mfit.draw()
+   return mfit
+

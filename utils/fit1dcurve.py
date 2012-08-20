@@ -619,6 +619,60 @@ class Spline(oneDcurve):
       self.setup = True
       self.realization = None
 
+   def add_knot(self, x):
+      '''Add a knot point at x.  The task parameter is automatically set
+      to -1 as a result.'''
+      if x <= self.tck[0][3] or x >= self.tck[0][-3]:
+         return
+      old_knots = self.tck[0][4:-4]
+      knots = num.concatenate([[x],old_knots])
+      knots = num.sort(knots)
+
+      self.pars['task'] = -1
+      self.pars['t'] = knots
+      try:
+         self._setup()
+      except:
+         print "Adding knot failed, reverting to old knots"
+         self.pars['t'] = old_knots
+         self.setup = False
+      return
+
+   def delete_knot(self, x):
+      '''Delete knot closest to x.  The task parameter is automatically set
+      to -1 as a result.'''
+      old_knots = self.tck[0][4:-4]
+      ds = num.absolute(old_knots - x)
+      id = num.argmin(ds)
+      l = old_knots.tolist()
+      del l[id]
+
+      self.pars['task'] = -1
+      self.pars['t'] = num.array(l)
+      try:
+         self._setup()
+      except:
+         print "Adding knot failed, reverting to old knots"
+         self.pars['t'] = old_knots
+         self.setup = False
+      return
+
+   def move_knot(self, x, xnew):
+      '''Move knot closest to x to new location xnew.  The task parameter is
+      automatically set to -1 as a result.'''
+      old_knots = self.tck[0][4:-4]
+      ds = num.absolute(old_knots - x)
+      id = num.argmin(ds)
+      self.pars['task'] = -1
+      self.pars['t'] = old_knots*1
+      self.pars['t'][id] = xnew
+      self.pars['t'] = num.sort(self.pars['t'])
+      try:
+         self._setup()
+      except:
+         self.pars['t'] = old_knots
+         self.setup = False
+
    def __call__(self, x):
       '''Interpolate at point [x].  Returns a 3-tuple: (y, mask) where [y]
       is the interpolated point, and [mask] is a boolean array with the same

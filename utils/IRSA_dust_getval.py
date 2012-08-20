@@ -15,9 +15,13 @@ def get_dust_RADEC(ra, dec):
    with dust_getval module, return a list (dust_getval results an array).'''
    if debug:
       print "get_dust_RADEC:  Querying URL:  ",BASE_URL % (ra,dec)
-   u = urllib.urlopen(BASE_URL % (ra,dec))
+   try:
+      u = urllib.urlopen(BASE_URL % (ra,dec))
+   except:
+      print "Failed to connect to IRSA.  E(B-V) query failed"
+      return([None],[1])
    if not u:
-      print "Failed to connect to NED.  E(B-V) query failed"
+      print "Failed to connect to IRSA.  E(B-V) query failed"
       return([None],[1])
    dom = parse(u)
    u.close()
