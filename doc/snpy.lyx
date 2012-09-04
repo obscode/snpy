@@ -4519,11 +4519,15 @@ mask_epoch(self, tmin, tmax):
 \family typewriter
 \series bold
 template(self, fitflux=False, do_sigma=True, Nboot=50, method=default_method,
- compute_params=True, **args):
+ compute_params=True, interactive=False, **args):
 \family default
 \series default
  Generate a smooth interpolation template of the data.
- You can choose which method to use by specifying method.
+ You can choose which method to use by specifying 
+\family typewriter
+method
+\family default
+.
  To get a list of methods available for your setup, use the 
 \family typewriter
 list_types()
@@ -4590,6 +4594,14 @@ In the following section, I describe the different interpolation methods
 template()
 \family default
 .
+ There is a new argument: 
+\family typewriter
+interactive
+\family default
+.
+ If true, a plot of the light-curve will open and you will be able to interactiv
+ely fit the data.
+ See section for more details.
 \end_layout
 
 \end_deeper
@@ -4623,17 +4635,59 @@ name "sub:Splining"
 
 \end_layout
 
+\begin_layout Standard
+SNooPy has several interpolation schemes built in.
+ Which ones depends on whether you have 
+\family typewriter
+pymc
+\family default
+ installed (for the Gaussian Processes) and how recent your 
+\family typewriter
+numpy
+\family default
+ is (for the polynomials).
+ Use the command '
+\family typewriter
+list_types()
+\family default
+' to list which are available to you.
+ Here are brief explanations of how each scheme works.
+\end_layout
+
 \begin_layout Subsubsection
 Gaussian Processes
 \end_layout
 
 \begin_layout Standard
-If you have installed the pymc package, it comes with an interpolating package
- that uses Gaussian Processes (GP).
+If you have installed the 
+\family typewriter
+pymc
+\family default
+ package, it comes with an interpolating package that uses Gaussian Processes
+ (GP).
  GP's are fantastic for interpolating when you may have missing data (gaps).
  This is usually where other fitters like Dierckx splines and hypersplines
  (see next sections) go awry.
- 
+ That's not to say that GP somehow magically know what to do in the absense
+ of data, but they tend to not 
+\begin_inset Quotes eld
+\end_inset
+
+go crazy
+\begin_inset Quotes erd
+\end_inset
+
+ like splines and they properly compute the uncertainty in the interpolator
+ when there is missing data.
+ In this way, GP's are more 
+\begin_inset Quotes eld
+\end_inset
+
+honest
+\begin_inset Quotes erd
+\end_inset
+
+.
 \end_layout
 
 \begin_layout Standard
@@ -4993,6 +5047,116 @@ end{verbatim}
 \end_inset
 
 
+\end_layout
+
+\begin_layout Subsubsection
+Interactive Fitting
+\end_layout
+
+\begin_layout Standard
+A new feature is the ability to interactively fit the data using the 
+\family typewriter
+matplotlib
+\family default
+ library.
+ Simply specify 
+\family typewriter
+interactive=True 
+\family default
+when you call the 
+\family typewriter
+template() 
+\family default
+member function.
+ A window that loos like figure XXX will pop up, showing you the light-curve,
+ the current fit, and the residuals from the fit.
+ You will then have access to certain keystrokes depending on the fitting
+ method.
+ In all cases, you can use the following keys:
+\end_layout
+
+\begin_layout Itemize
+'x': The point closest to the mouse pointer will be masked (red X will cover
+ it and it won't contribute to the fit).
+ If you use 'x' again near this point, you un-mask the data.
+\end_layout
+
+\begin_layout Itemize
+'r': re-fit the plot (if necessary) and re-draw the plot.
+\end_layout
+
+\begin_layout Itemize
+'c': (re)compute the light-curve parameters and plot them on the light-curve.
+\end_layout
+
+\begin_layout Itemize
+'q': quit the interactive plotting and close the graph.
+\end_layout
+
+\begin_layout Itemize
+'?': quick help on what keystrokes are available
+\end_layout
+
+\begin_layout Standard
+When fitting Gaussian Processes, the following keys can be used:
+\end_layout
+
+\begin_layout Itemize
+'s' and 'S': decrease and increase the scale by 10%, respectively.
+\end_layout
+
+\begin_layout Itemize
+'a' and 'A': decrease and increase the amplitude by 10%, respectively.
+\end_layout
+
+\begin_layout Itemize
+'d' and 'D': decrease and increase the degree of differentiability by 1
+\end_layout
+
+\begin_layout Standard
+When fitting with Dierckx splines, the following keys can be used:
+\end_layout
+
+\begin_layout Itemize
+'a': Add a knot point at the cursor position.
+ Note: this will change the 
+\family typewriter
+task
+\family default
+ parameter to -1.
+\end_layout
+
+\begin_layout Itemize
+'d': Delete knot point closest to the cursor position.
+ Note: this will change the 
+\family typewriter
+task
+\family default
+ parameter to -1.
+\end_layout
+
+\begin_layout Itemize
+'m': Move the knot point closest to the cursor position to a new position
+ (hit 'm' again).
+ Note: this will change the 
+\family typewriter
+task
+\family default
+ parameter to -1.
+\end_layout
+
+\begin_layout Standard
+When fitting with polynomials, the following keys can be used:
+\end_layout
+
+\begin_layout Itemize
+'n' and 'N': decrease and increase the order of the polynomial by 1
+\end_layout
+
+\begin_layout Itemize
+'m': specify range over which to fit (press 'm' at beginning and again at
+ end).
+ Pressing 'm' twice in the same location will reset to default range.
 \end_layout
 
 \begin_layout Section
@@ -6643,6 +6807,38 @@ m=-2.5\log_{10}\left(\frac{1}{ch}\int F\left(\lambda\right)S\left(\lambda\right)
 
 \end_inset
 
+Another option for the zero-point column is to specify the magnitude of
+ a standard spectrum.
+ For instance, you could use the string 
+\begin_inset Quotes eld
+\end_inset
+
+
+\family typewriter
+VegaB=0.0
+\family default
+
+\begin_inset Quotes erd
+\end_inset
+
+.
+ In this case, the zero-point is determined by setting the synthetic magnitude
+ of the spectrum 
+\family typewriter
+VegaB
+\family default
+ 
+\begin_inset CommandInset citation
+LatexCommand citep
+key "2004AJ....127.3508B"
+
+\end_inset
+
+ to zero.
+ 
+\end_layout
+
+\begin_layout Standard
 The format of the filter response files is simply two columns: wavelength
  (in angstroms) and flux.
 \end_layout
@@ -6659,23 +6855,32 @@ site-packages
 ).
  After you have added your filters, run the 
 \family typewriter
-setup.py
+update-snpy
 \family default
- script in the root of the SNooPy folder (
-\family typewriter
-python setup.py install
-\family default
-).
+ script.
 \end_layout
 
 \begin_layout Standard
 The filters module also comes with some spectra in a dictionary called,
- well,
+ 
 \family typewriter
- spectra.
-
+standards
 \family default
- There are three keys: Vega, Smith and Landolt.
+ that behaves much like 
+\family typewriter
+fset
+\family default
+.
+ The spectra are organized by 
+\family typewriter
+spectra.system.spectrum
+\family default
+.
+ Currently, we have 3 systems: 
+\family typewriter
+Vega, Smith, and Landolt
+\family default
+.
  Vega has several SEDs from CALSPEC.
  Smith has the standards from 
 \begin_inset CommandInset citation
@@ -6709,17 +6914,17 @@ begin{verbatim}
 
 \begin_layout Plain Layout
 
-In[1]:  print spectra['Vega'].keys()
+In[1]:  standards.list_systems()
 \end_layout
 
 \begin_layout Plain Layout
 
-In[2]:  print spectra['Smith'].keys()
+In[2]:  standards.list_SEDs()
 \end_layout
 
 \begin_layout Plain Layout
 
-In[3]:  print spectra['Landolt'].keys()
+In[3]:  standards.Landolt.list_SEDs()
 \end_layout
 
 \begin_layout Plain Layout
@@ -6731,6 +6936,44 @@ end{verbatim}
 
 \end_inset
 
+Just like fset, you can refer to an SED by a short-name:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+In[1]:  print spectra['VegaB']
+\end_layout
+
+\begin_layout Plain Layout
+
+VegaB:  Vega spectrum from Calspec, version 5 (Bohlin & Gilliand (2004)
+ AJ 127 3508)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
 Because these are spectum objects, you can do things like compute synthetic
  magnitudes from any of the filters in SNooPy.
  For example:
@@ -6749,12 +6992,12 @@ begin{verbatim}
 
 \begin_layout Plain Layout
 
-In[1]:  Bvega = fset['B'].synth_mag(spectra['Vega']['VebaB'])
+In[1]:  Bvega = fset['B'].synth_mag(spectra['VebaB'])
 \end_layout
 
 \begin_layout Plain Layout
 
-In[2]:  Bvega = fset['V'].synth_mag(spectra['Vega']['VebaB'])
+In[2]:  Bvega = fset['V'].synth_mag(spectra['VebaB'])
 \end_layout
 
 \begin_layout Plain Layout
