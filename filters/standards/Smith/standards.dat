@@ -1,6 +1,6 @@
-bd+174708     BD17_Fukugita_table6_flam.dat       BD17_mags.dat      Fukugita et al. (1996) AJ 111 1748
-bd+174708adj  BD17_Fukugita_table6_flam_adj.dat   BD17_adj_mags.dat  Fukugita et al. (1996) AJ 111 1748 (modified by M. Phillips to be consistent with Bohlin et. al SED)
-bd+17_Bohlin  bd_17d4708_stisnic_002.ascii        BC17_mags.dat      Bohlin & Gilliland.  (2004) AJ 129 3053
-bd+262606     BD26_Fukugita_table6_flam.dat       BD26_mags.dat      Fukugita et al. (1996) AJ 111 1748
-hd19445       HD19445_Fukugita_table6_flam.dat    HD19445_mags.dat   Fukugita et al. (1996) AJ 111 1748
-hd84937       HD84937_Fukugita_table6_flam.dat    HD84937_mags.dat   Fukugita et al. (1996) AJ 111 1748
+bd17     BD17_Fukugita_table6_flam.dat       BD17_mags.dat      Fukugita et al. (1996) AJ 111 1748
+bd17adj  BD17_Fukugita_table6_flam_adj.dat   BD17_adj_mags.dat  Fukugita et al. (1996) AJ 111 1748 (modified by M. Phillips to be consistent with Bohlin et. al SED)
+bd17B    bd_17d4708_stisnic_002.ascii        BC17_mags.dat      Bohlin & Gilliland.  (2004) AJ 129 3053
+bd26     BD26_Fukugita_table6_flam.dat       BD26_mags.dat      Fukugita et al. (1996) AJ 111 1748
+hd19445  HD19445_Fukugita_table6_flam.dat    HD19445_mags.dat   Fukugita et al. (1996) AJ 111 1748
+hd84937  HD84937_Fukugita_table6_flam.dat    HD84937_mags.dat   Fukugita et al. (1996) AJ 111 1748

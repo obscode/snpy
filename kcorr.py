@@ -314,7 +314,7 @@ def kcorr_mangle3(waves, spectra, filts, mags, m_mask, restfilts, z, colorfilts=
          return(kcorrs,mask)
 
 def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfilts=None,
-      full_output=0, normfilter=None, **mopts):
+      full_output=0, mepoch=False, **mopts):
    '''Find the (cross-band) k-correction for each filter in [restfilts] to
    observed corresponding filter in [filts] at redshift [z], using the provided
    [colorfilts] (or [filts] if [colorfilts] is not defined) and magnitudes to mangle
@@ -351,85 +351,140 @@ def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfil
    Rts = []
    if debug:  mopts['verbose'] = 1
 
-   for j in range(len(days)):
-      kcorrs.append([])
-      mask.append([])
-      day = int(days[j])
-      spec_wav,spec_f = get_SED(day, version)
-      if spec_wav is None:
-         # print "Warning:  no spectra for day %d, setting Kxy=0" % day
-         kcorrs[-1] = num.zeros((len(filts),), typecode=num.Float32)
-         mask[-1] = num.zeros((len(filts),))
-         Rts.append(kcorrs[-1] - 1.0)
-         m_opts.append(None)
-         continue
-
-      # Now determine which colors to use:
-      fs = [colorfilts[i] for i in range(len(colorfilts)) if m_mask[j,i]]
-      if len(fs) <= 1:
-         # only one filter, so no color information, leave the SED alone:
-         waves,man_spec_f,factors = spec_wav,spec_f,spec_wav*0.0+1.0
-      else:
-         cs = num.compress(m_mask[j],mags[j])[0:-1] - num.compress(m_mask[j],mags[j])[1:]
-         if debug:
-            print "filters and colors for day %f:" % (days[j])
-            print fs
-            print cs
- 
-         # Now we mangle the spectrum:
-         man_spec_f,waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,fs, 
-               cs, **mopts)
- 
-         if debug:  print "factors = ",factors
-         if debug:
-            # check the colors
-            for i in range(len(fs)-1):
-
-               print "input color:  %s-%s = %f" % (fs[i],fs[i+1], cs[i]),
-               f1 = filters.fset[fs[i]]
-               f2 = filters.fset[fs[i+1]]
-               col = f1.synth_mag(spec_wav*(1+z), man_spec_f) - \
-                     f2.synth_mag(spec_wav*(1+z), man_spec_f)
-               print "  output color:  %f" % (col)
- 
-      if full_output:
-         args = {'sw':waves, 'sf':factors}
-         for key in mopts:
-            args[key] = mopts[key]
-         m_opts.append(args)
-      # Let's plot these guys out
-      #if debug:
-      #   p = pygplot.Plot(device='/XWIN', yrange=[0,2])
-      #   p.line(spec_wav, spec_f/max(spec_f), color='blue')
-      #   p.line(spec_wav, man_spec_f/max(spec_f), color='green')
-      #   p.point(waves/(1+z), factors, color='orange', symbol=4)
-      #   p.line(spec_wav, man_spec_f/spec_f, color='orange')
- 
-      for i in range(len(filts)):
-         f1 = filters.fset[restfilts[i]]
-         zpt1 = f1.zp
-         f2 = filters.fset[filts[i]]
-         zpt2 = f2.zp
-         # Now compute the fluxes using Simpson's composite rule:
-         f1flux_0 = f1.response(spec_wav, man_spec_f, z=0)
-         f2flux_z = f2.response(spec_wav, man_spec_f, z=z)
-         #if debug:
-         #   p.line(f1.wave, f1.resp)
-         #   p.line(f2.wave, f2.resp)
-         #   p.line(f2.wave/(1.0+z), f2.resp, color='red')
-         #   p.plot()
-         #   p.close()
-         #   del p.lines[-3:]
-         if f1flux_0 < 0 or f2flux_z < 0:
-            kcorrs[-1].append(0.0)
-            mask[-1].append(0)
+   if mepoch:
+      # Doing multi epoch simultaneously with one mangling function...
+      spec_wavs = []
+      spec_fs = []
+      sids = []
+      for j in range(len(days)):
+         day = int(days[j])
+         s,f = get_SED(day, version)
+         if s is None:
+            spec_wavs.append(num.arange(980.,24981.0,10.))
+            spec_fs.append(num.zeros((2401,), dtype=float))
+            sids.append(False)
          else:
-            # Finally calculate the cross-band K Correction
-            kf1f2 = 2.5*num.log10(1+z) + 2.5*num.log10(f1flux_0/f2flux_z) - \
-                     zpt1 + zpt2
-            kcorrs[-1].append(kf1f2)
-            mask[-1].append(len(fs))
-      Rts.append(R_obs_spectrum(filts, spec_wav, man_spec_f, z, 0.01, 0.0))
+            spec_wavs.append(s)
+            spec_fs.append(f)
+            sids.append(True)
+      spec_wavs = num.array(spec_wavs)
+      spec_fs = num.array(spec_fs)
+      sids = num.array(sids)
+      fs = [colorfilts[i] for i in range(len(colorfilts)) \
+            if num.sometrue(m_mask[:,i])]
+      if len(fs) <=1 :
+         waves,man_spec_fs,factors = spec_wavs,spec_fs,spec_wavs*0.0+1.0
+      else:
+         cs = mags[:,:-1] - mags[:,1:]
+         gids = m_mask[:,:-1]*m_mask[:,1:]
+         gids = gids*sids[:,num.newaxis]
+         cs[-gids] = 99.9   # flag invalid value
+         man_spec_fs,waves,factors = mangle_spectrum2(spec_wavs*(1+z),
+               spec_fs, fs, cs, **mopts)
+
+
+      for j in range(len(days)):
+         kcorrs.append([])
+         mask.append([])
+         if not sids[j]:
+            kcorrs[-1] = num.zeros((len(filts),), typecode=num.Float32)
+            mask[-1] = num.zeros((len(filts),))
+            Rts.append(kcorrs[-1] - 1.0)
+            m_opts.append(None)
+            continue
+         if full_output:
+            args = {'sw':waves, 'sf':factors}
+            for key in mopts:
+               args[key] = mopts[key]
+            m_opts.append(args)
+ 
+         for i in range(len(filts)):
+             f1 = filters.fset[restfilts[i]]
+             zpt1 = f1.zp
+             f2 = filters.fset[filts[i]]
+             zpt2 = f2.zp
+             # Now compute the fluxes using Simpson's composite rule:
+             f1flux_0 = f1.response(spec_wavs[j], man_spec_fs[j], z=0)
+             f2flux_z = f2.response(spec_wavs[j], man_spec_fs[j], z=z)
+             if f1flux_0 < 0 or f2flux_z < 0:
+                kcorrs[-1].append(0.0)
+                mask[-1].append(0)
+             else:
+                # Finally calculate the cross-band K Correction
+                kf1f2 = 2.5*num.log10(1+z) + 2.5*num.log10(f1flux_0/f2flux_z) - \
+                         zpt1 + zpt2
+                kcorrs[-1].append(kf1f2)
+                mask[-1].append(len(fs))
+         Rts.append(R_obs_spectrum(filts, spec_wavs[j], man_spec_fs[j], z, 0.01, 0.0))
+
+   else:
+      for j in range(len(days)):
+         kcorrs.append([])
+         mask.append([])
+         day = int(days[j])
+         spec_wav,spec_f = get_SED(day, version)
+         if spec_wav is None:
+            # print "Warning:  no spectra for day %d, setting Kxy=0" % day
+            kcorrs[-1] = num.zeros((len(filts),), typecode=num.Float32)
+            mask[-1] = num.zeros((len(filts),))
+            Rts.append(kcorrs[-1] - 1.0)
+            m_opts.append(None)
+            continue
+ 
+         # Now determine which colors to use:
+         fs = [colorfilts[i] for i in range(len(colorfilts)) if m_mask[j,i]]
+         if len(fs) <= 1:
+            # only one filter, so no color information, leave the SED alone:
+            waves,man_spec_f,factors = spec_wav,spec_f,spec_wav*0.0+1.0
+            man_spec_f = [man_spec_f]
+         else:
+            cs = num.compress(m_mask[j],mags[j])[0:-1] - num.compress(m_mask[j],mags[j])[1:]
+            if debug:
+               print "filters and colors for day %f:" % (days[j])
+               print fs
+               print cs
+  
+            # Now we mangle the spectrum.  Note, we are redshifting the spectrum
+            # here, so do NOT set z in mangle_spectrum2.
+            man_spec_f,waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,fs, 
+                  cs, **mopts)
+ 
+            if debug:  print "factors = ",factors
+            if debug:
+               # check the colors
+               for i in range(len(fs)-1):
+ 
+                  print "input color:  %s-%s = %f" % (fs[i],fs[i+1], cs[i]),
+                  f1 = filters.fset[fs[i]]
+                  f2 = filters.fset[fs[i+1]]
+                  col = f1.synth_mag(spec_wav*(1+z), man_spec_f[0]) - \
+                        f2.synth_mag(spec_wav*(1+z), man_spec_f[0])
+                  print "  output color:  %f" % (col)
+  
+         if full_output:
+            args = {'sw':waves, 'sf':factors}
+            for key in mopts:
+               args[key] = mopts[key]
+            m_opts.append(args)
+  
+         for i in range(len(filts)):
+            f1 = filters.fset[restfilts[i]]
+            zpt1 = f1.zp
+            f2 = filters.fset[filts[i]]
+            zpt2 = f2.zp
+            # Now compute the fluxes using Simpson's composite rule:
+            f1flux_0 = f1.response(spec_wav, man_spec_f[0], z=0)
+            f2flux_z = f2.response(spec_wav, man_spec_f[0], z=z)
+            if f1flux_0 < 0 or f2flux_z < 0:
+               kcorrs[-1].append(0.0)
+               mask[-1].append(0)
+            else:
+               # Finally calculate the cross-band K Correction
+               kf1f2 = 2.5*num.log10(1+z) + 2.5*num.log10(f1flux_0/f2flux_z) - \
+                        zpt1 + zpt2
+               kcorrs[-1].append(kf1f2)
+               mask[-1].append(len(fs))
+         Rts.append(R_obs_spectrum(filts, spec_wav, man_spec_f[0], z, 0.01, 0.0))
    Rts = num.array(Rts)
    gids = num.greater(Rts, 0)
    Rtave = num.array([num.average(num.compress(gids[:,k], Rts[:,k])) \

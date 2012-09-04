@@ -348,6 +348,12 @@ filters/filters/FLWO/1.2meter/filters.dat -text
 filters/filters/FLWO/1.2meter/iprime_keplercam.dat -text
 filters/filters/FLWO/1.2meter/keplercam.passbands.txt -text
 filters/filters/FLWO/1.2meter/rprime_keplercam.dat -text
+filters/filters/KPNO/WIYN/H_WHIRC.dat -text
+filters/filters/KPNO/WIYN/J_WHIRC.dat -text
+filters/filters/KPNO/WIYN/K_WHIRC.dat -text
+filters/filters/KPNO/WIYN/WFCAM_filters.txt -text
+filters/filters/KPNO/WIYN/WHIRC_filters.txt -text
+filters/filters/KPNO/WIYN/filters.dat -text
 filters/filters/LCO/Dupont/.filters.dat.swp -text
 filters/filters/LCO/Dupont/D62_H_system_total.10 -text
 filters/filters/LCO/Dupont/D62_J_system_total.10 -text
@@ -393,6 +399,12 @@ filters/filters/Lick/KAIT/kait_I.dat -text
 filters/filters/Lick/KAIT/kait_R.dat -text
 filters/filters/Lick/KAIT/kait_U.dat -text
 filters/filters/Lick/KAIT/kait_V.dat -text
+filters/filters/UKIRT/WFCAM/H_WFCAM.dat -text
+filters/filters/UKIRT/WFCAM/J_WFCAM.dat -text
+filters/filters/UKIRT/WFCAM/K_WFCAM.dat -text
+filters/filters/UKIRT/WFCAM/Y_WFCAM.dat -text
+filters/filters/UKIRT/WFCAM/filters.dat -text
+filters/filters/UKIRT/WFCAM/z_WFCAM.dat -text
 filters/filters/USNO/USNO40/filters.dat -text
 filters/filters/USNO/USNO40/usno_g.res -text
 filters/filters/USNO/USNO40/usno_i.res -text

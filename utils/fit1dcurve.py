@@ -341,11 +341,13 @@ if polynomial is not None:
    
       def deriv(self, x, n=1):
          '''Returns the nth derivative of the function at x.'''
+         if not self.setup:  self._setup()
          dpoly = self.poly.deriv(m=n)
          return dpoly(x)
    
       def domain(self):
          '''Returns the valid domain of the polynomial.'''
+         if not self.setup:  self._setup()
          dom = self.poly.domain
          return (dom[0],dom[1])
 
@@ -362,12 +364,13 @@ if polynomial is not None:
 
          if xmin is None:  xmin = self.poly.domain[0]
          if xmax is None:  xmax = self.poly.domain[1]
+         if not self.setup:  self._setup()
          d1 = poly.deriv(m=1)
          d2 = poly.deriv(m=2)
          roots = d1.roots()
          # Roots can be complex.  Want only the real ones
          gids = num.iscomplex(roots)
-         roots = num.real(roots[gids])
+         roots = num.real(roots[-gids])
          gids = num.greater_equal(roots, xmin)*num.less_equal(roots, xmax)
          roots = roots[gids]
          if len(roots) == 0:
@@ -535,7 +538,7 @@ if spline2 is not None:
             vals = eval_extrema(self.realization)
          else:
             vals = eval_extrema(self.tck)
-         gids = num.ones(vals.shape, dtype=num.bool)
+         gids = num.ones(vals[0].shape, dtype=num.bool)
          if xmin is not None:
             gids = gids*num.greater_equal(vals[0],xmin)
          if xmax is not None:
@@ -941,7 +944,7 @@ if pymc is not None:
          #   enough)
          if xmin is None:  xmin = self.x.min()
          if xmax is None:  xmax = self.x.max()
-         dx = min(self.scale/20, (xmax-xmin)/5.0)
+         dx = min(self.scale*1.0/20, (xmax-xmin)/5.0)
          xs = num.arange(xmin, xmax+dx, dx)
          #f = lambda x: self.__call__(x)[0]
          dys = self.deriv(xs, n=1)
@@ -995,7 +998,8 @@ def Interpolator(type, x, y, dy, mask=None, **args):
    '''Convenience function that returns a 1D interpolator of the given [type]
    if possible.'''
    if type not in functions.keys():
-      raise ValueError,"Error:  the type %s is not defined.  Try list_types()"
+      raise ValueError,"Error:  the type %s is not defined.  Try list_types()" %\
+            type
    else:
       interp = functions[type][0]
       if type in polytypes:

@@ -6,11 +6,15 @@ try:
 except:
    from snpy.myplotlib import PanelPlot
 from matplotlib import pyplot as plt
+try:
+   import fit1dcurve
+except:
+   from snpy.utils import fit1dcurve
 
 class InteractiveFit:
 
    def __init__(self, interp, title=None, figsize=None, fignum=None, draw=True,
-         xlabel='X', ylabel='Y'):
+         xlabel='X', ylabel='Y', extra_bindings={}):
       '''Takes a oneDcurve instance as argument.  Sets up a plot with
       fit and residuals, then sets up bindings to interactively fit.'''
 
@@ -25,6 +29,25 @@ class InteractiveFit:
       self.ylabel = ylabel
       self.figsize = figsize
       self.fignum = fignum
+
+      # A callback to use when closing the figure
+      self.extra_bindings = extra_bindings
+
+      # Some help strings
+      self.bind_help = [('r','redraw the graph'),
+                        ('x','flag/unflag bad data')]
+      if isinstance(self.interp, fit1dcurve.Spline):
+         self.bind_help += [('a','Add knot point at cursor position'),
+                            ('d','Delete knot closest to cursor position'),
+                            ('m','Move knot closest to cursor to new position')]
+      if isinstance(self.interp, fit1dcurve.Polynomial):
+         self.bind_help += [('n/N','Decrease/Increase order of polynomial'),
+                            ('m','specify range over which to fit')]
+      if isinstance(self.interp, fit1dcurve.GaussianProcess):
+         self.bind_help += [('s/S', 'Decrease/Increase scale by 10%'),
+                            ('a/A', 'Decrease/Increase amplitude by 10%'),
+                            ('d/D', 'Decrease/Increase degree of diff. by 1')]
+      self.bind_help.append(('q','close the graph'))
 
       self.setup_graph(draw=draw)
       self.set_bindings()
@@ -46,8 +69,9 @@ class InteractiveFit:
 
    def setup_graph(self, draw=True):
 
-      self.mp = PanelPlot(1,2, pheights=[0.2,0.8], pwidths=[0.8],
+      self.mp = PanelPlot(1,2, pheights=[0.2,0.6], pwidths=[0.8],
             figsize=self.figsize, num=self.fignum)
+      self.mp.right_pad=0.20
 
       if self.title is None:
          self.mp.title("Fitting %s\ntype '?' for help" % str(self.interp))
@@ -71,8 +95,8 @@ class InteractiveFit:
       self._mod, = self.mp.axes[1].plot(xs[m], ys[m], '-', color='black')
 
       # if spline, plot the knot points
-      tck = getattr(self.interp, 'tck', None)
-      if tck:
+      if isinstance(self.interp, fit1dcurve.Spline):
+         tck = self.interp.tck
          self._knots, = self.mp.axes[1].plot(tck[0][4:-4], 
                self.interp(tck[0][4:-4])[0], 'd', color='red')
       else:
@@ -94,7 +118,25 @@ class InteractiveFit:
       if not num.alltrue(m):
          resids = resids[m]
          self.mp.axes[0].set_ylim((resids.min(), resids.max()))
-      if draw:  self.mp.draw()
+      self.mp.axes[1].text(1.01, 1.0, "Parameters:", va='bottom', ha='left',
+            transform=self.mp.axes[1].transAxes, color='blue')
+      self.mp.axes[0].text(1.01, 1.0, "Stats:", va='bottom', ha='left',
+            transform=self.mp.axes[0].transAxes, color='blue')
+      pars_labels = ""
+      for par in self.interp.pars:
+         if par == 't': continue
+         pars_labels += par + ":  \n"
+      self._pars_labels = self.mp.axes[1].text(1.03, 0.95, pars_labels,
+            ha='left', va='top', transform=self.mp.axes[1].transAxes,
+            fontdict={'size':10})
+      self._stats_labels = self.mp.axes[0].text(1.03, 0.95, 
+          "RMS:\nr-chi-sq:\nDW:", va='top', ha='left', 
+          transform=self.mp.axes[0].transAxes, fontdict={'size':10})
+      self.mp.draw()
+      self.plot_stats()
+      self.plot_params()
+      self.mp.draw()
+
 
    def draw(self):
       '''Just an alias to self.mp.draw.'''
@@ -134,17 +176,15 @@ class InteractiveFit:
       if not num.alltrue(m):
          resids = resids[m]
          self.mp.axes[0].set_ylim((resids.min(), resids.max()))
+      self.plot_stats()
+      self.plot_params()
       self.redraw_x()
+
 
    def help(self):
       print "The following key bindings are in effect:"
-      print "r:   redraw the graph"
-      print "x:   flag/unflag bad data"
-      if getattr(self.interp, 'tck', None) is not None:
-         print "a:   Add knot point at cursor position"
-         print "d:   Delete knot closest to cursor position"
-         print "m:   Move knot closest to cursor to new position"
-      print "q:   close the graph"
+      for key,help in self.bind_help:
+         print key+":   "+help
       print
       print "You can also vary the following member variables:"
       self.interp.help()
@@ -186,17 +226,51 @@ class InteractiveFit:
       '''Binding for re-fitting and drawing.'''
       if event.key != 'r':
          return
+      if 'r' in self.extra_bindings:
+         self.extra_bindings['r'](event)
       self.redraw()
 
    def _bind_q(self, event):
       '''Binding for quitting the session.'''
       if event.key == 'q':
+         if 'q' in self.extra_bindings:
+            self.extra_bindings['q'](event)
          self.mp.close()
 
    def _bind_help(self, event):
       '''Binding for help'''
       if event.key == '?':
          self.help()
+
+   def plot_stats(self):
+      '''plots the statistics of the fit.'''
+      label = " %.2f\n %.2f\n %.2f" % \
+            (self.interp.rms(), self.interp.rchisquare(), self.interp.DW())
+      id = getattr(self, '_statsid', None)
+      ax = self.mp.axes[0]
+      if id is None:
+         bbox = self._stats_labels.get_window_extent()
+         bbox = bbox.inverse_transformed(ax.transAxes)
+         self._statsid = ax.text(bbox.x1,0.95,label, va='top', ha='left',
+              transform=ax.transAxes, fontdict={'size':10})
+      else:
+         id.set_text(label)
+
+   def plot_params(self):
+      label = ""
+      for par in self.interp.pars:
+         if par == 't':  continue
+         label += " "+str(self.interp.pars[par])+"\n"
+      id = getattr(self, '_parsid', None)
+      ax = self.mp.axes[1]
+      if id is None:
+         bbox = self._pars_labels.get_window_extent()
+         bbox = bbox.inverse_transformed(ax.transAxes)
+         self._parsid = ax.text(bbox.x1, 0.95, label, va='top', ha='left',
+               transform=ax.transAxes, fontdict={'size':10})
+      else:
+         id.set_text(label)
+
 
    def _move_knot_point(self, event):
       id = getattr(self, '_knotid', None)
@@ -239,17 +313,85 @@ class InteractiveFit:
             self._mpressed = True
             id = num.argmin(num.absolute(x - tck[0][4:-4]))
             self._knotid = id
-            self._knot_move_id = self.mp.fig.canvas.mpl_connect(\
+            self._knot_move_id = self.mp.fig.canvas.mpl_connect(
                   'motion_notify_event', self._move_knot_point)
 
+   def _move_axvline(self, event):
+      self._axvline1.set_xdata([event.xdata,event.xdata])
+      plt.draw()
+
+   def _bind_poly_keys(self, event):
+      if event.key == 'n':
+         if self.interp.n > 0:
+            self.interp.n -= 1
+            self.redraw()
+      elif event.key == 'N':
+         self.interp.n += 1
+         self.redraw()
+      elif event.key == 'm':
+         if getattr(self,'_range_pending',None) is None:
+            self._range_pending = True
+            self._rx0 = event.xdata
+            self._axvline0 = event.inaxes.axvline(self._rx0)
+            self._axvline1 = event.inaxes.axvline(self._rx0)
+            self._range_pending = self.mp.fig.canvas.mpl_connect(
+                  'motion_notify_event', self._move_axvline)
+         else:
+            self._rx1 = event.xdata
+            self.mp.fig.canvas.mpl_disconnect(self._range_pending)
+            if absolute(self._rx0-self._rx1) == 0:
+               self.interp.xmin = None
+               self.interp.xmax = None
+            else:
+               self.interp.xmin = min(self._rx0, self._rx1)
+               self.interp.xmax = max(self._rx0, self._rx1)
+            self.interp.setup = False
+            self._range_pending = None
+            self._axvline0.remove()
+            self._axvline1.remove()
+            self.redraw()
+
+   def _bind_gp_keys(self, event):
+      '''Bindings when the Gaussian Process is in effect.'''
+      if event.key == 'A':
+         self.interp.amp += self._amp0*0.1
+      elif event.key == 'a':
+         if self.interp.amp > self._amp0*0.1:
+            self.interp.amp -= self._amp0*0.1
+      elif event.key == 's':
+         if self.interp.scale > self._scale0*0.1:
+            self.interp.scale -= self._scale0*0.1
+      elif event.key == 'S':
+         self.interp.scale += self._scale0*0.1
+      elif event.key == 'd':
+         if self.interp.diff_degree > 1:
+            self.interp.diff_degree -= 1
+      elif event.key == 'D':
+         self.interp.diff_degree += 1
+      else:
+         return
+
+      self.interp.setup = False
+      self.redraw()
 
    def set_bindings(self):
       '''Sets the bindings to the figure canvas.'''
+      # First clear out the default ones
+      ids = self.mp.fig.canvas.callbacks.callbacks['key_press_event'].keys()
+      for id in ids:
+         self.mp.fig.canvas.mpl_disconnect(id)
       self.mp.fig.canvas.mpl_connect('key_press_event',self._bind_x)
       self.mp.fig.canvas.mpl_connect('key_press_event',self._bind_r)
       self.mp.fig.canvas.mpl_connect('key_press_event',self._bind_q)
       self.mp.fig.canvas.mpl_connect('key_press_event',self._bind_help)
-      if getattr(self.interp, 'tck', None):
+      if isinstance(self.interp, fit1dcurve.Spline):
          self.mp.fig.canvas.mpl_connect('key_press_event', self._bind_knot_keys)
+      if isinstance(self.interp, fit1dcurve.Polynomial):
+         self.mp.fig.canvas.mpl_connect('key_press_event', self._bind_poly_keys)
+      if isinstance(self.interp, fit1dcurve.GaussianProcess):
+         self._scale0 = self.interp.scale
+         self._amp0 = self.interp.amp
+         self._diff_degree0 = self.interp.diff_degree
+         self.mp.fig.canvas.mpl_connect('key_press_event', self._bind_gp_keys)
 
 

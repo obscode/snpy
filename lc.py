@@ -160,16 +160,26 @@ class lc:
       interpolation.  If epoch is nonzero, then times are interpreted relative
       to parent.Tmax'''
       if self.interp is None:
-         raise AttributeError, "Error.  To interpolate, you need to fit a template first."
-
+         # Try to use a model
+         if self.band not in self.parent.model._fbands:
+            raise AttributeError, \
+                  "Error.  To interpolate, you need to fit a template or model first."
+         
       times = atleast_1d(times)
       if epoch: times = times + self.parent.Tmax
 
-      evm,mask = self.interp(times)
-      if self.model_flux:
-         mask = mask*greater(evm,0)
-         evm = where(evm <=0, 1.0, evm)
-         evm = -2.5*log10(evm) + self.filter.zp
+      if self.interp is not None:
+         evm,mask = self.interp(times)
+         if self.model_flux:
+            mask = mask*greater(evm,0)
+            evm = where(evm <=0, 1.0, evm)
+            evm = -2.5*log10(evm) + self.filter.zp
+      else:
+         evm,eevm,mask = self.parent.model(self.band, times)
+         if not self.parent.model.model_in_mags:
+            mask = mask*greater(evm, 0)
+            evm = where(evm <=0, 1.0, evm)
+            evm = -2.5*log10(evm) + self.filter.zp
 
       if t_tol > 0:
          # Now, we scan t and eval_t and find where they are less than tol.  
@@ -259,20 +269,7 @@ class lc:
          # Find Tmax
          if i:  
             inter.draw()
-            if inter.deriv(Tmaxs[0]-1)*inter.deriv(Tmaxs[0]+1) > 0:
-               Tmaxs.append(-1)
-               Mmaxs.append(-1)
-               dm15s.append(-1)
-               continue
-            else:
-               # self.deriv() for GP is really slow, so try this faster 
-               #    approach
-               xs = array([brentq(inter.deriv, Tmaxs[0]-1, Tmaxs[0]+1)])
-               ys = array(inter(xs[0]))
-               if self.model_flux:
-                  curvs = array([-1])
-               else:
-                  curvs = array([1])
+            xs,ys,curvs = inter.find_extrema(xmin=Tmaxs[0]-5, xmax=Tmaxs[0]+5)
          else:
             xs,ys,curvs = inter.find_extrema()
          if self.model_flux:

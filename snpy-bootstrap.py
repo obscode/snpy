@@ -1511,6 +1511,7 @@ def after_install(options,home_dir):
    home_dir = os.path.realpath(home_dir)
    # Test for installed software
    pip = join(home_dir, 'bin', 'pip')
+   print 'Using pip:', pip
    # First, the absolutely necessary stuff
    print "Now going to install the manditory software..."
    man_packages = ['scipy','pymysql','pyfits','matplotlib',

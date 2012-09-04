@@ -43,7 +43,7 @@ class color_dict(dict):
          if k in self.colors:
             return self.colors[k]
          else:
-            raise KeyError, k
+            return 'k'
 
 class symbol_dict(dict):
    symbols = {'B':'o', 'V':'s','R':'^','I':'D','G':'v','U':'<','Y':'>', 
@@ -62,7 +62,7 @@ class symbol_dict(dict):
          if k in self.symbols:
             return self.symbols[k]
          else:
-            raise KeyError, k
+            return 'o'
 
 # Some default colors and labels to use in plotting.
 #default_colors = color_dict()
@@ -841,9 +841,6 @@ def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
    ids = argsort(eff_wavs)
    bands = [bands[i] for i in ids]
       
-   for b in bands:
-      if b not in colors:  colors[b] = 1
-      if b not in symbols:  symbols[b] = 4
    n_plots = len(bands)
    p = myplotlib.PanelPlot(1, n_plots, num=112, figsize=(6,n_plots),
         nymax=5, prunex=None)
@@ -892,8 +889,9 @@ def plot_mangled_SED(event):
    wave,flux = kcorr.get_SED(day, version='H3')
    ax.plot(wave,flux, label='Original SED', color='black')
    if band in self.ks_mopts:
-      man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][id])
+      man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][id])[0]
    ax.plot(wave, man_flux, label='Mangled SED', color='darkgreen')
+   ax.plot(wave, man_flux/flux*ax.get_ylim()[1], color='orange')
 
    f1 = fset[band]
    f2 = fset[self.restbands[band]]
@@ -922,16 +920,19 @@ def bind_c(event):
 def draw_lc_params(self, ax):
    # draw lines that indicate the light-curve parameters
    for t in getattr(self, '_lc_labs', []):
-      t.remove()
+      try:
+         t.remove()
+      except ValueError:
+         pass
    self._lc_labs = []
    if self.Mmax and self.Tmax:
       t = ax.axhline(self.Mmax, color='0.5');  self._lc_labs.append(t)
-      t = ax.text(self.Tmax, self.Mmax, "$T_{max} = %.1f$" % self.Tmax,
-         rotation=90, va='top', ha='right', color='0.5')
+      t = ax.text(self.Tmax, self.mag.max(), "$T_{max} = %.1f$" % self.Tmax,
+         rotation=90, va='bottom', ha='right', color='0.5')
       self._lc_labs.append(t)
       t = ax.axvline(self.Tmax, color='0.5');  self._lc_labs.append(t)
-      t = ax.text(self.Tmax+15*(1+self.parent.z), self.Mmax, "$M_{max} = %.2f$" % self.Mmax,
-         va='top', ha='right', color='0.5')
+      t = ax.text(self.Tmax+15*(1+self.parent.z), self.Mmax + 0.1, "$M_{max} = %.2f$" % self.Mmax,
+         va='top', ha='left', color='0.5')
       self._lc_labs.append(t)
    if self.Mmax and self.dm15:
       t = ax.axhline(self.Mmax + self.dm15, color='0.5');  self._lc_labs.append(t)
@@ -940,7 +941,6 @@ def draw_lc_params(self, ax):
          "$\Delta m_{15} = %.2f$" % self.dm15, va='top', ha='right', 
          color='0.5')
       self._lc_labs.append(t)
-      
 
 def launch_int_fit(self, fitflux=False):
    '''Launch an interacive interpolator.'''
@@ -950,13 +950,14 @@ def launch_int_fit(self, fitflux=False):
       ylabel = 'flux'
 
    mfit = InteractiveFit.InteractiveFit(self.interp, fignum=111, draw=False,
-         xlabel='Epoch', ylabel=ylabel)
+         xlabel='Epoch', ylabel=ylabel, extra_bindings={'q':lambda event: self.compute_lc_params()})
    if not fitflux:
       mfit.mp.axes[0].invert_yaxis()
       mfit.mp.axes[1].invert_yaxis()
    mfit.mp.axes[0].lc = self
    mfit.mp.axes[1].lc = self
    mfit.mp.fig.canvas.mpl_connect('key_press_event', bind_c)
+   mfit.bind_help.append(('c','(re)compute light-curve parameters'))
    mfit.draw()
    return mfit
 

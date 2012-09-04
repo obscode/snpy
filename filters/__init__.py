@@ -273,8 +273,8 @@ class filter(spectrum):
 
    def synth_mag(self, specwave, flux=None, z=0, zeropad=0):
       '''Compute the synthetic magnitude based on the input spectrum defined by
-      (specwave) or (specwave,flux).  If z is supplied, first blueshift the 
-      fitler by this amount (ie, you are observing a redshifted spectrum).'''
+      (specwave) or (specwave,flux).  If z is supplied, first redshift the 
+      input spectrum by this amount.'''
       res = self.response(specwave,flux=flux,z=z,zeropad=zeropad)
       if res <= 0:
          return(-1)
@@ -333,57 +333,99 @@ class filter(spectrum):
       return(-2.5*num.log10(fluxr/flux0)/EBV)
 
 
-# NOTES on zero-points:
-#
-#  For the set UBVRI:  used Bohlen vega spectrum and the UBVRI adopted in
-#  vega_mags below 
-#  for Bs,Vs (SWOPE BV): computed synthetic magnitues for BV in
-#  the natural system using synthetic magnitudes derived from the Bohlin SED
-#  for Vega and from Fukugita et al. 1996, then computed the zeropoints based
-#  on these magnitudes (B: 0.009, V:0.027) 
-#  for u_s,g_s,r_s,i_s,z_s:  Used the 4 subdwarfs in Fukugita et al. 1996 along
-#  with their standard magnitudes (see sloan_standards and sloan_mags) 
-#  for  u_40,g_40,r_40,i_40 (USNO):  Same as for the u_s,g_s,r_s,i_s,z_s set.  
-#  for #  u,g,r,i (SWOPE):  Same as for the u_s,g_s,r_s,i_s,z_s set.  
-#  for YJHK (SWOPE):   Used the Bohlen model of Vega and assumed JHK mags from
-#  Stritzinger Y assumed to be 0.0 mag.  
-#  for Yc Jc (PANIC):    Same.
 
-# Now we define the filters:
-#          Name                           Filename          zeropoint
-standards = {}
-standard_mags = {}
-dirs = glob(stand_base+'/*')
-dirs = [dir for dir in dirs if os.path.isdir(dir) and \
-      os.path.isfile(os.path.join(dir,'standards.dat'))]
+class system:
+   '''An object that contains a photometric system of standards.'''
 
-for dir in dirs:
-   sname = os.path.basename(dir)
-   standards[sname] = {}
-   standard_mags[sname] = {}
-   f = open(os.path.join(stand_base, sname, 'standards.dat'))
-   lines = f.readlines()
-   for line in lines:
-      if line[0] == "#":  continue
-      l = line.split()
-      standards[sname][l[0]] = spectrum(l[0], os.path.join(stand_base,sname,l[1]),
-                             string.join(l[3:]), load=0)
-      standard_mags[sname][l[0]] = {}
-      if os.path.isfile(os.path.join(stand_base,sname,l[2])):
-         f2 = open(os.path.join(stand_base,sname,l[2]))
-         lines2 = f2.readlines()
-         lines2 = map(string.split, lines2)
-         for i in range(len(lines2)):
-            if lines2[i][0] == "#":  continue
-            standard_mags[sname][l[0]][lines2[i][0]] = float(lines2[i][1])
-         f2.close()
-   f.close()
+   def __init__(self, name):
+      self.name = name
+      self.SEDs = {}
 
-vegaK = standards['Vega']['VegaK']
-vegaH = standards['Vega']['VegaH01']
-vegaH85 = standards['Vega']['VegaH85']
-vegaB = standards['Vega']['VegaB']
-vega = vegaB
+   def add_SED(self, SED):
+      if not isinstance(SED, spectrum):
+         raise ValueError, "SED must be a spectrum instance"
+      self.SEDs[SED.name] = SED
+
+   def list_SEDs(self):
+      for SED in self.SEDs:
+         print "\t"+self.SEDs[SED].name
+
+   def __getattr__(self, attr):
+      if attr in self.__dict__['SEDs']:
+         return self.__dict__['SEDs'][attr]
+      else:
+         raise AttributeError
+
+   def __getitem__(self, key):
+      if key in self.SEDs:
+         return self.SEDs[key]
+      else:
+         raise AttributeError
+
+   def __str__(self):
+      ret = "system %s with standards:  " % (self.name)
+      for key in self.SEDs:  ret += "%s, " % (key)
+      return ret
+
+   def __repr__(self):
+      return self.__str__()
+
+class standard_set:
+   '''An object that will contain all the standard SEDs.  The
+   standard set contains a dictionary of system objects.  Each
+   system object contains a dictionary of spectrum objects.
+   So standards.Vega.Bohlin04  would refer to the Bohlin & Gllliand
+   2004 SED.  You can also refer to the spectrum with a unique ID 
+   as, e.g., standards['VegaB'].'''
+
+   def __init__(self):
+      self.systems = {}
+      self.spectra = {}
+
+   def add_system(self, name):
+      self.systems[name] = system(name)
+
+   def list_systems(self):
+      for syst in self.systems:
+         print syst+": "+self.systems[syst].name
+
+   def list_SEDS(self):
+      for syst in self.systems:
+         print self.systems[syst].name
+         self.systems[syst].list_SEDS()
+
+   def cache_spectra(self):
+      for syst in self.systems.values():
+         for sed in syst.SEDs.values():
+            if sed.name in self.spectra:
+               print "Warning!  Encountered multiple filter IDs for %s" %\
+                        (sed)
+            self.spectra[sed.name] = sed
+
+   def __getattr__(self, attr):
+      if attr in self.__dict__['systems']:
+         return self.__dict__['systems'][attr]
+      elif attr in self.__dict__['spectra']:
+         return self.__dict__['spectra'][attr]
+      else:
+         raise AttributeError
+
+   def __getitem__(self, key):
+      if key in self.spectra:
+         return self.spectra[key]
+      elif key in self.systems:
+         return self.systems[key]
+      else:
+         raise KeyError, "spectrum ID %s not found" % (key)
+
+   def __setitem__(self, key, value):
+      self.spectra[key] = value
+
+   def __contains__(self, key):
+      if key in self.spectra:
+         return True
+      else:
+         return False
 
 class filter_set:
    '''An object that will contain all the filter instances.  The
@@ -514,6 +556,43 @@ class telescope:
    def __repr__(self):
       return self.__str__()
 
+# Now load in the standard spectra and filter set.
+standards = standard_set()
+standard_mags = {}
+dirs = glob(stand_base+'/*')
+dirs = [dir for dir in dirs if os.path.isdir(dir) and \
+      os.path.isfile(os.path.join(dir,'standards.dat'))]
+
+for dir in dirs:
+   sname = os.path.basename(dir)
+   standards.add_system(sname)
+   standard_mags[sname] = {}
+   f = open(os.path.join(stand_base, sname, 'standards.dat'))
+   lines = f.readlines()
+   for line in lines:
+      if line[0] == "#":  continue
+      l = line.split()
+      standards[sname].add_SED(spectrum(l[0], os.path.join(stand_base,sname,l[1]),
+                             string.join(l[3:]), load=0))
+      standard_mags[sname][l[0]] = {}
+      if os.path.isfile(os.path.join(stand_base,sname,l[2])):
+         f2 = open(os.path.join(stand_base,sname,l[2]))
+         lines2 = f2.readlines()
+         lines2 = map(string.split, lines2)
+         for i in range(len(lines2)):
+            if lines2[i][0] == "#":  continue
+            standard_mags[sname][l[0]][lines2[i][0]] = float(lines2[i][1])
+         f2.close()
+   f.close()
+standards.cache_spectra()
+
+vegaK = standards.Vega.VegaK
+vegaH = standards.Vega.VegaH01
+vegaH85 = standards.Vega.VegaH85
+vegaB = standards.Vega.VegaB
+vega = vegaB
+bd17 = standards.Smith.bd17
+
 
 fset = filter_set()
 obsdirs = glob(os.path.join(filter_base,'*'))
@@ -531,7 +610,26 @@ for obs in obsdirs:
       lines = f.readlines()
       for line in lines:
          l = line.split()
-         fset.observatories[obs_name].telescopes[tel_name].add_filter(
+         if l[2].find('=') >= 0:
+            # WE have a std=mag format
+            std,mag = map(string.strip, l[2].split('='))
+            if std  in standards:
+               try:
+                  m = float(mag)
+               except:
+                  raise ValueError, \
+                        "Could not convert standard magnitude for filter %s" %\
+                        l[0]
+               newf = filter(l[0], os.path.join(dir,l[1]), 0.0, string.join(l[3:]))
+               newf.zp = newf.compute_zpt(standards[std], m)
+               fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
+            else:
+               raise ValueError, \
+                     "Could not find standard %s for filter %s" % (std,l[0])
+
+
+         else:
+            fset.observatories[obs_name].telescopes[tel_name].add_filter(
                          filter(l[0], os.path.join(dir,l[1]),
                              float(l[2]), string.join(l[3:])))
       f.close()

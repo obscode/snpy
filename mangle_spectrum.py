@@ -15,6 +15,7 @@ except:
 from snpy.utils import deredden
 from snpy.utils import mpfit
 import copy
+#from matplotlib import pyplot as plt
 
 filts = fset
 debug=False
@@ -54,12 +55,7 @@ class f_tspline(function):
       self.pars = None
       self.verbose = verbose
 
-   #def setup(self):
-   #   # First, we need to figure out the wavelengths for the control points
-   #   self.knots = self.parent.ave_waves
-   #   self.factors = self.knots*0 + 1.0
-
-   def init_pars(self):
+   def init_pars(self, nid=0):
       # one parameter for each knot points
       p = []
       pi = [{'fixed':0, 'limited':[1,0], 'limits':[0.0,0.0], 'step':0.001, 'value':1.0} \
@@ -68,18 +64,11 @@ class f_tspline(function):
       nf = len(bs)
       knots = self.parent.ave_waves
       if bs[0] == 'blue':
-         for i in range(1, len(self.parent.fluxes) + 1):
-            pi[i]['value'] = self.parent.fluxes[i-1]
          if self.gradient:
             dw = (knots[0] - knots[1])/(knots[1] - knots[2])
             pi[0]['tied']='p[1] + %8.4f*(p[1]-p[2])' % (dw)
-            pi[0]['value'] = self.parent.fluxes[0]
          else:
             pi[0]['tied'] = 'p[1]'
-      else:
-         for i in range(0, len(self.parent.fluxes)):
-            pi[i]['value'] = self.parent.fluxes[i-1]
-
       if self.parent.allbands[-1] == 'red':
          pi[-1]['value'] = pi[-2]['value']
          if self.gradient:
@@ -87,6 +76,7 @@ class f_tspline(function):
             pi[-1]['tied']='p[%d] + %8.4f*(p[%d]-p[%d])' % (nf-2, dw, nf-2, nf-3)
          else:
             pi[-1]['tied'] = 'p[%d]' % (nf - 2)
+      pi[nid]['fixed'] = 1
       return(pi)
 
    def set_pars(self, pars):
@@ -102,7 +92,7 @@ class f_tspline(function):
          xyds = tspline.tspsi(self.parent.ave_waves, self.pars, 
                tension=self.tension, slopes=self.slopes)
 
-      res = tspline.tsval1(x, xyds)
+      res = num.array([tspline.tsval1(x[i], xyds) for i in range(x.shape[0])])
 
       y0 = tspline.tsval1(self.parent.ave_waves[0], xyds)[0]
       y1 = tspline.tsval1(self.parent.ave_waves[-1], xyds)[0]
@@ -121,22 +111,23 @@ class f_tspline(function):
 class f_ccm(function):
 
    def __init__(self, parent, tension=None, gradient=False, slopes=None, verbose=False):
-      self.pars = [1.0, 0.0, 3.1]
+      self.pars = [0.0, 3.1]
       self.verbose = verbose
 
-   def init_pars(self):
+   def init_pars(self, nid=0):
       # one parameter for each of scale, ebv, rv
       pi = [{'fixed':0, 'limited':[1,0], 'limits':[0.0, 0.0], 'value':1.0, 'step':0.0001},
             {'fixed':0, 'limited':[0,0], 'value':0.0, 'step':0.0001},
             {'fixed':0, 'limited':[1,0], 'limits':[0.0, 0.0], 'value':3.1, 'step':0.0001}]
-      return(pi)
+      return(pi[1:])
 
    def set_pars(self, pars):
       self.pars = pars
 
    def __call__(self, x):
-      m,a,b = deredden.unred(x, x*0+1,-self.pars[1], R_V=self.pars[2])
-      m *= self.pars[0]
+      m = num.array([deredden.unred(x[i], x[i]*0+1, -self.pars[0], R_V=self.pars[1])[0]\
+            for i in range(x.shape[0])])
+      #m *= self.pars[0]
       return m
 
 mangle_functions = {'tspline':f_tspline,
@@ -150,8 +141,12 @@ class mangler:
 
    def __init__(self, wave, flux, method, z=0, **margs):
 
-      self.wave = wave
-      self.flux = flux
+      self.wave = num.asarray(wave)
+      self.flux = num.asarray(flux)
+      if len(num.shape(self.wave)) == 1:
+         self.wave = self.wave.reshape((1,self.wave.shape[0]))
+      if len(num.shape(self.flux)) == 1:
+         self.flux = self.flux.reshape((1,self.flux.shape[0]))
       self.ave_waves = None
       if method not in mangle_functions:
          methods = ",".join(mangle_funcitons.keys())
@@ -160,25 +155,24 @@ class mangler:
       self.z = z
       self.verbose=margs.get('verbose', False)
 
-      self.mags = num.zeros((20,), dtype=num.float32)  # scratch space
-
    def get_colors(self, bands):
       '''Given a set of filters, determine the colors of the mangled
       spectrum for the current set of function parameters.  You'll get
       N-1 colors for N bands and each color will be bands[i+1]-bands[i]'''
       mflux = self.function(self.wave)*self.flux
-      for i,b in enumerate(bands):
-         #mags.append(fset[b].synth_mag(self.wave, mflux, z=self.z))
-         self.mags[i] = fset[b].synth_mag(self.wave, mflux, z=self.z)
-      N = len(bands)
-
-      return self.mags[1:N] - self.mags[0:N-1]
+      cs = self.resp_rats*0
+      for i in range(cs.shape[0]):
+         for j in range(cs.shape[1]):
+            m1 = fset[bands[j]].synth_mag(self.wave[i], mflux[i], z=self.z)
+            m2 = fset[bands[j+1]].synth_mag(self.wave[i], mflux[i], z=self.z)
+            cs[i,j] = m1-m2
+      return cs
 
    def get_mflux(self):
       '''Given the current paramters, return the mangled flux.'''
-      if self.verbose:  print 'calling mangling function'
+      #if self.verbose:  print 'calling mangling function'
       mflux = self.function(self.wave)
-      if self.verbose:  print 'done'
+      #if self.verbose:  print 'done'
       return(self.flux*mflux)
 
    def create_anchor_filters(self, bands, anchorwidth):
@@ -212,36 +206,48 @@ class mangler:
       wave0 = filts['blue'].wave[0]
       wave1 = filts['red'].wave[-1]
    
-      if wave0 < self.wave[0]*(1+self.z) or wave1 > self.wave[-1]*(1+self.z): 
+      if wave0 < self.wave.min()*(1+self.z) or wave1 > self.wave.max()*(1+self.z): 
          print 'Problem in mangle_spectrum: SED does not cover anchor filter '+\
                'definitions'
          if(self.verbose): 
             print 'Anchor filter definitions cover  ',wave0, 'A to ',wave1,'A'
-            print 'SED covers ',self.wave[0]*(1+self.z),'A to ',\
-                  self.wave[-1]*(1+self.z),'A (observed)'
+            print 'SED covers ',self.wave.min()*(1+self.z),'A to ',\
+                  self.wave.max()*(1+self.z),'A (observed)'
       if(self.verbose): print 'Anchor filter definitions cover  ', \
                                wave0,'A to ',wave1,'A'
       
 
    def solve(self, bands, colors, norm_filter=None, fixed_filters=None, 
-         anchorwidth=100, xtol=1e-10, ftol=1e-10, gtol=1e-10):
+         anchorwidth=100, xtol=1e-10, ftol=1e-4, gtol=1e-10):
       '''Solve for the mangling function that will produce the observed colors
       in the filters defined by bands.'''
 
+      # going to try to do multiple-epoch colors simultaneously with one
+      #  mangle function.  colors[i,j] = color for epoch i, color j
+      colors = num.asarray(colors)
+      if len(num.shape(colors)) == 1:
+         colors = colors.reshape((1,colors.shape[0]))
+      if colors.shape[0] != self.wave.shape[0]:
+         raise ValueError, "colors.shape[0] and number of spectra must match"
+      if colors.shape[1] != len(bands) - 1:
+         raise ValueError, "colors.shape[1] must be len(bands)-1"
+      self.gids = num.less(colors, 90)
+
       self.bands = bands
-      self.mfluxes = num.zeros((len(bands),), dtype=num.float32)
+      self.mfluxes = num.zeros((colors.shape[0],len(bands)), dtype=num.float32)
       self.mfactors = num.array([num.power(10,-0.4*fset[b].zp) for \
             b in self.bands])
 
-      if len(bands) != len(colors) + 1:
+      if len(bands) != colors.shape[1] + 1:
          raise ValueError, "length of bands must be one more than colors"
 
       if norm_filter is None:
-         norm_filter = bands[-1]
+         num_good = num.sum(self.gids*1, axis=0)
+         norm_filter = bands[num.argmax(num_good)+1]
       else:
          if norm_filter not in bands:
             raise ValueError, "norm_filter must be one of bands"
-      colors = num.asarray(colors)
+      #print norm_filter
       if fixed_filters is not None:
          if fixed_filters == "blue":
             fixed_filters = [bands[0]]
@@ -260,36 +266,33 @@ class mangler:
       self.ave_waves = num.array([fset[b].ave_wave for b in self.allbands])
 
       # Construct the flux levels we want from the colors
-      flux_rats = num.power(10, 0.4*colors)    # N-1 of these
-      fluxes = num.zeros((len(bands),), dtype=num.Float64)
-      fluxes[0] = fset[bands[0]].response(self.wave, self.flux, z=self.z)/\
-            num.power(10,0.4*fset[bands[0]].zp)
-      for i in range(1, len(bands)):
-         fluxes[i] = fluxes[i-1]*flux_rats[i-1]
+      flux_rats = num.power(10, 0.4*colors)    # M X N-1 of these
+      dzps = num.array([fset[bands[i]].zp - fset[bands[i+1]].zp \
+            for i in range(0,len(bands)-1)])
+      self.resp_rats = num.power(10, -0.4*(colors - dzps[num.newaxis,:]))
+      self.resp_rats = num.where(self.gids, self.resp_rats, 1)
       id = bands.index(norm_filter)
-      factor = fset[norm_filter].response(self.wave, self.flux, z=self.z)/\
-            num.power(10, 0.4*fset[norm_filter].zp)/fluxes[id]
-
-      self.fluxes = fluxes*factor
       if self.verbose:
          print "You input the following colors:"
+         for i in range(colors.shape[1]):
+            print "%s - %s" % (bands[i],bands[i+1])
          print colors
-         print "This translates to the following fluxes:"
-         print self.fluxes
-         print "Which, for self-consistency, should be:"
-         print [-2.5*num.log10(self.fluxes[i]/self.fluxes[i+1]) for i in range(len(bands)-1)]
+         print "This translates to the following response ratios:"
+         print self.resp_rats[self.gids]
          print "Initial colors for this spectrum are:"
          print self.get_colors(bands)
 
+
       # Do some initial setup
-      pi = self.function.init_pars()
+      pi = self.function.init_pars(nid=id)
 
       if self.verbose:
          quiet = 0
       else:
          quiet = 1
+      #quiet = 1
       result = mpfit.mpfit(self.leastsq, parinfo=pi, quiet=quiet, maxiter=200,
-            ftol=ftol, gtol=gtol, xtol=xtol, functkw={'bands':bands})
+            ftol=ftol, gtol=gtol, xtol=xtol, functkw={'bands':bands,'nid':id})
       if (result.status == 5) : print \
         'Maximum number of iterations exceeded in mangle_spectrum'
       self.function.set_pars(result.params)
@@ -298,173 +301,29 @@ class mangler:
          print self.get_colors(bands)
       return(result)
 
-   def leastsq(self, p, fjac, bands):
+   def leastsq(self, p, fjac, bands, nid):
       self.function.set_pars(p)
       mflux = self.get_mflux()
-      for i,b in enumerate(bands):
-         self.mfluxes[i] = fset[b].response(self.wave, mflux, z=self.z)
-      #mfluxes = num.array([fset[b].response(self.wave, mflux, z=self.z)/\
-      #      num.power(10, 0.4*fset[b].zp) for b in self.bands])
-      return (0, self.fluxes - self.mfluxes*self.mfactors)
+      mresp = self.resp_rats*0
+      filts = num.arange(mresp.shape[1])
+      filts = num.repeat(filts, mresp.shape[0]).reshape(mresp.shape[::-1]).T
+      for i in range(mresp.shape[0]):
+         for j in range(mresp.shape[1]):
+            if not self.gids[i,j]:  continue
+            mresp[i,j] = fset[bands[j]].response(self.wave[i], mflux[i], z=self.z)/\
+                         fset[bands[j+1]].response(self.wave[i], mflux[i], z=self.z)
 
-#class mangler2:
-#   '''Given a set of spectra, find the best single function's 
-#   paramters, such that the function multiplied by the spectra produce
-#   the colors specified.  The idea here is to find a single mangling
-#   function that best describes the total evolution of the SN 
-#   photometry (rather than finding one for each epoch)'''
-#
-#   def __init__(self, wave, flux, method, z=0, **margs):
-#
-#      self.wave = wave
-#      self.flux = flux
-#      self.Nspec = num.shape(self.flux)[0]
-#      self.ave_waves = None
-#      if method not in mangle_functions:
-#         methods = ",".join(mangle_funcitons.keys())
-#         raise ValueError, "method must be one of the following:\n%s" % methods
-#      self.function = mangle_functions[method](self, **margs)
-#      self.z = z
-#      self.verbose=margs.get('verbose', False)
-#
-#      self.mags = num.zeros((self.Nspec,20), dtype=num.float32)  # scratch space
-#
-#   def get_colors(self, bands):
-#      '''Given a set of filters, determine the colors of the mangled
-#      spectrum for the current set of function parameters.  You'll get
-#      N-1 colors for N bands and each color will be bands[i+1]-bands[i]'''
-#      mflux = self.function(self.wave)[num.newaxis,:]*self.flux
-#      for i in range(self.Nspec):
-#         for j,b in enumerate(bands):
-#            self.mags[i,j] = fset[b].synth_mag(self.wave, mflux[i], z=self.z)
-#      N = len(bands)
-#
-#      return self.mags[:,1:N] - self.mags[:,0:N-1]
-#
-#   def get_mflux(self):
-#      '''Given the current paramters, return the mangled flux.'''
-#      if self.verbose:  print 'calling mangling function'
-#      mflux = self.function(self.wave)
-#      if self.verbose:  print 'done'
-#      return(self.flux*mflux[num.newaxis,:])
-#
-#   def create_anchor_filters(self, bands, anchorwidth):
-#      '''Given a set of filters in bands, create two fake filters at
-#      either end to serve as anchor filters.'''
-#      mean_wave = num.array([fset[b].ave_wave for b in bands])
-#      red = bands[num.argmax(mean_wave)]
-#      blue = bands[num.argmin(mean_wave)]
-#
-#      wave0 = fset[blue].wave[0]
-#      wave1 = fset[red].wave[-1]
-#
-#      # Create two new fake filters
-#      fset['blue'] = filter('blue_anchor')
-#      fset['red'] = filter('red_anchor')
-#      resp = num.array([0.,0.,1.,1.,0.,0.])
-#      dwave = num.array([anchorwidth+2., anchorwidth+1., anchorwidth, 3., 2., 1.])
-#   
-#      filts['blue'].wave = wave0 - dwave
-#      filts['blue'].resp = resp*1.0
-#      filts['red'].wave = wave1 + dwave[::-1]
-#      filts['red'].resp = resp
-#   
-#      # Setup zero points to reasonable values
-#      filts['red'].zp = filts['red'].compute_zpt(vegaB, 0.0)
-#      filts['blue'].zp = filts['blue'].compute_zpt(vegaB, 0.0)
-#   
-#      filts['red'].ave_wave = num.sum(filts['red'].wave)/len(filts['red'].wave)
-#      filts['blue'].ave_wave = num.sum(filts['blue'].wave)/len(filts['blue'].wave)
-#   
-#      wave0 = filts['blue'].wave[0]
-#      wave1 = filts['red'].wave[-1]
-#   
-#      if wave0 < self.wave[0]*(1+self.z) or wave1 > self.wave[-1]*(1+self.z): 
-#         print 'Problem in mangle_spectrum: SED does not cover anchor filter '+\
-#               'definitions'
-#         if(self.verbose): 
-#            print 'Anchor filter definitions cover  ',wave0, 'A to ',wave1,'A'
-#            print 'SED covers ',self.wave[0]*(1+self.z),'A to ',\
-#                  self.wave[-1]*(1+self.z),'A (observed)'
-#      if(self.verbose): print 'Anchor filter definitions cover  ', \
-#                               wave0,'A to ',wave1,'A'
-#      
-#
-#   def solve(self, bands, colors, norm_filter=None, fixed_filters=None, 
-#         anchorwidth=100, xtol=1e-10, ftol=1e-10, gtol=1e-10):
-#      '''Solve for the mangling function that will produce the observed colors
-#      in the filters defined by bands.'''
-#
-#      # colors[i,j] = color for specrum i, band[j+1]-band[j]
-#      self.bands = bands
-#      self.mfluxes = num.zeros((self.Nspec,len(bands)), dtype=num.float32)
-#      self.mfactors = num.array([num.power(10,-0.4*fset[b].zp) for \
-#            b in self.bands])
-#
-#      if len(bands) != colors.shape[1] + 1:
-#         raise ValueError, "length of bands must be one more than colors"
-#
-#      if norm_filter is None:
-#         norm_filter = bands[-1]
-#      else:
-#         if norm_filter not in bands:
-#            raise ValueError, "norm_filter must be one of bands"
-#      colors = num.asarray(colors)
-#      self.gids = num.less(colors, 90)
-#      if fixed_filters is not None:
-#         if fixed_filters == "blue":
-#            fixed_filters = [bands[0]]
-#         elif fixed_filters == 'red':
-#            fixed_filters = [bands[-1]]
-#         elif fixed_fitlers == 'both':
-#            fixed_filters = [bands[0], bands[-1]]
-#         else:
-#            raise ValueError, "fixed_filters must be 'blue','red', or 'both'"
-#         self.allbands = bands
-#      else:
-#         self.create_anchor_filters(bands, anchorwidth)
-#         self.allbands = ['blue'] + bands + ['red']
-#
-#      # The average wavelengths of the filters being used
-#      self.ave_waves = num.array([fset[b].ave_wave for b in self.allbands])
-#
-#      # Construct the flux levels we want from the colors
-#      flux_rats = num.power(10, 0.4*colors)    # (Nspec,N-1) of these
-#      fluxes = num.zeros((Nspec,len(bands)), dtype=num.Float32)
-#      for i in range(Nspec):
-#         fluxes[i,0] = fset[bands[0]].response(self.wave, self.flux[i], z=self.z)/\
-#            num.power(10,0.4*fset[bands[0]].zp)
-#         for j in range(1, len(bands)):
-#            fluxes[i,j] = fluxes[i,j-1]*flux_rats[i,j-1]
-#      id = bands.index(norm_filter)
-#      factor = num.array([fset[norm_filter].response(self.wave, self.flux[i], 
-#         z=self.z)/num.power(10, 0.4*fset[norm_filter].zp)/fluxes[id] \
-#               for i in range(Nspec)])
-#
-#      self.fluxes = num.ravel(fluxes[:,num.newaxis]*factor)
-#      # Do some initial setup
-#      pi = self.function.init_pars()
-#
-#      if self.verbose:
-#         quiet = 0
-#      else:
-#         quiet = 1
-#      result = mpfit.mpfit(self.leastsq, parinfo=pi, quiet=quiet, maxiter=200,
-#            ftol=ftol, gtol=gtol, xtol=xtol, functkw={'bands':bands})
-#      if (result.status == 5) : print \
-#        'Maximum number of iterations exceeded in mangle_spectrum'
-#      self.function.set_pars(result.params)
-#      return(result)
-#
-#   def leastsq(self, p, fjac, bands):
-#      self.function.set_pars(p)
-#      mflux = self.get_mflux()
-#      for i in range(Nspec):
-#         for j,b in enumerate(bands):
-#            self.mfluxes[i,j] = fset[b].response(self.wave, mflux[i], z=self.z)
-#      #mfluxes = num.array([fset[b].response(self.wave, mflux, z=self.z)/\
-#      #      num.power(10, 0.4*fset[b].zp) for b in self.bands])
-#      return (0, self.fluxes - num.ravel(self.mfluxes*self.mfactors[num.newaxis,:]))
+      delt = self.resp_rats[self.gids] - mresp[self.gids]
+      #f = plt.figure(200)
+      #f.clear()
+      #ax = f.add_subplot(111)
+      #if len(ax.lines) == 2:
+      #   ax.lines[1].set_ydata(mresp[self.gids])
+      #else:
+      #   ax.plot(filts[self.gids], self.resp_rats[self.gids],'.')
+      #   ax.plot(filts[self.gids], mresp[self.gids],'.')
+      #plt.draw()
+      return (0, num.ravel(delt))
 
 messages = ['Bad input parameters','chi-square less than ftol',
       'paramters changed less than xtol',

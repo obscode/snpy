@@ -13,7 +13,6 @@ have_sql = sqlmod.have_sql
 import types
 import plot_sne_mpl as plotmod
 from lc import lc           # the light-curve class
-from distutils.version import StrictVersion
 from numpy.oldnumeric import *       # Vectors
 import ubertemp             # a template class that contains these two
 import kcorr                # Code for generating k-corrections
@@ -27,18 +26,21 @@ from scipy.integrate import trapz
 from scipy.interpolate import interp1d
 from utils import fit_spline # My Spline fitting routines
 from filters import fset    # filter definitions.
-from filters import standards as spectra # spectra.
+from filters import standards # standard SEDs
 import mangle_spectrum      # SN SED mangling routines
 import pickle
 import model
 from utils.fit1dcurve import list_types,regularize
 
-Version = '2.0b'     # Let's keep track of this from now on.
+Version = '2.1b'     # Let's keep track of this from now on.
+__version__ = Version
 
 # Some useful functions in other modules which the interactive user may want:
 getSED = kcorr.get_SED
 Robs = kcorr.R_obs
 Ia_w,Ia_f = getSED(0, 'H3')
+Vega = standards.Vega.VegaB
+BD17 = standards.Smith.bd17
 
 class dict_def:
    '''A class that acts like a dictionary, but if you ask for a key
@@ -280,16 +282,15 @@ class sn(object):
 
    def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0):
       '''Use the Lira Law to derive a color excess.  [Bband] and [Vband] 
-      should be
-      whichever observed bands corresponds to restframe B and V, respectively.
-      Use [interpolate]=1 to interpolate missing data.  If [interpolate]=0, then
-      no color is computed where data is missing.  The color excess is
-      estimated to be the median of the offset between the Lira line and the 
-      data.  The uncertainty is 1.49 times the median absolute deviation of
-      the offset data from the Lira line.  If you want to restrict the data
-      used, use [tmin] and [tmax] to define a window.  If you want a graph use
-      [plot]=1.  Returns a 3-tuple:  the E(B-V), error, and the fit splope (which
-      can be used as a diagnostic).'''
+      should be whichever observed bands corresponds to restframe B and V,
+      respectively.  Use [interpolate]=1 to interpolate missing data.  If
+      [interpolate]=0, then no color is computed where data is missing.  The
+      color excess is estimated to be the median of the offset between the Lira
+      line and the data.  The uncertainty is 1.49 times the median absolute
+      deviation of the offset data from the Lira line.  If you want to restrict
+      the data used, use [tmin] and [tmax] to define a window.  If you want a
+      graph use [plot]=1.  Returns a 3-tuple:  the E(B-V), error, and the fit
+      splope (which can be used as a diagnostic).'''
 
       # find V-maximum
       t_maxes,maxes,e_maxes,restbands = self.get_rest_max([Vband])
@@ -343,7 +344,7 @@ class sn(object):
       return self.get_max(bands, deredden=deredden, restframe=1)
 
    def get_max(self, bands, restframe=0, deredden=0):
-      '''Get the rest-frame maximum magnitue in [bands] based on the currently
+      '''Get the  maximum magnitude in [bands] based on the currently
       defined model or spline fits.  If you want rest-frame maxima 
       (i.e., have the k-corrections at maximum subtracted), set [restframe]=1.  
       If you want the reddening (galactic and/or host) removed, set 
@@ -352,6 +353,11 @@ class sn(object):
       (Tmax,Mmax,e_Mmax,rband)
       Tmax = array of times of maximum, Mmax = array of maximum magnitudes,
       e_Mamx = error in max magnitudes, rband=rest-band for each filter.'''
+      if type(bands) is type(""):
+         bands = [bands]
+         scalar = True
+      else:
+         scalar = False
       model_bands = [b for b in bands if b in self.model._fbands]
       lc_model_bands = [b for b in bands if self.data[b].Mmax is not None]
       for band in bands:
@@ -374,6 +380,8 @@ class sn(object):
             result[1][i] = self.data[b].Mmax
             result[2][i] = self.data[b].e_Mmax
             result[3][i] = b
+      if scalar:
+         return (result[0][0],result[1][0],result[2][0],result[3][0])
       return result
 
    def kcorr(self, bands=None, mbands=None, mangle=1, interp=1, use_model=0, 
@@ -498,7 +506,7 @@ class sn(object):
          raise RuntimeError, \
             "Error:  your epochs are all outside -20 < t < 70.  Check self.Tmax"
       kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle2(t/(1+self.z)/s, bands, 
-            mags, masks, restbands, self.z, normfilter=mbands[-1], 
+            mags, masks, restbands, self.z, 
             colorfilts=mbands, version=self.k_version, full_output=1, **mopts)
       mask = greater(mask, 0)
       kcorrs = array(kcorrs)
@@ -535,7 +543,7 @@ class sn(object):
          raise AttributeError, "Mangling info not found... try running self.kcorr()"
       epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
       wave,flux = kcorr.get_SED(int(epoch), version=self.k_version)
-      man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][i])
+      man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][i])[0]
       return(wave,man_flux,flux,man_flux/flux)
    
    def get_color(self, band1, band2, interp=1, use_model=0, model_float=0, kcorr=0):
@@ -679,9 +687,9 @@ class sn(object):
       invalid (1).'''
       base = self.name + "_lc_"
       if not epoch:
-         toff = self.Tmax
-      else:
          toff = 0
+      else:
+         toff = self.Tmax
       for filter in self.data.keys():
          f = open(base+filter+"_data.dat", 'w')
          print >> f, "#  column 1:  time"
@@ -698,12 +706,12 @@ class sn(object):
                   flag = (not self.ks_mask[filter][i])
                   ks = self.ks[filter][i]
                print >> f, "%.2f  %.3f  %.3f  %d" % \
-                     (self.data[filter].t[i]+toff, 
+                     (self.data[filter].MJD[i]-toff, 
                      self.data[filter].mag[i] - ks, 
                      self.data[filter].e_mag[i], flag)
             else:
                print >> f, "%.2f  %.3f  %.3f  %d" % \
-                     (self.data[filter].t[i]+toff, 
+                     (self.data[filter].MJD[i]-toff, 
                      self.data[filter].mag[i], self.data[filter].e_mag[i], 0)
          f.close()
          if filter in self.model._fbands:
@@ -723,18 +731,18 @@ class sn(object):
             print >>f, "# column 1: time"
             print >>f, "# column 2:  model magnitude"
             for i in range(len(ts)):
-               print >> f, "%.1f, %.3f" % (ts[i]+toff, ms[i])
+               print >> f, "%.1f, %.3f" % (ts[i]+self.Tmax-toff, ms[i])
             f.close()
-         if self.data[filter].tck is not None:
-            f = open(base+filter+"_spline.dat", 'w')
-            ts = arange(self.data[filter].tck[0][0], 
-                  self.data[filter].tck[0][-1]+1, 1.0)
-            m,mask = self.data[filter].eval(ts, t_tol=-1)
+         if self.data[filter].interp is not None:
+            f = open(base+filter+"_smooth.dat", 'w')
+            x0,x1 = self.data[filter].interp.domain()
+            ts = arange(x0, x1+1, 1.0)
+            m,mask = self.data[filter].interp(ts)
             print >> f, "# column 1:  time"
             print >> f, "# column 2:  splined magnitude"
             for i in range(len(ts)):
                if not mask[i]:  continue
-               print >> f, "%.1f  %.3f" % (ts[i]+toff-self.Tmax, m[i])
+               print >> f, "%.1f  %.3f" % (ts[i]-toff, m[i])
             f.close()
 
    def update_sql(self, attributes=None, dokcorr=1):
@@ -853,11 +861,13 @@ class sn(object):
          margs={}, **args):
       '''Fit the N light curves with the currently set model (see 
       self.choose_model()).  The parameters that can be varried or held 
-      fixed depending on the model being used (try help(self.model)
+      fixed depend on the model being used (try help(self.model)
       for this info).  If one of these parameters is specified with a 
       value as an argument, it is held fixed.  Otherwise it is varied.  
       If you set a parameter to None, it will be automoatically chosen by 
-      self.model.guess().
+      self.model.guess().  Specify which filters to fit by supplying a
+      list of strings for the [bands] argument.  Otherwise, all filters
+      whose restbands can be modeled are fit simultaneously.
 
       There are several optional arguments that change how the fit deals
       with k-corrections:
@@ -870,7 +880,12 @@ class sn(object):
          - reset_kcorrs=1:  before the first fit, zero any previous 
                       k-corrections.  Setting  this to false and kcorr to 
                       false will use the k-corrections previously computed 
-                      (i.e., those saved in s.ks).
+                      (i.e., othose saved in s.ks).
+         - k_sretch=True:  Use the stretch (or dm15) to stretch the SED
+                      template in time before computing k-corrections.
+         - margs={}:  Specify arguments to be used when the mangling
+                      is done.  Try help(kcorr.mangle_spectrum2) to find
+                      out what arguments are available.
       NOTE:  If you have data that has already been k-corrected (either
              outside SNooPy or by setting the individual data's K
              attributes, use kcorr=0 and reset_kcorrs=1.  If you have
@@ -1032,7 +1047,7 @@ class sn(object):
       to use the first filter in bands).  To extrapolate the red end of
       the spectrum using Rayleigh-Jeans, use extrap_red='RJ', otherwise
       set it to None.  To specify a function of wavelength for the blue
-      end, use [extrap_blue].  Specifying [outfile] will save the graph.'''
+      end, use [extrap_blue].'''
       for b in bands:  
          if b not in self.data:
             raise AttributeError, "band %s not defined in data set" % (b)
@@ -1057,11 +1072,11 @@ class sn(object):
          normband = bands[0]
       if verbose:  print "Normalizing to flux in %s band" % normband
 
-      if 'ks_mopt' not in self.__dict__:
-         ks_mopt = {}
+      if 'ks_mopts' not in self.__dict__:
+         ks_mopts = {}
       else:
-         ks_mopt = self.ks_mopt
-      if not alltrue(array([b in ks_mopt for b in bands])):
+         ks_mopts = self.ks_mopts
+      if not alltrue(array([b in ks_mopts for b in bands])):
          remangle = 1
 
       if remangle:
@@ -1086,10 +1101,11 @@ class sn(object):
 
          # normalize to observed flux
          mobs,mask = self.data[normband].eval(MJD[-1], t_tol=-1)
-         if not mask:
+         if not mask[0]:
             bol.append(0.0)
             bol_mask.append(False)
-         fobs = power(10, -0.4*(mobs - fset[normband].zp))
+            continue
+         fobs = power(10, -0.4*(mobs[0] - fset[normband].zp))
          fint = fset[normband].response(wave*(1+self.z), mflux)
          mflux = mflux*fobs/fint
 
@@ -1130,7 +1146,7 @@ class sn(object):
 
          bol_mask.append(True)
          bol.append(flx)
-      return(self.dadta[refband].t, array(bol),array(bol_mask))
+      return(self.data[refband].t, array(bol),array(bol_mask))
 
    def closest_band(self, band, tempbands=None, lowz=0.15):
       '''Find the rest-frame filter in [tempbands] that is closest to the

@@ -289,6 +289,8 @@ class EBV_model(model):
 
    def __call__(self, band, t):
       self.template.mktemplate(self.dm15)
+      if len(shape(t)) == 0:
+         t = array([t])
       t = t - self.Tmax
       rband = self.parent.restbands[band]
 
