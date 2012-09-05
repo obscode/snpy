@@ -32,3 +32,50 @@
             a number of dependencies that are causing problems when porting
             to new architectures.  Sorry, PGPLOT, but you're just too 
             hard to maintain.
+
+Feb2012:
+            SNOOPY2 is now released.  New templates using the stretch parameter
+            instead of dm15 exclusively.  For now, we still use the dm15 as the
+            default parameter, but I think I'll change that at some point...
+            PGLOT is now GONE.  I'm sick of trying to port it.  Long live
+            matplotlib.
+
+            There is now a new method for installing:  using a bootstrap
+            script form virtualenv.  This will allow SNooPy to exist side
+            by side with other modules and not interfered.  That's the idea
+            anyway.
+
+August 2012:
+           SEveral changes and addons.
+
+           - Added the following filters:
+             2MASS filters (J2m, H2m, Ks2m)
+             UKIRT filters:  WFCAMz, WFCAMY, WFCAMJ, WFCAMH, WFCAMK
+             WIYN filters:  WHIRCJ, WHIRCH, WHIRCK
+           
+           - When adding filters to SNooPy, instead of specifying the zero-point
+             you can now simply put in strings like VegaB=0 or BD17=15.0
+             The meaning is that this filter has a VegaB (Bohlin CALSPEC Vega SED)
+             magnitude of 0 or a BD+17 (again, Bohlin CALSPEC version) magnitude
+             of 15.
+           
+           - When you want to fit a light-curve using one over many different
+             interpolators (use list_types() to see a list), you can also
+             do it interactively by passing 'interactive=True' to the template
+             function.  For example:
+             >>> s.B.template(method='hyperspline', interactive=True)
+             This will pop-up a plot with residuals.  Type '?' for key
+             binding help.  Also see SNooPy documentation section 7.5.3
+           
+           - Compute bolometric light-curve using the bolometric() function.  This
+             is experimental.  the function signature is.  To see how to use it, do:
+             >>> s = get_sn(...)
+             >>> help(s.bolometric)
+           
+           - If you want to solve for a single mangling function that is
+             the same for all epochs, pass the option through the fit
+             function in the following way:
+             s.fit(..., margs={'mepoch':True})
+             or, if computing the k-corrections manually
+             s.kcorr(mangle=1, mepoch=True)
+           
