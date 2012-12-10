@@ -955,6 +955,9 @@ class sn(object):
    def plot_filters(self, bands=None, day=0, **args):
       return plotmod.plot_filters(self, bands, day, **args)
 
+   def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None):
+      return plotmod.plot_color(self, f1,f2,epoch, deredden, outfile)
+
    def compute_w(self, band1, band2, band3, R=None):
       '''Returns the reddeining-free magnitude in the sense that:
       w = band1 - R(band1,band2,band3)*(band2 - band3)

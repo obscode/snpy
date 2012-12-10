@@ -612,6 +612,47 @@ def plot_lira(t, t2, t_maxes, BV, eBV, BV2, tmin, tmax, c):
    p.canvas.draw()
    return p
 
+def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None):
+   '''Plot the color ([f1]-[f2]) evolution curve for the SN.  If  [epoch]
+   is True and Bmax is defined, plot relative to T(Bmax).  If [deredden]
+   is True, remove MW reddening.  Specify [outfile] to save to file.'''
+   p = pyplot.figure(114)
+   p.clear()
+   ax = p.add_subplot(111)
+   ax.set_xlabel('JD - JD(Bmax)')
+   ax.set_ylabel('%s-%s' % (f1,f2))
+
+   MJD,BV,eBV,flag = self.get_color(f1, f2, interp=1, use_model=0, kcorr=0)
+   if epoch:
+      if self.Tmax:
+         t0 = self.Tmax
+      elif 'B' in self.data and getattr(self.data['B'],'Tmax',None) is not None:
+         t0 = self.B.Tmax
+      else:
+         t0 = 0
+   else:
+      t0 = 0
+
+   if deredden:
+      Ia_w,Ia_f = kcorr.get_SED(0, 'H3')
+      R1 = fset[f1].R(wave=Ia_w, flux=Ia_f, Rv=3.1)
+      R2 = fset[f2].R(wave=Ia_w, flux=Ia_f, Rv=3.1)
+      BV = BV - (R1-R2)*self.EBVgal
+      eBV = sqrt(power(eBV,2) + (R1-R2)**2*0.1**2*self.EBVgal**2)
+
+   bids = equal(flag, 0)
+   print bids
+   rids = equal(flag, 1)
+   print rids
+   ax.errorbar(MJD[bids]-t0, BV[bids], yerr=eBV[bids], fmt='o', capsize=0, 
+         color='black', label='obs')
+   ax.errorbar(MJD[rids]-t0, BV[rids], yerr=eBV[rids], fmt='o', capsize=0, 
+         color='red', mfc='red', label='inter')
+   ax.legend(prop={'size':12})
+   pyplot.draw()
+   #p.canvas.draw()
+   return p
+
 def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None):
    # clear out any previous bindings...  gotta be a better way to do this...
    if flux: 
