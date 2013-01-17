@@ -260,7 +260,7 @@ class sn(object):
          ret_data["e_"+band] = temp2
 
       if outfile is not None:
-         if type(outfile) is types.StringType:
+         if type(outfile) in types.StringTypes:
             fp = open(outfile, 'w')
          elif type(outfile) is types.FileType:
             fp = outfile
@@ -353,7 +353,7 @@ class sn(object):
       (Tmax,Mmax,e_Mmax,rband)
       Tmax = array of times of maximum, Mmax = array of maximum magnitudes,
       e_Mamx = error in max magnitudes, rband=rest-band for each filter.'''
-      if type(bands) is type(""):
+      if type(bands) in types.StringTypes:
          bands = [bands]
          scalar = True
       else:
@@ -376,8 +376,25 @@ class sn(object):
             mid = model_bands.index(b)
             for j in range(4): result[j][i] = mod_result[j][mid]
          if b in lc_model_bands:
+            if b in model_bands:
+               print "Warning:  both model and spline fits present, using " +\
+                     "spline values"
+            if restframe:
+               print "Warning:  can't k-correct spline fits, you're getting " +\
+                     "observed maxima!"
+            if deredden:
+               if band in self.Robs:
+                  if type(self.Robs[band]) is type(()):
+                     R = scipy.interpolate.splev(self.data[b].Tmax, self.Robs[band])
+                  else:
+                     R = self.parent.Robs[band]
+               else:
+                  R = fset[band].R(wave=Ia_w, flux=Ia_f)
+            else:
+               R = 0
+
             result[0][i] = self.data[b].Tmax
-            result[1][i] = self.data[b].Mmax
+            result[1][i] = self.data[b].Mmax - R*self.EBVgal
             result[2][i] = self.data[b].e_Mmax
             result[3][i] = b
       if scalar:
@@ -505,7 +522,7 @@ class sn(object):
       if not sometrue(greater_equal(t, -19)*less(t, 70)):
          raise RuntimeError, \
             "Error:  your epochs are all outside -20 < t < 70.  Check self.Tmax"
-      kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle2(t/(1+self.z)/s, bands, 
+      kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle(t/(1+self.z)/s, bands, 
             mags, masks, restbands, self.z, 
             colorfilts=mbands, version=self.k_version, full_output=1, **mopts)
       mask = greater(mask, 0)
@@ -925,7 +942,7 @@ class sn(object):
          if len(kbands) > 0:
             if not self.quiet:
                print "Setting up initial k-corrections"
-            self.kcorr(kbands, mangle=0)
+            self.kcorr(kbands, mangle=0, use_stretch=k_stretch)
  
          if not self.quiet:
             if mangle:

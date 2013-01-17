@@ -330,9 +330,7 @@ class sqlbase:
          num_match = numpy.sum(con, axis=1)
          # Check to see there's at least one match per requested time:
          if not numpy.alltrue(num_match):
-            print type(num_match)
             bids = numpy.nonzero(numpy.equal(num_match, 0))[0]
-            print type(bids)
             btimes = ""
             for i in range(len(bids)):  btimes += " %.1f " % (times[bids[i]])
             raise AttributeError, "No photometry entry for %s" % btimes

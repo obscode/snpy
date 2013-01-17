@@ -1,11 +1,31 @@
 #!/usr/bin/env python
+'''
 
-# T_NEWXKCORR -- Calculate cross-band K Correction from a 1-d spectrum.
-# This version converts the spectrum to photons before multiplying by the filter trans.
-#  
-#   Program written by MMP
-#     Re-written in python by CRB
-#  Added reddening correction for galactic and host extinctions
+A module for computing k-corrections.  This module contains the following 
+functions:
+
+   get_SED(day, version):    Retrieve the SED of a SNIa.  The version can
+                           refer to : 'H':  Hsiao (published)
+                                      'H3': Hsiao (unpublished with NIR)
+                                      'N':  Nugent
+                                      '91bg': Nugent's SN1991bg template
+   redden:  Use CCM+ODonnel to redden an SED.  Optionally redden by both a
+            local(z=0) reddening law and high-z reddening law
+   K:  compute the k-correction for a single spectrum and filter combo
+   kcorr: compute the k-correction (without mangling) for a list of
+          epochs
+   kcorr_mangle:  compute the k-corrections (with mangling) for a list of
+          epochs
+   kcorr_mangle2:  comptute the k-corrections (with mangling) for a list of
+          spectra.
+
+Original comments from Mark's IRAF code:
+ T_NEWXKCORR -- Calculate cross-band K Correction from a 1-d spectrum.
+ This version converts the spectrum to photons before multiplying by the filter trans.
+  
+   Program written by MMP
+     Re-written in python by CRB
+  Added reddening correction for galactic and host extinctions'''
 
 import os,sys,string,re
 #import pygplot
@@ -47,51 +67,51 @@ if have_FITS:
    f = FITS.FITS(os.path.join(spec_base, 'Hsiao_SED_V2.fits'))
    h_sed = f.data()
    h_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], typecode=num.Float32) - \
-         f['CRPIX1'] - 1)*f['CDELT1']
+         f['CRPIX1'] + 1)*f['CDELT1']
    f.close()
    # Hsiao's new OPT+NIR uberspectrum
    f = FITS.FITS(os.path.join(spec_base, 'Hsiao_SED_V3.fits'))
    h3_sed = f.data()
    h3_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], typecode=num.Float32) - \
-         f['CRPIX1'] - 1)*f['CDELT1']
+         f['CRPIX1'] + 1)*f['CDELT1']
    f.close()
    # Nugent's uberspectrum:
    f = FITS.FITS(os.path.join(spec_base, "Nugent_SED.fits"))
    n_sed = f.data()
    n_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], typecode=num.Float32) - \
-         f['CRPIX1'] - 1)*f['CDELT1']
+         f['CRPIX1'] + 1)*f['CDELT1']
    # Nugent's 91bg-like SED:
    f = FITS.FITS(os.path.join(spec_base, "Nugent_91bg_SED.fits"))
    n91_sed = f.data()
    n91_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], typecode=num.Float32) - \
-         f['CRPIX1'] - 1)*f['CDELT1']
+         f['CRPIX1'] + 1)*f['CDELT1']
 else:
    # Hsiao's uberspectrum:
    f = pyfits.open(os.path.join(spec_base, 'Hsiao_SED_V2.fits'))
    h_sed = f[0].data
    head = f[0].header
    h_wav = head['CRVAL1'] + (num.arange(head['NAXIS1'],typecode=num.Float32) - \
-         head['CRPIX1'] - 1)*head['CDELT1']
+         head['CRPIX1'] + 1)*head['CDELT1']
    f.close()
    # Hsiao's new OPT+NIR uberspectrum
    f = pyfits.open(os.path.join(spec_base, 'Hsiao_SED_V3.fits'))
    h3_sed = f[0].data
    head = f[0].header
    h3_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],typecode=num.Float32) - \
-         head['CRPIX1'] - 1)*head['CDELT1']
+         head['CRPIX1'] + 1)*head['CDELT1']
    f.close()
    # Nugent's uberspectrum:
    f = pyfits.open(os.path.join(spec_base, "Nugent_SED.fits"))
    n_sed = f[0].data
    head = f[0].header
    n_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],typecode=num.Float32) - \
-         head['CRPIX1'] - 1)*head['CDELT1']
+         head['CRPIX1'] + 1)*head['CDELT1']
    # Nugent's 91bg-like SED:
    f = pyfits.open(os.path.join(spec_base, "Nugent_91bg_SED.fits"))
    n91_sed = f[0].data
    head = f[0].header
    n91_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],typecode=num.Float32) - \
-         head['CRPIX1'] - 1)*head['CDELT1']
+         head['CRPIX1'] + 1)*head['CDELT1']
 
 def get_SED(day, version='H3'):
    '''Retrieve the SED for a SN on day 'day' (where day=0 corresponds to Bmax). 
@@ -126,20 +146,41 @@ def redden(wave, flux, ebv_gal, ebv_host, z, R_gal=3.1, R_host=3.1):
 
    return(newflux)
 
-def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1, R_host=3.1,
-      version="H3"):
-   '''Find the cross-band k-correction for rest band filter1 to observed
-   band filter2 at redshift z.  In other words, filter1 should be bluer than filter2
-   if z is a red-shift.'''
+def K(wave, spec, f1, f2, z, photons=1):
+   '''compute single K-correction based on spectrum defined by [wave] and 
+   [spec].  [f1] is the filter instance of the rest-frame filter.  [f2] is a 
+   filter instance of the observer-frame filter.  So f1 should be either be 
+   the same as f2 (for low-z) or bluer than f2.'''
+
+   # The zero-points
+   zpt1 = f1.zp
+   zpt2 = f2.zp
+
+   # compute the response through each filter
+   f1flux_0 = f1.response(wave, spec, photons=photons)
+   f2flux_z = f2.response(wave, spec, z=z, photons=photons)
+
+   if f1flux_0 < 0 or f2flux_z <= 0:
+      # Something clearly went wrong
+      return (0.0, 0)
+   else:
+      # Finally calculate the cross-band K Correction
+      # Since we blueshift the spectrum (instead of redshift the filter)
+      # the sign of the 2.5 is now positive
+      kf1f2 =  2.5*num.log10(1+z) + 2.5*num.log10(f1flux_0/f2flux_z) - \
+               zpt1 + zpt2
+      return (kf1f2, 1)
+
+def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1, 
+      R_host=3.1, version="H3", photons=1):
+   '''Find the cross-band k-correction for rest band [filter1] to observed
+   band [filter2] at redshift [z].  In other words, [filter1] should be bluer 
+   than [filter2] if [z] is a at red-shift.'''
 
    if filter1 not in filters.fset:
       raise AttributeError, "filter %s not defined in filters module" % filter1
    if filter2 not in filters.fset:
       raise AttributeError, "filter %s not defined in filters module" % filter2
-   f1 = filters.fset[filter1]
-   f2 = filters.fset[filter2]
-   zpt1 = f1.zp
-   zpt2 = f2.zp
 
    kcorrs = []
    mask = []      # Masks the good values (1) and bad (not defined) values (0)
@@ -159,68 +200,25 @@ def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1, R_host=3.
       else:
          sp_f = spec_f
 
-      # Now compute the fluxes using Simpson's composite rule:
-      #  But now we keep the filter response unchanged, so instead
-      #  we blue-shift the SED
-      f1flux_0 = f1.response(spec_wav, sp_f)
-      f2flux_z = f2.response(spec_wav, sp_f, z=z)
-      if f1flux_0 < 0 or f2flux_z <= 0:
-         kcorrs.append(0.0)
-         mask.append(0)
-      else:
-         # Finally calculate the cross-band K Correction
-         # Since we blueshift the spectrum (instead of redshift the filter)
-         # the sign of the 2.5 is now positive
-         kf1f2 =  2.5*num.log10(1+z) + 2.5*num.log10(f1flux_0/f2flux_z) - \
-                  zpt1 + zpt2
-         kcorrs.append(kf1f2)
-         mask.append(1)
+      f1 = filters.fset[filter1]
+      f2 = filters.fset[filter2]
+      k,f = K(spec_wav, sp_f, f1, f2, z, photons=photons)
+      kcorrs.append(k)
+      mask.append(f)
    return(kcorrs,mask)
 
-def kcorr2(wave, spectrum, filter1, filter2, z):
-   '''Find the cross-band k-correction for rest band filter1 to observed band
-    filter2 at redshift z for an in put spectrum given by wave,spectrum. 
-    The SED should be in the REST frame.'''
-
-   if filter1 not in filters.fset:
-      raise AttributeError, "filter %s not defined in filters module" % filter1
-   if filter2 not in filters.fset:
-      raise AttributeError, "filter %s not defined in filters module" % filter2
-   f1 = filters.fset[filter1]
-   f2 = filters.fset[filter2]
-   zpt1 = f1.zp
-   zpt2 = f2.zp
-
-   kcorrs = []
-   mask = []      # Masks the good values (1) and bad (not defined) values (0)
-   spec_wav,spec_f = wave,spectrum
-
-   # Now compute the fluxes using Simpson's composite rule:
-   f1flux_0 = f1.response(spec_wav, spec_f, z=0)
-   f2flux_z = f2.response(spec_wav, spec_f, z=z)
-   if f1flux_0 < 0 or f2flux_z <= 0:
-      kcorr = 0
-      mask = 0
-   else:
-      # Finally calculate the cross-band K Correction
-      kf1f2 =  2.5*num.log10(1+z) + 2.5*num.log10(f1flux_0/f2flux_z) - \
-               zpt1 + zpt2
-      kcorr = kf1f2
-      mask = 1
-   return(kcorr,mask)
-
-def kcorr_mangle3(waves, spectra, filts, mags, m_mask, restfilts, z, colorfilts=None,
-      full_output=0, **mopts): 
-   '''Find the (cross-band) k-correction for each filter in restfilts to
-   observed corresponding filter in fitls at redshift z, using the provided
-   colorfilts (or filts if colorfilts is not defined) and magnitudes to mangle
-   the SED provided in waves,spectra.  The SED must be in the REST frame.
-   The array mags and mask should have
-   dimensions (len(spectra),len( colorfilts)) so that mags[i,j] coorespond to
-   the magnitude for spectra[i] in filter filts[j].  The mask is used to
-   determine which magnitudes are good and which are bad (for whatever reason).
-   This version is good if you have your own spectra to mangle instead of the
-   Nugent or Hsiao templates.'''
+def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z, 
+      colorfilts=None, full_output=0, **mopts): 
+   '''Find the (cross-band) k-correction for each filter in [restfilts] to
+   observed corresponding filter in [fitls] at redshift [z], using the provided
+   [colorfilts] (or [filts] if [colorfilts] is not defined) and magnitudes
+   [mags] to mangle the SED provided in [waves],[spectra].  The SED must be in
+   the REST frame.  The array [mags] and [mask] should have dimensions
+   (len([spectra]),len( [colorfilts])) so that mags[i,j] coorespond to the
+   magnitude for spectra[i] in filter filts[j].  The mask is used to determine
+   which magnitudes are good and which are bad (for whatever reason).  This
+   version is good if you have your own spectra to mangle instead of the Nugent
+   or Hsiao templates.'''
 
    if colorfilts is None:  colorfilts = filts
    for filter1 in filts + restfilts + colorfilts:
@@ -252,53 +250,31 @@ def kcorr_mangle3(waves, spectra, filts, mags, m_mask, restfilts, z, colorfilts=
       fs = [colorfilts[i] for i in range(len(colorfilts)) if m_mask[j,i]]
       if len(fs) <= 1:
          # only one filter, so no color information, leave the SED alone:
-         waves,man_spec_f,factors = spec_wav,spec_f,spec_wav*0.0+1.0
+         man_waves,man_spec_f,factors = spec_wav,spec_f,spec_wav*0.0+1.0
       else:
-         cs = num.compress(m_mask[j],mags[j])[0:-1] - \
-               num.compress(m_mask[j],mags[j])[1:]
+         #cs = num.compress(m_mask[j],mags[j])[0:-1] - \
+         #      num.compress(m_mask[j],mags[j])[1:]
+         ms = num.compress(m_mask[j],mags[j])
  
          # Now we mangle the spectrum:
-         man_spec_f,waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,fs, 
-               cs, **mopts)
+         man_spec_f,man_waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,fs, 
+               ms, **mopts)
       if full_output:
-         waves_a.append(waves)
+         waves_a.append(man_waves)
          manf_a.append(man_spec_f)
          factors_a.append(factors)
  
-      # Let's plot these guys out
-      #if debug:
-      #   p = pygplot.Plot(device='/XWIN', xrange=[3500,9500])
-      #   p.line(spec_wav, spec_f/max(spec_f), color='blue')
-      #   p.line(spec_wav, man_spec_f/max(spec_f), color='green')
-      #   p.point(waves/(1+z), factors, symbol=3, size=2,color='orange')
-      #   tck = scipy.interpolate.splrep(waves/(1+z), factors, k=3, s=0)
-      #   xx = num.arange(waves[0]/(1+z), waves[-1]/(1+z), 10)
-      #   p.line(xx, scipy.interpolate.splev(xx, tck), color='orange')
- 
       for i in range(len(filts)):
          f1 = filters.fset[restfilts[i]]
-         zpt1 = f1.zp
          f2 = filters.fset[filts[i]]
-         zpt2 = f2.zp
-         # Now compute the fluxes using Simpson's composite rule:
-         f1flux_0 = f1.response(spec_wav, man_spec_f, z=0)
-         f2flux_z = f2.response(spec_wav, man_spec_f, z=z)
-         #if debug:
-         #   p.line(f1.wave, f1.resp)
-         #   p.line(f2.wave, f2.resp)
-         #   p.line(f2.wave/(1.0+z), f2.resp, color='red')
-         #   p.plot()
-         #   p.close()
-         #   del p.lines[-3:]
-         if f1flux_0 < 0 or f2flux_z < 0:
-            kcorrs[-1].append(0.0)
-            mask[-1].append(0)
-         else:
-            # Finally calculate the cross-band K Correction
-            kf1f2 = 2.5*num.log10(1+z) + 2.5*num.log10(f1flux_0/f2flux_z) - \
-                     zpt1 + zpt2
-            kcorrs[-1].append(kf1f2)
+
+         k,f = K(spec_wav, man_spec_f[0], f1, f2, z)
+         if f == 1:
+            kcorrs[-1].append(k)
             mask[-1].append(len(fs))
+         else:
+            kcorrs[-1].append(0)
+            mask[-1].append(0)
    kcorrs = num.array(kcorrs)
    mask = num.array(mask)
 
@@ -313,17 +289,17 @@ def kcorr_mangle3(waves, spectra, filts, mags, m_mask, restfilts, z, colorfilts=
       else:
          return(kcorrs,mask)
 
-def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfilts=None,
-      full_output=0, mepoch=False, **mopts):
+def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H', 
+      colorfilts=None, full_output=0, mepoch=False, **mopts):
    '''Find the (cross-band) k-correction for each filter in [restfilts] to
    observed corresponding filter in [filts] at redshift [z], using the provided
-   [colorfilts] (or [filts] if [colorfilts] is not defined) and magnitudes to mangle
-   the SED.  The array [mags] and [mask] should have dimensions (len(days),len(
-   colorfilts)) so that mags[i,j] correspond to the magnitude on day days[i] in
-   filter filts[j].  The mask is used to determine which magnitudes are good
-   and which are bad (for whatever reason).  Use this version if your data
-   needs to be masked in any way.  If [full_output]=True, returm a list of
-   [waves,factors] of
+   [colorfilts] (or [filts] if [colorfilts] is not defined) and magnitudes to
+   mangle the SED.  The array [mags] and [mask] should have dimensions
+   (len(days),len( colorfilts)) so that mags[i,j] correspond to the magnitude
+   on day days[i] in filter filts[j].  The mask is used to determine which
+   magnitudes are good and which are bad (for whatever reason).  Use this
+   version if your data needs to be masked in any way.  If [full_output]=True,
+   returm a list of [waves,factors] of
 
    Output: 
       kcorrs,mask      array of k-corrections and associated masks
@@ -375,12 +351,14 @@ def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfil
       if len(fs) <=1 :
          waves,man_spec_fs,factors = spec_wavs,spec_fs,spec_wavs*0.0+1.0
       else:
-         cs = mags[:,:-1] - mags[:,1:]
-         gids = m_mask[:,:-1]*m_mask[:,1:]
-         gids = gids*sids[:,num.newaxis]
-         cs[-gids] = 99.9   # flag invalid value
+         #cs = mags[:,:-1] - mags[:,1:]
+         #gids = m_mask[:,:-1]*m_mask[:,1:]
+         #gids = gids*sids[:,num.newaxis]
+         #cs[-gids] = 99.9   # flag invalid value
+         gids = m_mask*sids[:,num.newaxis]
+         ms = where(gids, ms, 99.9)
          man_spec_fs,waves,factors = mangle_spectrum2(spec_wavs*(1+z),
-               spec_fs, fs, cs, **mopts)
+               spec_fs, fs, ms, **mopts)
 
 
       for j in range(len(days)):
@@ -400,23 +378,12 @@ def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfil
  
          for i in range(len(filts)):
              f1 = filters.fset[restfilts[i]]
-             zpt1 = f1.zp
              f2 = filters.fset[filts[i]]
-             zpt2 = f2.zp
-             # Now compute the fluxes using Simpson's composite rule:
-             f1flux_0 = f1.response(spec_wavs[j], man_spec_fs[j], z=0)
-             f2flux_z = f2.response(spec_wavs[j], man_spec_fs[j], z=z)
-             if f1flux_0 < 0 or f2flux_z < 0:
-                kcorrs[-1].append(0.0)
-                mask[-1].append(0)
-             else:
-                # Finally calculate the cross-band K Correction
-                kf1f2 = 2.5*num.log10(1+z) + 2.5*num.log10(f1flux_0/f2flux_z) - \
-                         zpt1 + zpt2
-                kcorrs[-1].append(kf1f2)
-                mask[-1].append(len(fs))
-         Rts.append(R_obs_spectrum(filts, spec_wavs[j], man_spec_fs[j], z, 0.01, 0.0))
-
+             k,f = K(spec_wavs[j], man_spec_fs[j], f1, f2, z)
+             kcorrs[-1].append(k)
+             mask[-1].append(0)
+         Rts.append(R_obs_spectrum(filts, spec_wavs[j], man_spec_fs[j], z, 
+            0.01, 0.0))
    else:
       for j in range(len(days)):
          kcorrs.append([])
@@ -438,23 +405,25 @@ def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfil
             waves,man_spec_f,factors = spec_wav,spec_f,spec_wav*0.0+1.0
             man_spec_f = [man_spec_f]
          else:
-            cs = num.compress(m_mask[j],mags[j])[0:-1] - num.compress(m_mask[j],mags[j])[1:]
+            #cs = num.compress(m_mask[j],mags[j])[0:-1] - \
+            #     num.compress(m_mask[j],mags[j])[1:]
+            ms = num.compress(m_mask[j], mags[j])
             if debug:
                print "filters and colors for day %f:" % (days[j])
                print fs
-               print cs
+               print ms[:-1]-m[1:]
   
             # Now we mangle the spectrum.  Note, we are redshifting the spectrum
             # here, so do NOT set z in mangle_spectrum2.
-            man_spec_f,waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,fs, 
-                  cs, **mopts)
+            man_spec_f,waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,
+                  fs, ms, **mopts)
  
             if debug:  print "factors = ",factors
             if debug:
                # check the colors
                for i in range(len(fs)-1):
  
-                  print "input color:  %s-%s = %f" % (fs[i],fs[i+1], cs[i]),
+                  print "input color:  %s-%s = %f" % (fs[i],fs[i+1], ms[i]-ms[i+1]),
                   f1 = filters.fset[fs[i]]
                   f2 = filters.fset[fs[i+1]]
                   col = f1.synth_mag(spec_wav*(1+z), man_spec_f[0]) - \
@@ -469,22 +438,12 @@ def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfil
   
          for i in range(len(filts)):
             f1 = filters.fset[restfilts[i]]
-            zpt1 = f1.zp
             f2 = filters.fset[filts[i]]
-            zpt2 = f2.zp
-            # Now compute the fluxes using Simpson's composite rule:
-            f1flux_0 = f1.response(spec_wav, man_spec_f[0], z=0)
-            f2flux_z = f2.response(spec_wav, man_spec_f[0], z=z)
-            if f1flux_0 < 0 or f2flux_z < 0:
-               kcorrs[-1].append(0.0)
-               mask[-1].append(0)
-            else:
-               # Finally calculate the cross-band K Correction
-               kf1f2 = 2.5*num.log10(1+z) + 2.5*num.log10(f1flux_0/f2flux_z) - \
-                        zpt1 + zpt2
-               kcorrs[-1].append(kf1f2)
-               mask[-1].append(len(fs))
-         Rts.append(R_obs_spectrum(filts, spec_wav, man_spec_f[0], z, 0.01, 0.0))
+            k,f = K(spec_wav,man_spec_f[0], f1, f2, z)
+            kcorrs[-1].append(k)
+            mask[-1].append(f)
+         Rts.append(R_obs_spectrum(filts, spec_wav, man_spec_f[0], z, 0.01, 
+            0.0))
    Rts = num.array(Rts)
    gids = num.greater(Rts, 0)
    Rtave = num.array([num.average(num.compress(gids[:,k], Rts[:,k])) \
@@ -499,91 +458,8 @@ def kcorr_mangle2(days, filts, mags, m_mask, restfilts, z, version='H', colorfil
    else:
       return(kcorrs, mask, Rts, m_opts)
 
-def kcorr_mangle(days, filts, colors,  restfilts, z, version='H', **mopts):
-   '''Find the cross-band k-correction for each filter in restfilts to observed
-   corresponding filter in fitls at redshift z, using the provided filters and 
-   colors to mangle the SED.  len(filts) must be one more than len(colors) and
-   be equal to len(restfilts).  colors must be 2D with len(colors) = len(days)
-   and len(colors[i])=len(filts)-1.  The argument days must be the epoch in the
-   frame of the supernova.'''
-
-   for filter1 in filts + restfilts:
-      if filter1 not in filters.fset:
-         raise AttributeError, "filter %s not defined in filters module" % \
-               filter1
-
-   kcorrs = []
-   mask = []      # Masks the good values (1) and bad (not defined) values (0)
-
-   j = 0
-   for day in days:
-      kcorrs.append([])
-      mask.append([])
-      day = int(day)
-      spec_wav,spec_f = get_SED(day, version)
-      if spec_wav is None:
-         # print "Warning:  no spectra for day %d, setting Kxy=0" % day
-         kcorrs[-1] = num.zeros((len(filts),), typecode=num.Float32)
-         mask[-1] = num.zeros((len(filts),))
-         continue
- 
-      # Now we mangle the spectrum:
-      man_spec_f,waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,filts,
-           colors[j], **mopts)
-
-      if debug:
-         # check the colors
-         for i in range(len(filts)-1):
-            print "input color:  %s-%s = %f" % (filts[i],filts[i+1],colors[i]),
-            f1 = filters.fset[filts[i]]
-            f2 = filters.fset[filts[i+1]]
-            col = f1.synth_mag(spec_wav*(1+z), man_spec_f) - \
-                  f2.synth_mag(spec_wav*(1+z), man_spec_f)
-            print "  output color:  %f" % (col)
- 
-      # Let's plot these guys out
-      #if debug:
-      #   p = pygplot.Plot(device='/XWIN')
-      #   p.line(spec_wav, spec_f/max(spec_f), color='blue')
-      #   p.line(spec_wav, man_spec_f/max(spec_f), color='green')
-      #   #p.line(waves/(1+z), factors, color='orange')
-      #   p.point(waves/(1+z), factors, symbol=3, size=2,color='orange')
-      #   tck = scipy.interpolate.splrep(waves/(1+z), factors, k=3, s=0)
-      #   xx = num.arange(waves[0]/(1+z), waves[-1]/(1+z), 10)
-      #   p.line(xx, scipy.interpolate.splev(xx, tck), color='orange')
- 
-      for i in range(len(filts)):
-         f1 = filters.fset[restfilts[i]]
-         zpt1 = f1.zp
-         f2 = filters.fset[filts[i]]
-         zpt2 = f2.zp
-         # Now compute the fluxes using Simpson's composite rule:
-         f1flux_0 = f1.response(spec_wav, man_spec_f, z=0)
-         f2flux_z = f2.response(spec_wav, man_spec_f, z=z)
-         #if debug:
-         #   p.line(f1.wave, f1.resp)
-         #   p.line(f2.wave, f2.resp)
-         #   p.line(f2.wave/(1.0+z), f2.resp, color='red')
-         #   p.plot()
-         #   p.close()
-         #   del p.lines[-3:]
-         if f1flux_0 < 0 or f2flux_z < 0:
-            kcorrs[-1].append(0.0)
-            mask[-1].append(0)
-         else:
-            # Finally calculate the cross-band K Correction
-            kf1f2 = 2.5*num.log10(1+z) + 2.5*num.log10(f1flux_0/f2flux_z) - \
-                     zpt1 + zpt2
-            kcorrs[-1].append(kf1f2)
-            mask[-1].append(1)
-      j = j + 1
-   kcorrs = num.array(kcorrs)
-   mask = num.array(mask)
-
-   return(kcorrs,mask)
-
-def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1, 
-      version='H'):
+def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal, 
+      Rv_host=3.1, Rv_gal=3.1, version='H'):
    '''Compute the observed value of R based on a fiducial value of Rv for 
    both Galactic and host extinction and the SED of a supernova.  filter[1-3]
    are used in the sense that absorption in band filter1 is:

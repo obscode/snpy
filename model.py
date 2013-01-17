@@ -71,6 +71,28 @@ class model:
       '''For band [band], produce a model lightcurve suitable for plotting as a line.'''
       raise NotImplementedError('Derived class must overide')
 
+   def kcorr(self, band, t):
+      '''Convenience function to call back to the parent and get the k-corrections.'''
+      # If k-corrections are there, use them
+      if band in self.parent.ks_tck:   
+         tck = self.parent.ks_tck[band]
+         K = scipy.interpolate.splev(t+self.Tmax, tck)
+         k0 = scipy.interpolate.splev(tck[0][0], tck)
+         k1 = scipy.interpolate.splev(tck[0][-1], tck)
+         K = where(less(t+self.Tmax, tck[0][0]), k0, K)
+         K = where(greater(t+self.Tmax, tck[0][-1]), k1, K)
+         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+               self.Tmax))
+         # mask based on original mask and limits of Hsiao spectrum
+         mask2 = self.parent.ks_mask[band][mids]*\
+               greater_equal(t, -19)*less_equal(t, 70)
+      else:
+         K = 0*t
+         mask2 = ones(t.shape, typecode=bool)
+      return K,mask2
+
+   def _extra_error(self, parameters):
+      return 0
 
    def fit(self, bands, epsfcn=0, **args):
       '''Fit the model with currently fixed and free parameters againts the
@@ -123,9 +145,9 @@ class model:
          raise RuntimeError, "Error:  Corariance Matrix is singular.  No errors computed"
       C = C*self.rchisquare    # the trick for underestimated errors.
       self.C = {}
-      for p in self.parameters:  self.errors[p] = 0.0
+      for p in self.parameters:  self.errors[p] = self._extra_error(p)
       for i in range(len(self._free)):
-         self.errors[self._free[i]] = sqrt(C[i,i])
+         self.errors[self._free[i]] += sqrt(C[i,i])
          if self._free[i] not in self.C:  self.C[self._free[i]] = {}
          for j in range(len(self._free)):
             self.C[self._free[i]][self._free[j]] = C[i,j]
@@ -297,15 +319,17 @@ class EBV_model(model):
       # Now build the lc model
       temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
       # If k-corrections are there, use them
-      if band in self.parent.ks_tck:   
-         temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
-         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
-               self.Tmax))
-         # mask based on original mask and limits of Hsiao spectrum
-         mask2 = self.parent.ks_mask[band][mids]*\
-               greater_equal(t, -19)*less_equal(t, 70)
-      else:
-         mask2 = ones(temp.shape, typecode=bool)
+      #if band in self.parent.ks_tck:   
+      #   temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
+      #   mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+      #         self.Tmax))
+      #   # mask based on original mask and limits of Hsiao spectrum
+      #   mask2 = self.parent.ks_mask[band][mids]*\
+      #         greater_equal(t, -19)*less_equal(t, 70)
+      #else:
+      #   mask2 = ones(temp.shape, typecode=bool)
+      K,mask2 = self.kcorr(band, t)
+      temp = temp + K
 
       # Apply reddening correction:
       # Figure out the reddening law
@@ -752,16 +776,8 @@ class max_model(model):
 
       temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
       if debug:  print ">>>>  done."
-      # If k-corrections are there, use them
-      if band in self.parent.ks_tck:   
-         temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
-         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
-               self.Tmax))
-         # mask based on original mask and limits of Hsiao spectrum
-         mask2 = self.parent.ks_mask[band][mids]*\
-               greater_equal(t, -19)*less_equal(t, 70)
-      else:
-         mask2 = ones(temp.shape, typecode=bool)
+      K,mask2 = self.kcorr(band, t)
+      temp = temp + K
 
       # Apply Max
       temp = temp + self.parameters[rband+'max'] 
@@ -809,6 +825,45 @@ class max_model(model):
          eMmaxs.append(self.errors[rband+'max'])
          rbands.append(rband)
       return(Tmaxs, Mmaxs, eMmaxs, rbands)
+
+   def _extra_error(self, parameter):
+      '''Return the extra error we computed in the SNooPy paper when
+      observations start after Tmax.'''
+      days = array([0.,5.,10.,15.,20.])
+      errors = {'dm15':array([0.00, 0.00, 0.03, 0.03, 0.03]),
+                'Tmax':array([0.07, 0.16, 0.21, 0.21, 0.46]),
+                'umax':array([0.00, 0.03, 0.05, 0.06, 0.06]),
+                'Bmax':array([0.00, 0.02, 0.02, 0.03, 0.04]),
+                'Vmax':array([0.00, 0.00, 0.01, 0.03, 0.03]),
+                'gmax':array([0.00, 0.01, 0.01, 0.01, 0.02]),
+                'rmax':array([0.00, 0.01, 0.02, 0.02, 0.02]),
+                'imax':array([0.01, 0.03, 0.05, 0.05, 0.05]),
+                'Ymax':array([0.01, 0.03, 0.03, 0.03, 0.04]),
+                'Jmax':array([0.02, 0.04, 0.05, 0.05, 0.05]),
+                'Hmax':array([0.01, 0.02, 0.02, 0.02, 0.02])}
+      errors['st'] = errors['dm15']*13.74/30    # conversion factor from dm15 to s
+      if parameter[1:] == 'max':
+         f = parameter[0]
+         for band in self.parent.data:
+            if self.parent.restbands[band] == f:
+               break
+         t0 = (self.parent.data[band].MJD - self.Tmax).min()/(1+self.parent.z)
+         if t0 < 0:  return 0
+         id = argmax(absolute(t0-days))
+         return errors[parameter][id]
+
+      t0s = []
+      for band in self.parent.data:
+         rband = self.parent.restbands[band]
+         if rband+'max' not in self.parameters:
+            continue
+         t0 = (self.parent.data[band].MJD - self.Tmax).min()/(1+self.parent.z)
+         t0s.append(t0)
+      t0 = median(t0s)
+      if t0 < 0:
+         return 0
+      id = argmax(absolute(t0 - days))
+      return errors[parameter][id]
 
 class max_model2(model):
    '''Same as max_model, but here we let Tmax for each filter be a free parameter.'''

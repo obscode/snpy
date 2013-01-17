@@ -46,9 +46,10 @@ def fitpoly(x, y, w, k=1, x0=0):
    coefficients of the series:  f(x0), f'(x0), f''(x0), ... and the 
    associated errors.'''
 
-   A = [1.0/fac(i)*power(x-x0, i)*w for i in range(k+1)]
+   w2 = sqrt(w)
+   A = [1.0/fac(i)*power(x-x0, i)*w2 for i in range(k+1)]
    A = transpose(array(A))
-   b = y*w
+   b = y*w2
 
    soll,err = fitsvd(A,b)
    return(soll, err)

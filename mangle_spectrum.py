@@ -45,7 +45,8 @@ class function:
 
 class f_tspline(function):
 
-   def __init__(self, parent, tension=None, gradient=False, slopes=None, verbose=False):
+   def __init__(self, parent, tension=None, gradient=False, slopes=None, 
+         verbose=False, log=False):
       function.__init__(self,parent)
       self.knots = None
       self.factors = None
@@ -54,12 +55,17 @@ class f_tspline(function):
       self.slopes = None           # End slopes if not using gradient
       self.pars = None
       self.verbose = verbose
+      self.log = log
 
    def init_pars(self, nid=0):
       # one parameter for each knot points
       p = []
-      pi = [{'fixed':0, 'limited':[1,0], 'limits':[0.0,0.0], 'step':0.001, 'value':1.0} \
-            for i in range(len(self.parent.allbands))]
+      if self.log:
+         limited = [0,0]
+      else:
+         limited = [1,0]
+      pi = [{'fixed':0, 'limited':limited, 'limits':[0.0,0.0], 'step':0.001, 
+             'value':1.0} for i in range(len(self.parent.allbands))]
       bs = self.parent.allbands
       nf = len(bs)
       knots = self.parent.ave_waves
@@ -227,6 +233,7 @@ class mangler:
       colors = num.asarray(colors)
       if len(num.shape(colors)) == 1:
          colors = colors.reshape((1,colors.shape[0]))
+
       if colors.shape[0] != self.wave.shape[0]:
          raise ValueError, "colors.shape[0] and number of spectra must match"
       if colors.shape[1] != len(bands) - 1:
@@ -243,10 +250,11 @@ class mangler:
 
       if norm_filter is None:
          num_good = num.sum(self.gids*1, axis=0)
-         norm_filter = bands[num.argmax(num_good)+1]
+         self.norm_filter = bands[num.argmax(num_good)+1]
       else:
          if norm_filter not in bands:
             raise ValueError, "norm_filter must be one of bands"
+         self.norm_filter = norm_filter
       #print norm_filter
       if fixed_filters is not None:
          if fixed_filters == "blue":
@@ -271,7 +279,7 @@ class mangler:
             for i in range(0,len(bands)-1)])
       self.resp_rats = num.power(10, -0.4*(colors - dzps[num.newaxis,:]))
       self.resp_rats = num.where(self.gids, self.resp_rats, 1)
-      id = bands.index(norm_filter)
+      id = bands.index(self.norm_filter)
       if self.verbose:
          print "You input the following colors:"
          for i in range(colors.shape[1]):
@@ -281,6 +289,7 @@ class mangler:
          print self.resp_rats[self.gids]
          print "Initial colors for this spectrum are:"
          print self.get_colors(bands)
+         self.init_colors = self.get_colors(bands)
 
 
       # Do some initial setup
@@ -299,6 +308,9 @@ class mangler:
       if self.verbose:
          print "The final colors of the SED are:"
          print self.get_colors(bands)
+         print "Compared to initial colors:"
+         print self.init_colors
+
       return(result)
 
    def leastsq(self, p, fjac, bands, nid):
@@ -332,11 +344,20 @@ messages = ['Bad input parameters','chi-square less than ftol',
       'Exceeded maximum number of iterations',
       'ftol is too small','xtol is too small','gtol is too small']
 
-def mangle_spectrum2(wave,flux,bands, colors, fixed_filters=None, 
+def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None, 
       normfilter=None, z=0, verbose=0, anchorwidth=100,
       method='tspline', xtol=1e-6, ftol=1e-6, gtol=1e-6, **margs):
    m = mangler(wave, flux, method, z=z, verbose=verbose, **margs)
-   res = m.solve(bands, colors, norm_filter=normfilter, fixed_filters=fixed_filters,
+   if len(num.shape(mags)) == 1:
+      oned = True
+      gids = num.less(mags[:-1],90)*num.less(mags[1:],90)
+      colors = num.where(gids, mags[:-1]-mags[1:], 99.9)
+   else:
+      oned = False
+      gids = num.less(mags[:-1,:],90)*num.less(mags[1:,:],90)
+      colors = num.where(gids, mags[:-1,:]-mags[1:,:], 99.9)
+   res = m.solve(bands, colors, norm_filter=normfilter, 
+         fixed_filters=fixed_filters,
          anchorwidth=anchorwidth, xtol=xtol, ftol=ftol, gtol=gtol)
    if res.status > 4:
       print "Warning:  %s" % messages[res.status]
@@ -345,7 +366,18 @@ def mangle_spectrum2(wave,flux,bands, colors, fixed_filters=None,
    elif verbose:
       print "mpfit finised with:  %s" % messages[res.status]
 
-   return (m.get_mflux(), m.ave_waves, m.function.pars)
+   # finally, normalize the flux
+   mflux = m.get_mflux()
+   id = bands.index(m.norm_filter)
+   if oned:
+      omag = num.array([mags[id]])
+   else:
+      omag = mags[id,:]
+   for i in range(len(mflux)):
+      mmag = fset[m.norm_filter].synth_mag(wave,mflux[i],z=z)
+      mflux[i] = mflux[i]*num.power(10,-0.4*(omag[i]-mmag))
+
+   return (mflux, m.ave_waves, m.function.pars)
 
 def apply_mangle(wave,flux,sw,sf,method='tspline', **margs):
 
