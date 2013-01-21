@@ -279,7 +279,7 @@ class mangler:
             for i in range(0,len(bands)-1)])
       self.resp_rats = num.power(10, -0.4*(colors - dzps[num.newaxis,:]))
       self.resp_rats = num.where(self.gids, self.resp_rats, 1)
-      id = bands.index(self.norm_filter)
+      id = self.allbands.index(self.norm_filter)
       if self.verbose:
          print "You input the following colors:"
          for i in range(colors.shape[1]):
