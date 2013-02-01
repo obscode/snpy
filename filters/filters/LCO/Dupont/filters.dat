@@ -1,3 +1,7 @@
 J_PMT D62_J_system_total.10 13.08607 Legacy J-band for PMT on Dupont at LCO
 H_PMT D62_H_system_total.10 13.06032 Legacy H-band for PMT on Dupont at LCO
 K_PMT D62_K_system_total.10 12.54567 Legacy K-band for PMT on Dupont at LCO
+Yd Y_DUP_TAM_scan_atm.dat VegaB=0 TAM scanned Y filter for Dupont at LCO
+Jd J_DUP_TAM_scan_atm.dat VegaB=0 TAM scanned J filter for Dupont at LCO
+Hd H_DUP_TAM_scan_atm.dat VegaB=0 TAM scanned H filter for Dupont at LCO
+Kd K_DUP_TAM_scan_atm.dat VegaB=0 TAM scanned K filter for Dupont at LCO

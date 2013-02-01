@@ -553,6 +553,8 @@ if spline2 is not None:
          else:
             return eval_x(y, self.tck)
    functions['hyperspline'] = (HyperSpline, "B. Thijsse style spline (snpy.spline2)")
+   functions['spline2'] = (HyperSpline, "B. Thijsse style spline (snpy.spline2)")
+
 
 
 class Spline(oneDcurve):

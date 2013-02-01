@@ -3,6 +3,7 @@ from filters import fset
 import numpy.random as RA
 from utils import stats
 from utils import fit1dcurve
+from utils import InteractiveFit
 import plotmod
 from scipy.optimize import brentq
 
@@ -123,7 +124,13 @@ class lc:
          if self.__dict__['interp'] is not None:
             if name in self.__dict__['interp'].pars:
                setattr(self.__dict__['interp'], name, value)
-               self.replot()
+               # Now check to see if there is an interactive fit to update
+               mp = getattr(self, 'mp', None)
+               if mp is not None and \
+                     isinstance(mp, InteractiveFit.InteractiveFit):
+                  mp.redraw()
+
+               #self.replot()
                return
       if name == 'mask':
          if 'mask' in self.__dict__.keys():
@@ -194,8 +201,8 @@ class lc:
 
       return(evm,mask)
 
-   def spline_fit(self, fitflux=0, do_sigma=1, Nboot=100, keep_boot=1, method='spline2',
-         **args):
+   def spline_fit(self, fitflux=0, do_sigma=1, Nboot=100, keep_boot=1, 
+         method='spline2', **args):
       '''Make a spline template of the lightcurve.  If fitflux=1, then fit in 
       flux-space.  If do-sigma=1, do a monte-carlo simulation to get an idea of
       the uncertainties in the final parameters.  Nboot controls the number of
@@ -209,14 +216,15 @@ class lc:
          dm15, e_dm15:   delta-m 15
          model_type:     "spline" or "spline2"
          tck:            spline info '''
-      return self.template(fitflux, do_sigma, Nboot, keep_boot, method, **args)
+      return self.template(fitflux=fitflux, do_sigma=do_sigma, Nboot=Nboot, 
+            method=method, **args)
 
    def list_types(self):
       print "the following methods are available for constructing templates:"
       fit1dcurve.list_types()
 
-   def template(self, fitflux=False, do_sigma=True, Nboot=50, method=default_method,
-         compute_params=True, interactive=False, **args):
+   def template(self, fitflux=False, do_sigma=True, Nboot=50, 
+         method=default_method, compute_params=True, interactive=False, **args):
       '''Make an interpolating template of the lightcurve.  If fitflux, then fit in 
       flux-space.  If do-sigma, do a monte-carlo simulation to get an idea of
       the uncertainties in the final parameters.  Nboot controls the number of

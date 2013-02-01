@@ -550,18 +550,27 @@ class sn(object):
                           tmin=res['MJD'].min(), tmax=res['MJD'].max())[0]
 
 
-   def get_mangled_SED(self, band, i):
-      '''After the mangle_kcorr function has been run, you can use this function to
-      retrieve the mangled SED that was used to compute the k-correction for the
-      [i]'th day in [band]'s light-curve.  Returns 4 arrays:  wavelength, mangled_flux,
-      original flux, and mangling function.'''
+   def get_mangled_SED(self, band, i, normalize=True):
+      '''After the mangle_kcorr function has been run, you can use this
+      function to retrieve the mangled SED that was used to compute the
+      k-correction for the [i]'th day in [band]'s light-curve.  Returns 4
+      arrays:  wavelength, mangled_flux, original flux, and mangling
+      function.  If [normalize] is True, then scale the mangled SED to
+      match the flux level to the observed photometry.'''
       
       if 'ks_mopts' not in self.__dict__:
          raise AttributeError, "Mangling info not found... try running self.kcorr()"
       epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
       wave,flux = kcorr.get_SED(int(epoch), version=self.k_version)
       man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][i])[0]
-      return(wave,man_flux,flux,man_flux/flux)
+      if not normalize:
+         return(wave*(1+self.z),man_flux,flux,man_flux/flux)
+
+      # Now compute the normalizing factor
+      num = power(10,-0.4*(self.data[band].magnitude[i] -\
+            self.data[band].filter.zp))
+      denom = fset[band].response(wave*(1+self.z), man_flux)
+      return(wave*(1+self.z),man_flux*num/denom,flux,man_flux/flux)
    
    def get_color(self, band1, band2, interp=1, use_model=0, model_float=0, kcorr=0):
       '''return the observed SN color of [band1] - [band2].  If [interp]=1, then

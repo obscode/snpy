@@ -19,9 +19,12 @@ ou ushiftedswo.txt 12.400  shifted u filter for Swope at LCO
 og gshiftedswo.txt 14.432  shifted g filter for Swope at LCO
 or rshiftedswo.txt 14.136 shifted r filter for Swope at LCO
 oi ishiftedswo.txt 13.687 shifted i filter on Swope at LCO
-Y yfilter 12.687 Y-band on Swope at LCO
-J jfilter 12.853 J-band for Swope at LCO
-H hfilter 12.555 H-band for Swope at LCO
+Y Y_SWO_TAM_scan_atm.dat VegaB=0 TAM scanned Y filter for Swope at 
+J J_SWO_TAM_scan_atm.dat VegaB=0 TAM scanned J filter for Swope at 
+H H_SWO_TAM_scan_atm.dat VegaB=0 TAM scanned H filter for Swope at 
+oY yfilter 12.687 Y-band on Swope at LCO
+oJ jfilter 12.853 J-band for Swope at LCO
+oH hfilter 12.555 H-band for Swope at LCO
 K kfilter 11.967 K-band for Swope at LCO
 Yc yfilter 12.687 Yc-band for PANIC on Baade, LCO
 Jc jfilter 12.853 Jc-band for PANIC on Baade, LCO
