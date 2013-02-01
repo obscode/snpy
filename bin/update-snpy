@@ -1,6 +1,6 @@
-#!/Users/burns/snpy/bin/python
+#!/Users/cburns/snpy2/bin/python
 
-import os,sys
+import os,sys,re
 import subprocess
 
 fallback = '''
@@ -43,17 +43,23 @@ if not os.path.isdir(snpy_src):
 os.chdir(snpy_src)
 if os.path.isdir('.svn'):
    print "Trying to update from repository..."
-   ret = subprocess.call(['svn','update','--accept','theirs-full'])
-   if ret != 0:
+   p = subprocess.Popen(['svn','update','--accept','theirs-full'],
+         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+   p.wait()
+   if p.returncode != 0:
       print "SVN command failed.  Check your internet connection"
       sys.exit(1)
    print "Success!"
+   line = p.stdout.readlines()[-1]
+   rev = re.search(r'At revision ([0-9]+)\.',line).group(1)
+   of = open('version.py','w')
+   print >> of, "__version__ = '2.0-%s'" % (rev)
+   of.close()
+
    of = open('SNooPy.build.log','w')
    print "Building updated SNooPy source code..."
    p = subprocess.Popen([os.path.join(sys.prefix, 'bin','python'),'setup.py',
       'install'], stdout=of, stderr=subprocess.STDOUT)
-   #subprocess.call([os.path.join(sys.prefix, 'bin','python'),
-   #   'setup.py','install'])
    p.wait()
    if p.returncode != 0:
       print "Failed to build the updated SNooPy source code!"

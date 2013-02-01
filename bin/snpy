@@ -11,12 +11,14 @@ Usage:  snpy [lowz] [-gui gui]
         -gui gui:  select gui to use.  By default, 'tk' is
                    used on Linux and 'osx' on Macs.  You
                    can try 'tk' on Mac, but it tends to be 
-                   less reliable'''
+                   less reliable
+        -nc:  Don't check for newer versions at startup'''
 
 gui = 'tk'
 if '-gui' in sys.argv:
    id = sys.argv.index('-gui')+1
    gui = sys.argv[id]
+nc = '-nc' in sys.argv
 
 if sys.platform.find('linux') >= 0:
    if getattr(sys, 'real_prefix', False):
@@ -62,4 +64,14 @@ from snpy import *
 if "lowz" in sys.argv:
    del sys.argv[sys.argv.index("lowz")]
    sqlmod.default_sql = sqlmod.sql_lowz()
+if not nc:
+   upgrade,message = check_version()
+   if upgrade:
+      print "**********************************"
+      print "New version of SNooPy is Available"
+      print "**********************************"
+      for line in message:
+         sys.stdout.write(line)
+      print ""
+      print "Use update-snpy to install this new version"
 ipshell()

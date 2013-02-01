@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import sys,string,os,re
 from glob import glob
 have_sql = 1
@@ -31,9 +30,7 @@ import mangle_spectrum      # SN SED mangling routines
 import pickle
 import model
 from utils.fit1dcurve import list_types,regularize
-
-Version = '2.1b'     # Let's keep track of this from now on.
-__version__ = Version
+from version import __version__
 
 # Some useful functions in other modules which the interactive user may want:
 getSED = kcorr.get_SED
@@ -1341,3 +1338,18 @@ def get_sn(str, sql=None):
    else:
       s = sn(str, source=sql)
    return s
+
+def check_version():
+   global __version__
+   import urllib2
+   from distutils.version import LooseVersion
+   u = urllib2.urlopen('ftp://192.91.178.6/pub/cburns/snpy/latest', timeout=1)
+   if not u:
+      return None,None
+   lines = u.readlines()
+   u.close()
+   ver = LooseVersion(lines[0].strip())
+   if ver > LooseVersion(__version__):
+      return True,lines[1:]
+   else:
+      return False,None

@@ -621,6 +621,9 @@ class Spline(oneDcurve):
    def _setup(self):
       '''Given the current set of params, setup the interpolator.'''
       self.tck = splrep(self.x, self.y, 1.0/self.ey, **self.pars)
+      # Check for NaN's in the tck.
+      if num.sometrue(num.isnan(self.tck[1])):
+         raise ValueError, "The Spline is invalid.  It is possible the data are too noisy, or smoothing is too low.  Try increasing 's' or fixing your errors"
       self.setup = True
       self.realization = None
 
@@ -657,7 +660,7 @@ class Spline(oneDcurve):
       try:
          self._setup()
       except:
-         print "Adding knot failed, reverting to old knots"
+         print "Deleting knot failed, reverting to old knots"
          self.pars['t'] = old_knots
          self.setup = False
       return
