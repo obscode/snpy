@@ -93,7 +93,7 @@ class sn(object):
       self.__dict__['model'] = model.EBV_model(self)
       self.template_bands = ['u','B','V','g','r','i','Y','J','H','K']
 
-      self.Version = Version    # A version-stamp for when we upgrade
+      self.Version = __version__    # A version-stamp for when we upgrade
       self.name = name
       self.z = z              # Redshift of the SN
       self.ra = ra              # Coordinates
