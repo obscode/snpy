@@ -371,8 +371,8 @@ class sql_highz(sqlbase):
    SPEC_TABLE = "SPECTRA"
    SPEC_INFO = "SP_INFO"
 
-   FILTER_KEYS = {'Bs':'B',
-                  'Vs':'V'}
+   #FILTER_KEYS = {'Bs':'B',
+   #               'Vs':'V'}
 
 
 class sql_lowz(sqlbase):
