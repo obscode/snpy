@@ -773,6 +773,7 @@ utils/mpfit.py -text
 utils/redlaw.py -text
 utils/setup.py -text
 utils/stats.py -text
+/version.py -text
 zeropoints/CFHT/compute_zpt.py -text
 zeropoints/LCO/compute_zpt_BV.py -text
 zeropoints/LCO/compute_zpt_YJHK.py -text
