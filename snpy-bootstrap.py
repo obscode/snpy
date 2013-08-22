@@ -2044,6 +2044,29 @@ xu/Lx8M/UvCLTxW7VULHxB1PRRbrYfvWNY5S8it008jOjcleaMqVBDnUXcWULV2YK9JEQ92OfC96
 
 
 if __name__ == '__main__':
+
+    # First check to see if we are in a virtualenv or venv already...
+    if hasattr(sys, 'real_prefix'):
+       print "Warning:  you are already running in a virtual environment."
+       print "So I'm just going to install SNooPy in this virtualenv"
+       print "Should I proceed (Y/N)?"
+       res = raw_input()
+       if res == 'Y':
+          rp = os.path.realpath(sys.prefix)
+          after_install(None, rp)
+          sys.exit(0)
+    elif hasattr(sys, 'base_prefix'):
+       print "Warning:  you are already running in a venv virtual environment."
+       print "So I'm just going to install SNooPy in this venv."
+       print "Should I proceed (Y/N)?"
+       res = raw_input()
+       if res == 'Y':
+          rp = os.path.realpath(sys.prefix)
+          if not os.path.isfile(os.path.join(rp,'bin','pip')):
+             install_pip(os.path.join(rp, 'bin', 'python'))
+          after_install(None, rp)
+          sys.exit(0)
+
     main()
 
 ## TODO:

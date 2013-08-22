@@ -1,4 +1,4 @@
-#!/Users/cburns/snpy2/bin/python
+#!/Users/cburns/Library/Enthought/Canopy_32bit/User/bin/python
 
 import os,sys,re
 import subprocess
@@ -27,7 +27,9 @@ If you downloaded a static source tarball:
 
 # first check to see if we are in a virtualenv
 realprefix = getattr(sys, 'real_prefix', None)
-if realprefix is None:
+baseprefix = getattr(sys, 'base_prefix', None)
+
+if realprefix is None and baseprefix is None:
    print fallback
    print instructions
    sys.exit(1)
