@@ -12,7 +12,7 @@ have_sql = sqlmod.have_sql
 import types
 import plot_sne_mpl as plotmod
 from lc import lc           # the light-curve class
-from numpy.oldnumeric import *       # Vectors
+from numpy import *       # Vectors
 import ubertemp             # a template class that contains these two
 import kcorr                # Code for generating k-corrections
 import utils.IRSA_dust_getval as dust_getval
@@ -243,8 +243,8 @@ class sn(object):
       ret_data['MJD'] = times
       # Now loop through the bands and see where we need to fill in data
       for band in bands:
-         gids = less(absolute(times[:,NewAxis] - \
-               self.data[band].MJD[NewAxis,:]), dt)
+         gids = less(absolute(times[:,newaxis] - \
+               self.data[band].MJD[newaxis,:]), dt)
          temp1 = 0.0*times + 99.9
          temp2 = 0.0*times + 99.9
          for i in range(len(gids)):
@@ -277,7 +277,8 @@ class sn(object):
       else:
          return(ret_data)
 
-   def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0):
+   def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0,
+         kcorr=1):
       '''Use the Lira Law to derive a color excess.  [Bband] and [Vband] 
       should be whichever observed bands corresponds to restframe B and V,
       respectively.  Use [interpolate]=1 to interpolate missing data.  If
@@ -293,7 +294,7 @@ class sn(object):
       t_maxes,maxes,e_maxes,restbands = self.get_rest_max([Vband])
       Tmax = t_maxes[0]
 
-      t,BV,eBV,flag = self.get_color(Bband, Vband, kcorr=1)
+      t,BV,eBV,flag = self.get_color(Bband, Vband, kcorr=kcorr)
 
       # find all points that have data in both bands
       gids = equal(flag, 0)
@@ -305,7 +306,7 @@ class sn(object):
       gids = gids*greater_equal(t-Tmax, tmin)*less_equal(t-Tmax, tmax)
 
       # Now check that we actually HAVE some data left
-      if len(nonzero(gids)) == 0:
+      if not sometrue(gids):
          raise RuntimeError, "Sorry, no data available between t=%f and t=%f" % (tmin,tmax) 
       
       # extract the data we want and convert to Vmax epochs
@@ -362,8 +363,8 @@ class sn(object):
             raise ValueError, "Error:  filter %s has not been fit " % band + \
                   "with a light-curve yet, so I cannot compute it's maximum"
       N = len(bands)
-      result = (zeros(N, dtype=Float32), zeros(N, dtype=Float32),
-            zeros(N, dtype=Float32), [""]*N)
+      result = (zeros(N, dtype=float32), zeros(N, dtype=float32),
+            zeros(N, dtype=float32), [""]*N)
       if len(model_bands) > 0:
          mod_result = self.model.get_max(model_bands, restframe=restframe,
                deredden=deredden)
@@ -640,8 +641,8 @@ class sn(object):
       flag = where(m1*m2, 0, 1)
 
       # Get the range where we are doing interpolation
-      i1 = max(min(nonzero(m1)), min(nonzero(m2)))
-      i2 = min(max(nonzero(m1)), max(nonzero(m2)))
+      i1 = max(min(nonzero(m1)[0]), min(nonzero(m2)[0]))
+      i2 = min(max(nonzero(m1)[0]), max(nonzero(m2)[0]))
       # from 0 to i1 (non-inclusive) and i2 to end, we have extrapolation, flag
       # as 2
       flag[0:i1] = 2
@@ -663,11 +664,12 @@ class sn(object):
 
       return(data['MJD'], colors, e_colors, flag)
 
-   def getEBVgal(self):
+   def getEBVgal(self, calibration='SF11'):
       '''Gets the value of E(B-V) due to galactic extinction.  The ra and decl
       member varialbles must be set beforehand.'''
       if self.ra is not None and self.decl is not None:
-         self.EBVgal,mask = dust_getval.get_dust_RADEC(self.ra, self.decl)
+         self.EBVgal,mask = dust_getval.get_dust_RADEC(self.ra, self.decl,
+               calibration=calibration)
          self.EBVgal = self.EBVgal[0]
       else:
          print "Error:  need ra and dec to be defined, E(B-V)_gal not computed"
@@ -743,7 +745,7 @@ class sn(object):
             if k_correct and filter in self.ks_tck:
                ks = scipy.interpolate.splev(ts + self.Tmax, self.ks_tck[filter])
                # mask out valid k-corrections
-               mids = argmin(absolute(ts[:,NewAxis]-self.data[filter].MJD[NewAxis,:]+\
+               mids = argmin(absolute(ts[:,newaxis]-self.data[filter].MJD[newaxis,:]+\
                      self.Tmax))
                ks_mask = self.ks_mask[filter][mids]*greater_equal(ts, -19)*less_equal(ts, 70)
                mask = mask*ks_mask
@@ -919,6 +921,7 @@ class sn(object):
       if bands is None:
          # By default, we fit the bands whose restbands are provided by the model
          bands = [b for b in self.data.keys() if self.restbands[b] in self.model.rbs]
+
       # Setup initial Robs (in case it is used by the model)
       for band in bands:
          if band not in self.Robs:
@@ -978,8 +981,10 @@ class sn(object):
    def plot_filters(self, bands=None, day=0, **args):
       return plotmod.plot_filters(self, bands, day, **args)
 
-   def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None):
-      return plotmod.plot_color(self, f1,f2,epoch, deredden, outfile)
+   def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None,
+         clear=True):
+      return plotmod.plot_color(self, f1,f2,epoch, deredden, outfile,
+            clear)
 
    def compute_w(self, band1, band2, band3, R=None):
       '''Returns the reddeining-free magnitude in the sense that:
@@ -1019,7 +1024,7 @@ class sn(object):
       return plotmod.mask_data(self)
    
    def plot(self, xrange=None, yrange=None,  
-         title=None, interactive=0, single=0, dm=1, fsize=None, linewidth=None,
+         title=None, interactive=0, single=0, offset=True, fsize=None, linewidth=None,
          symbols=None, colors=None, relative=0, legend=1, mask=1, label_bad=0,
          flux=0, epoch=1, msize=6, outfile=None):
       '''Plot out the supernova data in a nice format.  There are several 
@@ -1029,7 +1034,7 @@ class sn(object):
          - title:  optional title
          - interactive:  allows for an interactive plot (PGPLOT only).
          - single:  plot out as a single (rather than panelled) plot?
-         - dm:  offset in magnitudes between the lightcurves (for single plots)
+         - offset:  offset between the lightcurves (for single plots)
          - fsize:  override the font size used to plot the graphs
          - linewidth:  override the line width
          - symbols:  dictionary of symbols, indexed by band name.
@@ -1044,7 +1049,7 @@ class sn(object):
       '''
 
       return plotmod.plot_sn(self, xrange, yrange,
-         title, interactive, single, dm, fsize, linewidth,
+         title, interactive, single, offset, fsize, linewidth,
          symbols, colors, relative, legend, mask, label_bad,
          flux, epoch, msize, outfile)
 
@@ -1271,7 +1276,10 @@ def import_lc(file):
    line N+1:   Date   magnitue   error
    ....
    '''
-   f = open(file)
+   if type(file) is type(""):
+      f = open(file)
+   else:
+      f = file
    lines = f.readlines()
    fields = lines[0].split()
    if len(fields) != 4:  raise RuntimeError, "first line of %s must have 4 " +\
