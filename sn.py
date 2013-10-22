@@ -1326,13 +1326,14 @@ def import_lc(file):
 
    return(s)
 
-def get_sn(str, sql=None):
+def get_sn(str, sql=None, **kw):
    '''Attempt to get a sn object from several possible sources.  First, if str
    corresponds to an existing file name, the function attempts to load the sn
    instance from it as if it were a pickle'd object.  If that fails, it attempts
    to use import_lc() on the file.  If str is not the name of an existing file,
    it is treated as a SN name and is retrieved from the designated sql connection
-   object (or default_sql if sql=None).'''
+   object (or default_sql if sql=None), in which case all keyword arguments
+   are sent as options to the sql module.'''
    if os.path.isfile(str):
       try:
          f = open(str, 'r')
@@ -1344,14 +1345,17 @@ def get_sn(str, sql=None):
          except RuntimeError:
             raise RuntimeError, "Could now load %s into SNPY" % str
    else:
-      s = sn(str, source=sql)
+      s = sn(str, source=sql, **kw)
    return s
 
 def check_version():
    global __version__
    import urllib2
    from distutils.version import LooseVersion
-   u = urllib2.urlopen('ftp://192.91.178.6/pub/cburns/snpy/latest', timeout=1)
+   try:
+      u = urllib2.urlopen('ftp://192.91.178.6/pub/cburns/snpy/latest', timeout=1)
+   except:
+      return None,None
    if not u:
       return None,None
    lines = u.readlines()
