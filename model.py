@@ -4,14 +4,13 @@ New:  Add an optional [decline_param] to choose between a dm15 model and stretch
 import os
 from snpy import ubertemp
 from snpy import kcorr
-from snpy.filters import fset
-from numpy.oldnumeric import *
 from numpy.linalg import cholesky
 from scipy import stats
 from scipy.optimize import leastsq
 from scipy.optimize import brent
 import scipy.interpolate
-from numpy import median, bool, diag
+from numpy import *
+#from numpy import median, bool, diag
 from numpy.linalg import inv
 
 Ia_w,Ia_f = kcorr.get_SED(0, 'H3')
@@ -81,14 +80,14 @@ class model:
          k1 = scipy.interpolate.splev(tck[0][-1], tck)
          K = where(less(t+self.Tmax, tck[0][0]), k0, K)
          K = where(greater(t+self.Tmax, tck[0][-1]), k1, K)
-         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
-               self.Tmax))
+         mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[newaxis,:]+\
+               self.Tmax), axis=1)
          # mask based on original mask and limits of Hsiao spectrum
          mask2 = self.parent.ks_mask[band][mids]*\
                greater_equal(t, -19)*less_equal(t, 70)
       else:
          K = 0*t
-         mask2 = ones(t.shape, typecode=bool)
+         mask2 = ones(t.shape, dtype=bool)
       return K,mask2
 
    def _extra_error(self, parameters):
@@ -170,7 +169,7 @@ class model:
          if debug: print">>> calling model member function"
          mod,err,mask = self.__call__(band, self.parent.data[band].MJD)
          if self.model_in_mags:
-            f = power(10, -0.4*(mod - fset[band].zp))
+            f = power(10, -0.4*(mod - self.parent.data[band].filter.zp))
             #ef = sqrt(power(err*mod/1.0857,2) + \
             #          power(self.parent.data[band].e_flux,2))
             cov_f = power(f*err/1.0857,2)
@@ -185,7 +184,7 @@ class model:
             resids_list.append((f - self.parent.data[band].flux)*W)
          else:
             W = cholesky(inv(error[band]+diag(cov_f)))
-            W = W*m[NewAxis,:]*m[:,NewAxis]
+            W = W*m[newaxis,:]*m[:,NewAxis]
             sum_w += sum(diagonal(W))
             resids_list.append(dot(W, f - self.parent.data[band].flux))
 
@@ -321,13 +320,13 @@ class EBV_model(model):
       # If k-corrections are there, use them
       #if band in self.parent.ks_tck:   
       #   temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
-      #   mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+      #   mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[NewAxis,:]+\
       #         self.Tmax))
       #   # mask based on original mask and limits of Hsiao spectrum
       #   mask2 = self.parent.ks_mask[band][mids]*\
       #         greater_equal(t, -19)*less_equal(t, 70)
       #else:
-      #   mask2 = ones(temp.shape, typecode=bool)
+      #   mask2 = ones(temp.shape, dtype=bool)
       K,mask2 = self.kcorr(band, t)
       temp = temp + K
 
@@ -560,13 +559,13 @@ class EBV_model2(model):
       # If k-corrections are there, use them
       if band in self.parent.ks_tck:   
          temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
-         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+         mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[NewAxis,:]+\
                self.Tmax))
          # mask based on original mask and limits of Hsiao spectrum
          mask2 = self.parent.ks_mask[band][mids]*\
                greater_equal(t, -19)*less_equal(t, 70)
       else:
-         mask2 = ones(temp.shape, typecode=bool)
+         mask2 = ones(temp.shape, dtype=bool)
 
       # Apply reddening correction:
       # Figure out the reddening law
@@ -840,7 +839,8 @@ class max_model(model):
                 'imax':array([0.01, 0.03, 0.05, 0.05, 0.05]),
                 'Ymax':array([0.01, 0.03, 0.03, 0.03, 0.04]),
                 'Jmax':array([0.02, 0.04, 0.05, 0.05, 0.05]),
-                'Hmax':array([0.01, 0.02, 0.02, 0.02, 0.02])}
+                'Hmax':array([0.01, 0.02, 0.02, 0.02, 0.02]),
+                'Kmax':array([0.00, 0.00, 0.00, 0.00, 0.00])}
       errors['st'] = errors['dm15']*13.74/30    # conversion factor from dm15 to s
       if parameter[1:] == 'max':
          f = parameter[0]
@@ -952,13 +952,13 @@ class max_model2(model):
       # If k-corrections are there, use them
       if band in self.parent.ks_tck:   
          temp = temp + scipy.interpolate.splev(t+Tmax, self.parent.ks_tck[band])
-         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+         mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[NewAxis,:]+\
                Tmax))
          # mask based on original mask and limits of Hsiao spectrum
          mask2 = self.parent.ks_mask[band][mids]*\
                greater_equal(t, -19)*less_equal(t, 70)
       else:
-         mask2 = ones(temp.shape, typecode=bool)
+         mask2 = ones(temp.shape, dtype=bool)
 
       # Apply Max
       temp = temp + self.parameters[rband+'max'] 
@@ -1116,13 +1116,13 @@ class Rv_model(model):
       # If k-corrections are there, use them
       if band in self.parent.ks_tck:   
          temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
-         mids = argmin(absolute(t[:,NewAxis]-self.parent.data[band].MJD[NewAxis,:]+\
+         mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[NewAxis,:]+\
                self.Tmax))
          # mask based on original mask and limits of Hsiao spectrum
          mask2 = self.parent.ks_mask[band][mids]*\
                greater_equal(t, -19)*less_equal(t, 70)
       else:
-         mask2 = ones(temp.shape, typecode=bool)
+         mask2 = ones(temp.shape, dtype=bool)
 
       # Apply reddening correction:
       # Figure out the reddening law
