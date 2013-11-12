@@ -154,8 +154,8 @@ class lc:
 
    def mask_epoch(self, tmin, tmax):
       '''Update the lc's mask to only include data between tmin and tmax.'''
-      self.mask *= greater_equal(self.t, tmin)
-      self.mask *= less_equal(self.t, tmax)
+      self.mask[greater_equal(self.t, tmin)] = False
+      self.mask[less_equal(self.t, tmax)] = False
 
    def mask_emag(self, max):
       '''Update the lc's mask to only include data with e_mag < max.'''
@@ -323,29 +323,47 @@ class lc:
       Tmaxs,Mmaxs,dm15s = map(array, [Tmaxs, Mmaxs, dm15s])
 
       Tgids = greater(Tmaxs, 0)
+      goodfrac = sum(Tgids)*1.0/len(Tgids)
       if sum(Tgids)*1.0/len(Tgids) < 0.8:
-         print "Warning!  More than 20% of MC realizations had bad Tmax"
+         print "Warning!  %f%% of MC realizations had good Tmax" % \
+               (sum(Tgids)*100.0/len(Tgids),)
       Mgids = greater(Mmaxs, 0)
       if sum(Mgids)*1.0/len(Mgids) < 0.8:
-         print "Warning!  More than 20% of MC realizations had bad Mmax"
+         print "Warning!  %f%% of MC realizations had good Mmax" %\
+               (sum(Mgids)*100.0/len(Mgids),)
       dgids = greater(dm15s, 0)
       if sum(dgids)*1.0/len(dgids) < 0.8:
-         print "Warning!  More than 20% of MC realizations had bad dm15"
-      self.Tmax = Tmaxs[0]
-      self.e_Tmax = std(Tmaxs[Tgids]) 
-      self.Mmax = Mmaxs[0]
-      self.e_Mmax = std(Mmaxs[Mgids]) 
-      self.dm15 = dm15s[0]
-      self.e_dm15 = std(dm15s[dgids]) 
-      self.cov_Tmax_dm15 = \
-            sum(compress(Tgids*dgids, (Tmaxs-Tmaxs[0])*(dm15s-dm15s[0])))/\
-            (sum(Tgids*dgids) - 1)
-      self.cov_Tmax_Mmax = \
-            sum(compress(Tgids*Mgids, (Tmaxs-Tmaxs[0])*(Mmaxs-Mmaxs[0])))/\
-            (sum(Tgids*Mgids) - 1)
-      self.cov_Mmax_dm15 = \
-            sum(compress(Mgids*dgids, (Mmaxs-Mmaxs[0])*(dm15s-dm15s[0])))/\
-            (sum(Mgids*dgids) - 1)
+         print "Warning!  %f%% of MC realizations had good dm15" %\
+               (sum(dgids)*100.0/len(dgids),)
+      if sometrue(Tgids):
+         self.Tmax = Tmaxs[0]
+         self.e_Tmax = std(Tmaxs[Tgids]) 
+      else:
+         self.Tmax = self.e_Tmax = -1
+      if sometrue(Mgids):
+         self.Mmax = Mmaxs[0]
+         self.e_Mmax = std(Mmaxs[Mgids]) 
+      else:
+         self.Mmax = self.e_Mmax = -1
+      if sometrue(dgids):
+         self.dm15 = dm15s[0]
+         self.e_dm15 = std(dm15s[dgids]) 
+      else:
+         self.dm15 = self.e_dm15 = -1
+
+      if sometrue(Tgids*dgids):
+         self.cov_Tmax_dm15 = \
+               sum(compress(Tgids*dgids, (Tmaxs-Tmaxs[0])*(dm15s-dm15s[0])))/\
+               (sum(Tgids*dgids) - 1)
+      
+      if sometrue(Tgids*Mgids):
+         self.cov_Tmax_Mmax = \
+               sum(compress(Tgids*Mgids, (Tmaxs-Tmaxs[0])*(Mmaxs-Mmaxs[0])))/\
+               (sum(Tgids*Mgids) - 1)
+      if sometrue(Mgids*dgids):
+         self.cov_Mmax_dm15 = \
+               sum(compress(Mgids*dgids, (Mmaxs-Mmaxs[0])*(dm15s-dm15s[0])))/\
+               (sum(Mgids*dgids) - 1)
       return
 
    def plot(self, epoch=1, flux=0, gloes=True, symbol=4, outfile=None):

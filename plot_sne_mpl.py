@@ -338,7 +338,7 @@ def change_SED(event):
 
 
 
-def plot_filters(self, bands=None, day=0, fill=0):
+def plot_filters(self, bands=None, day=0, fill=0, outfile=None):
    '''Plot the filt responses, both the observed ones and the restbands
    defined in the sn instance in the rest frame of the SN.  If bands is specified,
    only plot those.  Specify which SED to plot using day.'''
@@ -396,11 +396,13 @@ def plot_filters(self, bands=None, day=0, fill=0):
    pyplot.draw()
    p.cb = ButtonClick(p, bindings={'d':change_SED, 'D':change_SED})
    p.cb.connect()
+   if outfile is not None:
+      p.savefig(outfile)
    return p
 
 
 def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0, 
-      single=0, dm=1, fsize=12., linewidth=1, symbols=None, colors=None, 
+      single=0, offset=True, fsize=12., linewidth=1, symbols=None, colors=None, 
       relative=0, legend=1, mask=1, label_bad=0, flux=0, epoch=1, msize=6,
       outfile=None):
    '''Plot out the supernova data in a nice format.  There are several 
@@ -410,7 +412,7 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
       - title:  optional title
       - interactive:  allows for an interactive plot.
       - single:  plot out as a single (rather than panelled) plot?
-      - dm:  offset in magnitudes between the lightcurves (for single plots)
+      - offset:  automatically offset between the lightcurves (for single plots)
       - fsize:  override the font size used to plot the graphs
       - linewidth:  override the line width
       - symbols:  dictionary of symbols, indexed by band name.
@@ -500,7 +502,10 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
       # Add extra space, if needed
       #delt = max(i*dm, i*dm + maxes[0] - maxes[i])
       #delt = round(delt, 1)
-      delt = offsets[i]
+      if offset:
+        delt = offsets[i]
+      else:
+        delt = 0
       if not single:
          ax = p.axes[i]
          # make a reference to the lightcruve we are plotting.
@@ -612,12 +617,13 @@ def plot_lira(t, t2, t_maxes, BV, eBV, BV2, tmin, tmax, c):
    p.canvas.draw()
    return p
 
-def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None):
+def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None,
+      clear=True):
    '''Plot the color ([f1]-[f2]) evolution curve for the SN.  If  [epoch]
    is True and Bmax is defined, plot relative to T(Bmax).  If [deredden]
    is True, remove MW reddening.  Specify [outfile] to save to file.'''
    p = pyplot.figure(114)
-   p.clear()
+   if clear: p.clear()
    ax = p.add_subplot(111)
    ax.set_xlabel('JD - JD(Bmax)')
    ax.set_ylabel('%s-%s' % (f1,f2))
@@ -651,6 +657,8 @@ def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None):
    ax.legend(prop={'size':12})
    pyplot.draw()
    #p.canvas.draw()
+   if outfile is not None:
+      p.savefig(outfile)
    return p
 
 def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None):

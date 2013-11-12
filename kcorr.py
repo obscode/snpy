@@ -29,7 +29,7 @@ Original comments from Mark's IRAF code:
 
 import os,sys,string,re
 #import pygplot
-import numpy.oldnumeric as num
+import numpy as num
 import scipy.interpolate
 from utils import deredden
 try:
@@ -66,51 +66,51 @@ if have_FITS:
    # Hsiao's uberspectrum:
    f = FITS.FITS(os.path.join(spec_base, 'Hsiao_SED_V2.fits'))
    h_sed = f.data()
-   h_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], typecode=num.Float32) - \
+   h_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], dtype=num.float32) - \
          f['CRPIX1'] + 1)*f['CDELT1']
    f.close()
    # Hsiao's new OPT+NIR uberspectrum
    f = FITS.FITS(os.path.join(spec_base, 'Hsiao_SED_V3.fits'))
    h3_sed = f.data()
-   h3_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], typecode=num.Float32) - \
+   h3_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], dtype=num.float32) - \
          f['CRPIX1'] + 1)*f['CDELT1']
    f.close()
    # Nugent's uberspectrum:
    f = FITS.FITS(os.path.join(spec_base, "Nugent_SED.fits"))
    n_sed = f.data()
-   n_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], typecode=num.Float32) - \
+   n_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], dtype=num.float32) - \
          f['CRPIX1'] + 1)*f['CDELT1']
    # Nugent's 91bg-like SED:
    f = FITS.FITS(os.path.join(spec_base, "Nugent_91bg_SED.fits"))
    n91_sed = f.data()
-   n91_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], typecode=num.Float32) - \
+   n91_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], dtype=num.float32) - \
          f['CRPIX1'] + 1)*f['CDELT1']
 else:
    # Hsiao's uberspectrum:
    f = pyfits.open(os.path.join(spec_base, 'Hsiao_SED_V2.fits'))
    h_sed = f[0].data
    head = f[0].header
-   h_wav = head['CRVAL1'] + (num.arange(head['NAXIS1'],typecode=num.Float32) - \
+   h_wav = head['CRVAL1'] + (num.arange(head['NAXIS1'],dtype=num.float32) - \
          head['CRPIX1'] + 1)*head['CDELT1']
    f.close()
    # Hsiao's new OPT+NIR uberspectrum
    f = pyfits.open(os.path.join(spec_base, 'Hsiao_SED_V3.fits'))
    h3_sed = f[0].data
    head = f[0].header
-   h3_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],typecode=num.Float32) - \
+   h3_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
          head['CRPIX1'] + 1)*head['CDELT1']
    f.close()
    # Nugent's uberspectrum:
    f = pyfits.open(os.path.join(spec_base, "Nugent_SED.fits"))
    n_sed = f[0].data
    head = f[0].header
-   n_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],typecode=num.Float32) - \
+   n_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
          head['CRPIX1'] + 1)*head['CDELT1']
    # Nugent's 91bg-like SED:
    f = pyfits.open(os.path.join(spec_base, "Nugent_91bg_SED.fits"))
    n91_sed = f[0].data
    head = f[0].header
-   n91_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],typecode=num.Float32) - \
+   n91_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
          head['CRPIX1'] + 1)*head['CDELT1']
 
 def get_SED(day, version='H3'):
@@ -130,19 +130,24 @@ def get_SED(day, version='H3'):
    else:
       raise AttributeError, "version %s not recognized" % version
 
-def redden(wave, flux, ebv_gal, ebv_host, z, R_gal=3.1, R_host=3.1):
+def redden(wave, flux, ebv_gal, ebv_host, z, R_gal=3.1, R_host=3.1,
+      redlaw='ccm', strict_ccm=False):
    '''Artificially redden the spectral template to simulate dust reddening, a la
    Cardelli et al.  Unless over-ridden, the standard reddening coefficients is 
-   assumed (Rv=3.1) for both the Milky Way and host.'''
+   assumed (Rv=3.1) for both the Milky Way and host.  You can choose which
+   redening law (CCM or Fitzpatrick) by specifying redlaw='ccm' or
+   redlaw='fm', respectively.'''
    
    #First we redden due to galactic extinction:
    newflux = 1.0*flux
    # ebv_host is in the frame of the SN
    if ebv_host != 0:
-      newflux,a,b = deredden.unred(wave, flux, -ebv_host, R_host)
+      newflux,a,b = deredden.unred(wave, flux, -ebv_host, R_host,redlaw=redlaw,
+            strict_ccm=strict_ccm)
    # ebv_gal is in the frame of the observer
    if ebv_gal != 0:
-      newflux,a,b = deredden.unred(wave, newflux, -ebv_gal, R_gal, z)
+      newflux,a,b = deredden.unred(wave, newflux, -ebv_gal, R_gal, z, 
+            redlaw=redlaw, strict_ccm=strict_ccm)
 
    return(newflux)
 
@@ -337,7 +342,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
          s,f = get_SED(day, version)
          if s is None:
             spec_wavs.append(num.arange(980.,24981.0,10.))
-            spec_fs.append(num.zeros((2401,), dtype=float))
+            spec_fs.append(num.zeros((2401,), dtype=num.float64))
             sids.append(False)
          else:
             spec_wavs.append(s)
@@ -365,8 +370,8 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
          kcorrs.append([])
          mask.append([])
          if not sids[j]:
-            kcorrs[-1] = num.zeros((len(filts),), typecode=num.Float32)
-            mask[-1] = num.zeros((len(filts),))
+            kcorrs[-1] = num.zeros((len(filts),), dtype=num.float32)
+            mask[-1] = num.zeros((len(filts),), dtype=num.int8)
             Rts.append(kcorrs[-1] - 1.0)
             m_opts.append(None)
             continue
@@ -392,8 +397,8 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
          spec_wav,spec_f = get_SED(day, version)
          if spec_wav is None:
             # print "Warning:  no spectra for day %d, setting Kxy=0" % day
-            kcorrs[-1] = num.zeros((len(filts),), typecode=num.Float32)
-            mask[-1] = num.zeros((len(filts),))
+            kcorrs[-1] = num.zeros((len(filts),), dtype=num.float32)
+            mask[-1] = num.zeros((len(filts),), dtype=num.int8)
             Rts.append(kcorrs[-1] - 1.0)
             m_opts.append(None)
             continue
@@ -411,7 +416,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
             if debug:
                print "filters and colors for day %f:" % (days[j])
                print fs
-               print ms[:-1]-m[1:]
+               print ms[:-1]-ms[1:]
   
             # Now we mangle the spectrum.  Note, we are redshifting the spectrum
             # here, so do NOT set z in mangle_spectrum2.

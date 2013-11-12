@@ -401,4 +401,27 @@ class sql_lowz(sqlbase):
    PHOTO_COND = "and MNAT is not NULL and MNAT > 0"
    JD_OFFSET = 52999.5    # database is JD - 2453000, so +2999.5 gives MJD
 
+class sql_csp2(sqlbase):
+   host = "csp2.lco.cl"
+   user = "cburns"
+   passwd = None
+   db = "Phot"
+   port = 3306
+   readonly = 1
+
+   SN_TABLE = "SNList"
+   SN_ID = "SN"
+   ATTR_KEYS = {'z':'zc/300000.0',
+                'ra':'ra*15.0',
+                'decl':'de'}
+   PHOTO_TABLE = "MAGSN"
+   PHOTO_ID = "field"
+   PHOTO_JD = "JD"
+   PHOTO_MAG = "mag"
+   PHOTO_EMAG = "sqrt(err*err + fiterr*fiterr)"
+   PHOTO_FILT = "filt"
+   PHOTO_K = None      # No K-corrections in the DB
+   PHOTO_COND = "and obj=-1 and mag > 0"
+   JD_OFFSET = 2400000.5    # database is JD, JD-2400000.5 gives MJD
+
 default_sql = None

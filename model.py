@@ -1,7 +1,7 @@
 '''Model.py:  a class that defines a SN model to be fit by SNOOPY.
 
 New:  Add an optional [decline_param] to choose between a dm15 model and stretch (st)  model'''
-import os
+import os,string
 from snpy import ubertemp
 from snpy import kcorr
 from numpy.linalg import cholesky
@@ -184,7 +184,7 @@ class model:
             resids_list.append((f - self.parent.data[band].flux)*W)
          else:
             W = cholesky(inv(error[band]+diag(cov_f)))
-            W = W*m[newaxis,:]*m[:,NewAxis]
+            W = W*m[newaxis,:]*m[:,newaxis]
             sum_w += sum(diagonal(W))
             resids_list.append(dot(W, f - self.parent.data[band].flux))
 
@@ -199,8 +199,6 @@ class model:
       #extra = log(2*pi)-2/N*sum(log(W[m])) - 2*log(self.prior())/N
       #res = sqrt(power(res,2) + extra)
       return(res)
-
-
 
    def __getattr__(self, attr):
       if 'parameters' in self.__dict__:
@@ -317,16 +315,6 @@ class EBV_model(model):
 
       # Now build the lc model
       temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
-      # If k-corrections are there, use them
-      #if band in self.parent.ks_tck:   
-      #   temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
-      #   mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[NewAxis,:]+\
-      #         self.Tmax))
-      #   # mask based on original mask and limits of Hsiao spectrum
-      #   mask2 = self.parent.ks_mask[band][mids]*\
-      #         greater_equal(t, -19)*less_equal(t, 70)
-      #else:
-      #   mask2 = ones(temp.shape, dtype=bool)
       K,mask2 = self.kcorr(band, t)
       temp = temp + K
 
@@ -556,16 +544,8 @@ class EBV_model2(model):
 
       # Now build the lc model
       temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
-      # If k-corrections are there, use them
-      if band in self.parent.ks_tck:   
-         temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
-         mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[NewAxis,:]+\
-               self.Tmax))
-         # mask based on original mask and limits of Hsiao spectrum
-         mask2 = self.parent.ks_mask[band][mids]*\
-               greater_equal(t, -19)*less_equal(t, 70)
-      else:
-         mask2 = ones(temp.shape, dtype=bool)
+      K,mask2 = self.kcorr(band, t)
+      temp = temp + K
 
       # Apply reddening correction:
       # Figure out the reddening law
@@ -950,15 +930,8 @@ class max_model2(model):
       # Now build the lc model
       temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
       # If k-corrections are there, use them
-      if band in self.parent.ks_tck:   
-         temp = temp + scipy.interpolate.splev(t+Tmax, self.parent.ks_tck[band])
-         mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[NewAxis,:]+\
-               Tmax))
-         # mask based on original mask and limits of Hsiao spectrum
-         mask2 = self.parent.ks_mask[band][mids]*\
-               greater_equal(t, -19)*less_equal(t, 70)
-      else:
-         mask2 = ones(temp.shape, dtype=bool)
+      K,mask2 = self.kcorr(band, t)
+      temp = temp + K
 
       # Apply Max
       temp = temp + self.parameters[rband+'max'] 
@@ -1007,6 +980,18 @@ class max_model2(model):
          eMmaxs.append(self.errors[rband+'max'])
          rbands.append(rband)
       return(Tmaxs, Mmaxs, eMmaxs, rbands)
+
+   def __getattr__(self, attr):
+      if 'parameters' in self.__dict__:
+         if attr in self.__dict__['parameters']:
+            return self.__dict__['parameters'][attr]
+         if attr == 'Tmax' and 'TBmax' in self.__dict__['parameters']:
+            return self.__dict__['parameters']['TBmax']
+      if attr in self.__dict__:
+         return self.__dict__[attr]
+      else:
+         raise AttributeError, "Attribute %s not found" % (attr)
+
 
 
 class Rv_model(model):
@@ -1113,16 +1098,8 @@ class Rv_model(model):
 
       # Now build the lc model
       temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
-      # If k-corrections are there, use them
-      if band in self.parent.ks_tck:   
-         temp = temp + scipy.interpolate.splev(t+self.Tmax, self.parent.ks_tck[band])
-         mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[NewAxis,:]+\
-               self.Tmax))
-         # mask based on original mask and limits of Hsiao spectrum
-         mask2 = self.parent.ks_mask[band][mids]*\
-               greater_equal(t, -19)*less_equal(t, 70)
-      else:
-         mask2 = ones(temp.shape, dtype=bool)
+      K,mask2 = self.kcorr(band, t)
+      temp = temp + K
 
       # Apply reddening correction:
       # Figure out the reddening law

@@ -978,8 +978,8 @@ class sn(object):
       for it.'''
       return self.model.systematics(**args)
 
-   def plot_filters(self, bands=None, day=0, **args):
-      return plotmod.plot_filters(self, bands, day, **args)
+   def plot_filters(self, bands=None, day=0, outfile=None, **args):
+      return plotmod.plot_filters(self, bands, day, outfile=outfile,**args)
 
    def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None,
          clear=True):
@@ -1023,10 +1023,10 @@ class sn(object):
       '''
       return plotmod.mask_data(self)
    
-   def plot(self, xrange=None, yrange=None,  
-         title=None, interactive=0, single=0, offset=True, fsize=None, linewidth=None,
-         symbols=None, colors=None, relative=0, legend=1, mask=1, label_bad=0,
-         flux=0, epoch=1, msize=6, outfile=None):
+   def plot(self, xrange=None, yrange=None,  title=None, interactive=0, single=0,
+         offset=True, fsize=None, linewidth=None, symbols=None, colors=None, 
+         relative=0, legend=1, mask=1, label_bad=0, flux=0, epoch=1, msize=6, 
+         outfile=None):
       '''Plot out the supernova data in a nice format.  There are several 
       options:
          - xrange,yrange:  specify the ranges to plot as lists [xmin,xmax], 
@@ -1343,7 +1343,7 @@ def get_sn(str, sql=None, **kw):
          try:
             s = import_lc(str)
          except RuntimeError:
-            raise RuntimeError, "Could now load %s into SNPY" % str
+            raise RuntimeError, "Could not load %s into SNPY" % str
    else:
       s = sn(str, source=sql, **kw)
    return s

@@ -5,7 +5,7 @@ if '-h' in sys.argv or '-help' in sys.argv:
    print '''
 SNooPy Startup Script.
 
-Usage:  snpy [lowz] [-gui gui]
+Usage:  snpy [lowz|csp2] [-gui gui]
 
         -lowz:  use the low-z (LCO) database for querying
         -gui gui:  select gui to use.  By default, 'tk' is
@@ -64,6 +64,9 @@ from snpy import *
 if "lowz" in sys.argv:
    del sys.argv[sys.argv.index("lowz")]
    sqlmod.default_sql = sqlmod.sql_lowz()
+if "csp2" in sys.argv:
+   del sys.argv[sys.argv.index("csp2")]
+   sqlmod.default_sql = sqlmod.sql_csp2()
 if not nc:
    upgrade,message = check_version()
    if upgrade:

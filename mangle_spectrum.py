@@ -3,7 +3,7 @@ Color-matching:  modifying a spectrum by multiplication of a smooth function
 in order to reproduce the observed photometry.'''
 
 import types
-import numpy.oldnumeric as num
+import numpy as num
 from snpy.filters import fset
 from snpy.filters import filter
 from snpy.filters import vegaB
@@ -131,8 +131,8 @@ class f_ccm(function):
       self.pars = pars
 
    def __call__(self, x):
-      m = num.array([deredden.unred(x[i], x[i]*0+1, -self.pars[0], R_V=self.pars[1])[0]\
-            for i in range(x.shape[0])])
+      m = num.array([deredden.unred(x[i], x[i]*0+1, -self.pars[0], 
+         R_V=self.pars[1])[0] for i in range(x.shape[0])])
       #m *= self.pars[0]
       return m
 
@@ -145,10 +145,11 @@ class mangler:
    paramters, such that the function multiplied by the spectrum produces
    the colors specified.'''
 
-   def __init__(self, wave, flux, method, z=0, **margs):
+   def __init__(self, wave, flux, method, normfilter=None, z=0, **margs):
 
       self.wave = num.asarray(wave)
       self.flux = num.asarray(flux)
+      self.normfilter = normfilter
       if len(num.shape(self.wave)) == 1:
          self.wave = self.wave.reshape((1,self.wave.shape[0]))
       if len(num.shape(self.flux)) == 1:
@@ -223,7 +224,7 @@ class mangler:
                                wave0,'A to ',wave1,'A'
       
 
-   def solve(self, bands, colors, norm_filter=None, fixed_filters=None, 
+   def solve(self, bands, colors, fixed_filters=None, 
          anchorwidth=100, xtol=1e-10, ftol=1e-4, gtol=1e-10):
       '''Solve for the mangling function that will produce the observed colors
       in the filters defined by bands.'''
@@ -248,14 +249,12 @@ class mangler:
       if len(bands) != colors.shape[1] + 1:
          raise ValueError, "length of bands must be one more than colors"
 
-      if norm_filter is None:
+      if self.normfilter is None:
          num_good = num.sum(self.gids*1, axis=0)
-         self.norm_filter = bands[num.argmax(num_good)+1]
+         self.normfilter = bands[num.argmax(num_good)+1]
       else:
-         if norm_filter not in bands:
-            raise ValueError, "norm_filter must be one of bands"
-         self.norm_filter = norm_filter
-      #print norm_filter
+         if self.normfilter not in bands:
+            raise ValueError, "normfilter must be one of bands"
       if fixed_filters is not None:
          if fixed_filters == "blue":
             fixed_filters = [bands[0]]
@@ -279,7 +278,7 @@ class mangler:
             for i in range(0,len(bands)-1)])
       self.resp_rats = num.power(10, -0.4*(colors - dzps[num.newaxis,:]))
       self.resp_rats = num.where(self.gids, self.resp_rats, 1)
-      id = self.allbands.index(self.norm_filter)
+      id = self.allbands.index(self.normfilter)
       if self.verbose:
          print "You input the following colors:"
          for i in range(colors.shape[1]):
@@ -347,7 +346,8 @@ messages = ['Bad input parameters','chi-square less than ftol',
 def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None, 
       normfilter=None, z=0, verbose=0, anchorwidth=100,
       method='tspline', xtol=1e-6, ftol=1e-6, gtol=1e-6, **margs):
-   m = mangler(wave, flux, method, z=z, verbose=verbose, **margs)
+   m = mangler(wave, flux, method, z=z, verbose=verbose, 
+         normfilter=normfilter, **margs)
    if len(num.shape(mags)) == 1:
       oned = True
       gids = num.less(mags[:-1],90)*num.less(mags[1:],90)
@@ -356,8 +356,7 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
       oned = False
       gids = num.less(mags[:-1,:],90)*num.less(mags[1:,:],90)
       colors = num.where(gids, mags[:-1,:]-mags[1:,:], 99.9)
-   res = m.solve(bands, colors, norm_filter=normfilter, 
-         fixed_filters=fixed_filters,
+   res = m.solve(bands, colors, fixed_filters=fixed_filters,
          anchorwidth=anchorwidth, xtol=xtol, ftol=ftol, gtol=gtol)
    if res.status > 4:
       print "Warning:  %s" % messages[res.status]
@@ -368,13 +367,13 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
 
    # finally, normalize the flux
    mflux = m.get_mflux()
-   id = bands.index(m.norm_filter)
+   id = bands.index(m.normfilter)
    if oned:
       omag = num.array([mags[id]])
    else:
       omag = mags[id,:]
    for i in range(len(mflux)):
-      mmag = fset[m.norm_filter].synth_mag(wave,mflux[i],z=z)
+      mmag = fset[m.normfilter].synth_mag(wave,mflux[i],z=z)
       mflux[i] = mflux[i]*num.power(10,-0.4*(omag[i]-mmag))
 
    return (mflux, m.ave_waves, m.function.pars)

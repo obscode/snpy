@@ -358,6 +358,8 @@ filters/filters/FLWO/1.2meter/rprime_keplercam.dat -text
 filters/filters/GeminiNorth/NIRI/NIRI_H.dat -text
 filters/filters/GeminiNorth/NIRI/NIRI_J.dat -text
 filters/filters/GeminiNorth/NIRI/filters.dat -text
+filters/filters/HST/WFC3/filters.dat -text
+filters/filters/HST/WFC3/wfc3_ir_f160w.dat -text
 filters/filters/KPNO/WIYN/H_WHIRC.dat -text
 filters/filters/KPNO/WIYN/J_WHIRC.dat -text
 filters/filters/KPNO/WIYN/K_WHIRC.dat -text
@@ -743,6 +745,13 @@ sqlmod/__init__.py -text
 sqlmod/setup.py -text
 /st_calibration2.dat -text
 /tck3.pickle -text
+tests/README -text
+tests/SN2006ax.txt -text
+tests/dotests.sh -text
+tests/test_fits.py -text
+tests/test_kcorr.py -text
+tests/test_plots.py -text
+tests/test_templates.py -text
 tspack/__init__.py -text
 tspack/setup.py -text
 tspack/tspack.doc -text

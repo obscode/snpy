@@ -18,6 +18,18 @@ from matplotlib.ticker import MaxNLocator,NullFormatter
 from numpy import *
 from matplotlib import ticker
 
+from matplotlib import rcParams
+rcParams['font.size'] = 18
+rcParams['font.family'] = 'serif'
+rcParams['xtick.major.size'] = 8
+rcParams['ytick.major.size'] = 8
+rcParams['xtick.minor.size'] = 4
+rcParams['ytick.minor.size'] = 4
+rcParams['xtick.major.pad'] = 10
+rcParams['ytick.major.pad'] = 10
+
+
+
 def line_bbox(line):
    '''extract a bounding box from a line2D object.'''
    bbox = transforms.Bbox.unit()
@@ -575,14 +587,16 @@ class MultiPlot:
 class PanelPlot:
    '''A multi-plot with NXM panels, all squeezed together.'''
 
-   left_pad = 0.05
-   right_pad = 0.05
-   bottom_pad = 0.05
-   top_pad = 0.05
+   #left_pad = 0.05
+   #right_pad = 0.05
+   #bottom_pad = 0.05
+   #top_pad = 0.05
+   min_pad = 0.05
 
    def __init__(self, N, M, fig=None, pwidths=None, pheights=None, xlock=1,
          ylock=1, nxmax=None, nymax=None, nsubx=5, nsuby=5, prunex='both',
-         pruney='both', **kwargs):
+         pruney='both', left_pad=0, right_pad=0, bottom_pad=0,
+         top_pad=0, **kwargs):
       '''Create a panelplot, where each panel is snuggled up to its 
       neighbors and they effectively share interior axes.
       Arguments:
@@ -612,6 +626,14 @@ class PanelPlot:
       self.fig.clear()
       self.N = N
       self.M = M
+      self.left_pad = self.min_pad
+      self.right_pad = self.min_pad
+      self.bottom_pad = self.min_pad
+      self.top_pad = self.min_pad
+      self.extra_left_padding = left_pad
+      self.extra_right_padding = right_pad
+      self.extra_top_padding = top_pad
+      self.extra_bottom_padding = bottom_pad
       self.nxmax = nxmax
       self.nymax = nymax
       self.nsubx = nsubx
@@ -694,7 +716,7 @@ class PanelPlot:
       if 'rotation' not in kws:
          kws['rotation'] = 90
       y = self.bottom_pad + (1.0 - self.bottom_pad - self.top_pad)/2
-      self._ylabel = self.fig.text(0.05 - labelpad, y, string, **kws)
+      self._ylabel = self.fig.text(self.left_pad - labelpad, y, string, **kws)
       return self._ylabel
 
    def ij(self, i):
@@ -770,35 +792,35 @@ class PanelPlot:
 
       if self._ylabel is not None:
          y = self.bottom_pad + (1 - self.bottom_pad - self.top_pad)/2
-         x = self.left_pad*0.25
+         x = self.left_pad*0.4
          self._ylabel.set_position((x,y))
 
       if self._title is not None:
          x = self.left_pad + (1 - self.left_pad - self.right_pad)/2
-         y = 1 - self.top_pad*0.25
+         y = 1 - self.top_pad*0.4
          self._title.set_position((x,y))
 
    def set_left_padding(self, dx):
       '''Add extra padding on the left and re-scale everything.'''
-      self.left_pad = dx + 0.05
+      self.left_pad = dx + self.min_pad + self.extra_left_padding
       self.pwidths = (1.0 - self.left_pad - self.right_pad)*self.rel_widths
       self.reset_panel_positions()
 
    def set_right_padding(self, dx):
       '''Add extra padding on the right and re-scale everything.'''
-      self.right_pad = dx + 0.05
+      self.right_pad = dx + self.min_pad + self.extra_right_padding
       self.pwidths = (1.0 - self.left_pad - self.right_pad)*self.rel_widths
       self.reset_panel_positions()
 
    def set_bottom_padding(self, dy):
       '''Add extra padding on the bottom and re-scale everything.'''
-      self.bottom_pad = dy + 0.05
+      self.bottom_pad = dy + self.min_pad + self.extra_bottom_padding
       self.pheights = (1.0 - self.bottom_pad - self.top_pad)*self.rel_heights
       self.reset_panel_positions()
 
    def set_top_padding(self, dy):
       '''Add extra padding on the bottom and re-scale everything.'''
-      self.top_pad = dy + 0.05
+      self.top_pad = dy + self.min_pad + self.extra_top_padding
       self.pheights = (1.0 - self.bottom_pad - self.top_pad)*self.rel_heights
       self.reset_panel_positions()
 

@@ -37,9 +37,9 @@ base = os.path.dirname(base)
 filter_base = os.path.join(base,'filters')
 stand_base = os.path.join(base,'standards')
 
-h = 6.626068e-27
-c = 2.997925e18
-ch = c * h
+h = 6.626068e-27  # erg s
+c = 2.997925e18   # Angstrom/s
+ch = c * h        # erg Angstrom
 
 class spectrum:
    '''This class defines a spectrum.  It contains the response as Numeric arrays.  It has
@@ -317,19 +317,24 @@ class filter(spectrum):
       '''Return a copy of this instance.'''
       return(filter(self.name, self.file, self.zp, self.comment))
 
-   def R(self, Rv=3.1, wave=None, flux=None, z=0.0, EBV=0.001):
+   def R(self, Rv=3.1, wave=None, flux=None, z=0.0, EBV=0.001, redlaw='ccm',
+         strict_ccm=False):
       '''For a given reddening law Rv (default 3.1), find the ratio of total
       to selective absorption for this filter:  R = A/E(B-V).  You can 
       specify a specific spectrum by supplying a wave and flux and redshift
       (default is defined by filters.reference_wave and 
       filters.refernce_flux at z=0).  You can also specify E(B-V) (EBV) which can
-      change the value of R if the spectrum is significantly non-stellar.'''
+      change the value of R if the spectrum is significantly non-stellar. You
+      can specify redlaw='fm' if you prefer a Fitzpatric (1999) reddening 
+      law.'''
       global standards
 
       if wave is None:
          wave,flux = standards['Vega']['VegaB'].wave, standards['Vega']['VegaB'].resp
       flux0 = self.response(wave, flux, z, photons=1)
-      fluxr = self.response(wave, unred(wave, flux, -EBV, Rv, z)[0], z, photons=1)
+      redf = unred(wave, flux, -EBV, Rv, z, redlaw=redlaw, 
+            strict_ccm=strict_ccm)[0]
+      fluxr = self.response(wave, redf, z, photons=1)
       return(-2.5*num.log10(fluxr/flux0)/EBV)
 
 

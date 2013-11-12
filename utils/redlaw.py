@@ -20,18 +20,22 @@ import deredden
 from numpy.oldnumeric import *
 import scipy
 
-def Rv_to_R(f1, f2, f3, Rv, EBV=0.01, day=0, strict_ccm=0, version='H3'):
+def Rv_to_R(f1, f2, f3, Rv, EBV=0.01, day=0, redlaw='ccm',
+      strict_ccm=0, version='H3'):
    '''Convert from R_V and optionally EBV to an observed R through
    filter f1, corrected by f2-f3 color.  You can choose which day
    the SN SED should be (default day 0, max).  You can also specify
-   whether we should use the strict CCM relation (default no). Finally,
-   you an choose which SED sequence to use:  'H', 'H3', or '91bg' 
+   which reddening law to use:  redlaw='ccm' for Cardelli et al., or
+   redlaw='fm' for Fitzpatric and Malla (1999).  If redlaw='ccm', you
+   can specify whether we should use the strict CCM relation (default no).
+   Finally, you an choose which SED sequence to use:  'H', 'H3', or '91bg' 
    (default H3).'''
 
    # get the SNIa SED
    wave,flux = kcorr.get_SED(day, version=version)
    # Redden according to CCM (plus improvements if strict_ccm=0)
-   rflux,a,b = deredden.unred(wave, flux, EBV, Rv, strict_ccm=strict_ccm)
+   rflux,a,b = deredden.unred(wave, flux, EBV, Rv, redlaw=redlaw,
+         strict_ccm=strict_ccm)
    
    # compute synthetic magnitudes of original and reddened filter
    m1 = filters[f1].synth_mag(wave, flux)
