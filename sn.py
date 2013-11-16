@@ -101,8 +101,6 @@ class sn(object):
       self.filter_order = None  # The order in which to plot the filters
       self.xrange = None 
       self.yrange = None        # Impose any global plotting ranges?
-      #self.Rv_host = 3.1        # Ratio of total to selective absorption in 
-      #                          # host and
       self.Rv_gal = 3.1         #  galaxy
       self.EBVgal = 0.0
       self.fit_mag = False     # fit in magnitude space?
@@ -810,12 +808,12 @@ class sn(object):
             self.z = self.sql.get_SN_parameter('z')
             self.ra = self.sql.get_SN_parameter('ra')
             self.decl = self.sql.get_SN_parameter('decl')
-            for param in self.parameters:
-               try:
-                  self.parameters[param] = self.sql.get_SN_parameter(param)
-                  self.errors[param] = self.sql.get_SN_parameter('e_'+param)
-               except:
-                  pass
+            #for param in self.parameters:
+            #   try:
+            #      self.parameters[param] = self.sql.get_SN_parameter(param)
+            #      self.errors[param] = self.sql.get_SN_parameter('e_'+param)
+            #   except:
+            #      pass
             data = self.sql.get_SN_photometry()
             for filter in data:
                d = data[filter]

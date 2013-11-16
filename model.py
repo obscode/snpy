@@ -41,6 +41,8 @@ class model:
       self.do_kcorr = 1       # Do we perform initial k-corrections?
       self.rbs = []           # List of rest-frame filters this model supports
       self._fbands = []
+      self.args = {}
+      self.MWRobs = {}
 
    def guess(self, param):
       '''A function that is run and picks initial guesses for
@@ -90,6 +92,22 @@ class model:
          mask2 = ones(t.shape, dtype=bool)
       return K,mask2
 
+   def MWR(self, band, t):
+      '''Determine the best R_\lambda for the foreground MW extinction.'''
+      if band in self.parent.Robs:
+         if type(self.parent.Robs[band]) is type(()):
+            R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
+         else:
+            R = self.parent.Robs[band]
+      else:
+         if band in self.MWRobs:
+            R = self.MWRobs[band]
+         else:
+            self.MWRobs[band] = \
+                  self.parent.data[band].filter.R(self.parent.Rv_gal)
+            R = self.MWRobs[band]
+      return R
+
    def _extra_error(self, parameters):
       return 0
 
@@ -107,6 +125,9 @@ class model:
             raise ValueError, "band %s not defined in this SN object" % (b)
 
       self._fbands = bands
+
+      # Setup the MW reddening
+
 
       self.setup()
 
@@ -137,7 +158,11 @@ class model:
 
       self.chisquare = sum(power(self.info['fvec'], 2))
       self.dof = len(self.info['fvec']) - len(self._free)
-      self.rchisquare = self.chisquare/self.dof
+      if self.dof < 1:
+         print "Warning!  less than 1 degree of freedom!"
+         self.rchisquare = self.chisquare
+      else:
+         self.rchisquare = self.chisquare/self.dof
       
       # update errors and covariance matrix
       if C is None:
@@ -146,7 +171,12 @@ class model:
       self.C = {}
       for p in self.parameters:  self.errors[p] = self._extra_error(p)
       for i in range(len(self._free)):
-         self.errors[self._free[i]] += sqrt(C[i,i])
+         if C[i,i] < 0:
+            print "Error: covariance matrix has negative diagonal element."
+            print "       Error for %s not computed" % (self._free[i])
+            self.errors[self._free[i]] = 0
+         else:
+            self.errors[self._free[i]] += sqrt(C[i,i])
          if self._free[i] not in self.C:  self.C[self._free[i]] = {}
          for j in range(len(self._free)):
             self.C[self._free[i]][self._free[j]] = C[i,j]
@@ -327,11 +357,7 @@ class EBV_model(model):
          temp = temp + self.Robs[band]*(self.EBVhost + self.parent.EBVgal)
       else:
          # Apply Robs*EBVgal:
-         if band in self.parent.Robs:
-            if type(self.parent.Robs[band]) is type(()):
-               R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
-            else:
-               R = self.parent.Robs[band]
+         R = self.MWR(band, t)
          temp = temp + self.Robs[band]*self.EBVhost + R*self.parent.EBVgal
       temp = temp + self.DM + self.MMax(rband, self.calibration)
       return temp,etemp,mask*mask2
@@ -556,11 +582,7 @@ class EBV_model2(model):
          temp = temp + self.Robs[band]*(self.EBVhost + self.parent.EBVgal)
       else:
          # Apply Robs*EBVgal:
-         if band in self.parent.Robs:
-            if type(self.parent.Robs[band]) is type(()):
-               R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
-            else:
-               R = self.parent.Robs[band]
+         R = self.MWR(band, t)
          temp = temp + self.Robs[band]*self.EBVhost + R*self.parent.EBVgal
       temp = temp + self.DM + self.MMax(rband, self.calibration)
       return temp,etemp,mask*mask2
@@ -697,7 +719,7 @@ class max_model(model):
       # start with the set we always have:
       shape = self.stype
       pars = {shape:self.parameters[shape], 'Tmax':self.parameters['Tmax']}
-      errs = {shape:self.parameters[shape], 'Tmax':self.parameters['Tmax']}
+      errs = {shape:self.errors[shape], 'Tmax':self.errors['Tmax']}
       # now build up maxs, but use previously fit values if they exist.
       for band in self._rbs:
          if band+"max" not in pars:
@@ -762,12 +784,8 @@ class max_model(model):
       temp = temp + self.parameters[rband+'max'] 
 
       # Apply Robs*EBVgal:
-      if band in self.parent.Robs:
-         if type(self.parent.Robs[band]) is type(()):
-            R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
-         else:
-            R = self.parent.Robs[band]
-         temp = temp + R*self.parent.EBVgal
+      R = self.MWR(band, t)
+      temp = temp + R*self.parent.EBVgal
       return temp,etemp,mask*mask2
 
    def get_max(self, bands, restframe=0, deredden=0):
@@ -876,7 +894,7 @@ class max_model2(model):
       self._rbs = [self.parent.restbands[band] for band in self._fbands]
       # start with the set we always have:
       pars = {self.stype:self.parameters[self.stype]}
-      errs = {self.stype:self.parameters[self.stype]}
+      errs = {self.stype:self.errors[self.stype]}
       # now build up maxs, but use previously fit values if they exist.
       for band in self._rbs:
          if band+"max" not in pars:
@@ -937,12 +955,8 @@ class max_model2(model):
       temp = temp + self.parameters[rband+'max'] 
 
       # Apply Robs*EBVgal:
-      if band in self.parent.Robs:
-         if type(self.parent.Robs[band]) is type(()):
-            R = scipy.interpolate.splev(t+Tmax, self.parent.Robs[band])
-         else:
-            R = self.parent.Robs[band]
-         temp = temp + R*self.parent.EBVgal
+      R = self.MWR(band, t)
+      temp = temp + R*self.parent.EBVgal
       return temp,etemp,mask*mask2
 
    def get_max(self, bands, restframe=0, deredden=0):

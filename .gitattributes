@@ -726,6 +726,7 @@ lib/Eric/telluric.txt -text
 /setup.py -text
 /setup_CSP.py -text
 /sn.py -text
+/snMCMC.py -text
 /snpy-bootstrap.py -text
 /specobj.py -text
 spline2/MANIFEST -text
