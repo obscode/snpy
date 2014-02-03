@@ -247,6 +247,11 @@ CSPtemp/templates/SN2007af_u.dat -text
 /INSTALL -text
 /MANIFEST.in -text
 /README -text
+SwiftTemp/SNIa_m2_template_fe.dat -text
+SwiftTemp/SNIa_w1_template_fe.dat -text
+SwiftTemp/SNIa_w2_template_fe.dat -text
+SwiftTemp/__init__.py -text
+SwiftTemp/setup.py -text
 /__init__.py -text
 bin/lcparams -text
 bin/snpy -text
@@ -782,6 +787,7 @@ typeIa/Nugent_SED.fits -text svneol=unset#unset
 /ubertemp.py -text
 utils/GLOEs.py -text
 utils/IRSA_dust_getval.py -text
+utils/Ia_R_splines.pickle -text
 utils/InteractiveFit.py -text
 utils/NED_dust_getval.py -text
 utils/__init__.py -text
