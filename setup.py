@@ -16,6 +16,7 @@ def configuration(parent_package='', top_path=None):
    config.add_subpackage('tspack')
    config.add_subpackage('utils')
    config.add_subpackage('sqlmod')
+   config.add_subpackage('SwiftTemp')
    config.add_scripts(['bin/snpy'])
    config.add_scripts(['bin/update-snpy'])
    config.add_data_dir('typeIa')

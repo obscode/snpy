@@ -91,7 +91,7 @@ class sn(object):
       is a new object, you can also specify [ra], [dec], and [z].'''
       self.__dict__['data'] = {}        # the photometric data, one for each band.
       self.__dict__['model'] = model.EBV_model(self)
-      self.template_bands = ['u','B','V','g','r','i','Y','J','H','K']
+      self.template_bands = ubertemp.template_bands
 
       self.Version = __version__    # A version-stamp for when we upgrade
       self.name = name
@@ -577,12 +577,12 @@ class sn(object):
       Set [kcorr]=1 if you want the results k-corrected.
       Returns a 4-tuple:
       (MJD, band1-band2, e_band1-band2, flag).  
-       -  Flag is one of:
+       -  Flag logical 'or':
           0 - both bands measured at given epoch
-          1 - only one band measured, other interpolated
+          1 - only one band measured
           2 - extrapolation (based on template) needed, so reasonably safe
-          3 - data interpolated or extrapolated beyond template or spline, not
-              safe to use!'''
+          4 - interpolation invalid (extrapolation or what have you)
+          8 - One or both k-corrections invalid  (e.g. beyond SED template)'''
 
       if kcorr:
          if band1 not in self.ks_tck or band2 not in self.ks_tck:
@@ -601,6 +601,13 @@ class sn(object):
             col = col - k1 + k2
          ecol = sqrt(power(data['e_'+band1][gids], 2) + 
                      power(data['e_'+band2][gids], 2))
+         flags = floor(0*mjd).astype('l')
+         ids1 = argmin(absolute(mjd[:,newaxis] - s.data[band1].MJD[newaxis,:]),
+               axis=1)
+         ids2 = argmin(absolute(mjd[:,newaxis] - s.data[band2].MJD[newaxis,:]),
+               axis=1)
+         flags = flags + (s.data[band1].mask[ids1]+s.data[band2].mask[ids2])*8
+
          return(mjd, col, ecol, floor(0*mjd).astype('l'))
 
       # Now, if we are interpolating, do so by fitting each band 
@@ -638,15 +645,20 @@ class sn(object):
       m1 = less(data[band1], 90);  m2 = less(data[band2], 90)
       flag = where(m1*m2, 0, 1)
 
-      # Get the range where we are doing interpolation
-      i1 = max(min(nonzero(m1)[0]), min(nonzero(m2)[0]))
-      i2 = min(max(nonzero(m1)[0]), max(nonzero(m2)[0]))
-      # from 0 to i1 (non-inclusive) and i2 to end, we have extrapolation, flag
-      # as 2
-      flag[0:i1] = 2
-      flag[i2+1:] = 2
-      # flag places where we don't have data and template/spline is not valid
-      flag = where(greater(flag,0)*-(masks[0]*masks[1]),3,flag)
+      ## Get the range where we are doing interpolation
+      #i1 = max(min(nonzero(m1)[0]), min(nonzero(m2)[0]))
+      #i2 = min(max(nonzero(m1)[0]), max(nonzero(m2)[0]))
+      ## from 0 to i1 (non-inclusive) and i2 to end, we have extrapolation, flag
+      ## as 2
+      flag = flag + where(equal(flag,1)*(-masks[0]+-masks[1]),4,0)
+
+      # Lastly, where data is just plain bad
+      ids1 = argmin(absolute(data['MJD'][:,newaxis] - \
+            self.data[band1].MJD[newaxis,:]), axis=1)
+      ids2 = argmin(absolute(data['MJD'][:,newaxis] - \
+            self.data[band2].MJD[newaxis,:]), axis=1)
+      flag = flag + \
+            where(self.data[band1].mask[ids1]*self.data[band2].mask[ids2],0,8)
 
       # Now that the flags are set properly, we do the math:
       b1 = where(less(data[band1], 90), data[band1], interps[0])
@@ -693,12 +705,13 @@ class sn(object):
             print >> out, "   %s = %.3f  +/-  %.3f" % (param, self.parameters[param],
                                                        self.errors[param])
 
-   def dump_lc(self, epoch=0, tmin=-10, tmax=70, k_correct=0):
+   def dump_lc(self, epoch=0, tmin=-10, tmax=70, k_correct=0, mw_correct=0):
       '''Outputs several files that contain the lc information, both the data,
       uncertainties, and the models themselves.  If epoch=1, remove Tmax from
       the times.  tmin and tmax are the beginning and end epochs for the model.
       If k_correct=1, then apply the k-corrections to the data and model before
       outputting to the file.  Otherwise, the original data will be output.
+      if mw_correct=1, perform a Milky-Way foreground extinction correction.
       Only times for which the model (templates) are valid will be output.  This
       function will create several files with the following template names:
          {SN}_lc_{filter}_data.dat
@@ -719,6 +732,11 @@ class sn(object):
          print >> f, "#  column 2:  oberved magnitude"
          print >> f, "#  column 3:  error in observed magnitude"
          print >> f, "#  column 4:  Flag:  0=OK  1=Invalid K-correction"
+         if mw_correct:
+            Ia_w,Ia_f = kcorr.get_SED(0, 'H3')
+            Alamb = fset[filter].R(wave=Ia_w, flux=Ia_f, Rv=3.1)*self.EBVgal
+         else:
+            Alamb = 0
          for i in range(len(self.data[filter].mag)):
             if k_correct:
                flag = 0
@@ -730,12 +748,14 @@ class sn(object):
                   ks = self.ks[filter][i]
                print >> f, "%.2f  %.3f  %.3f  %d" % \
                      (self.data[filter].MJD[i]-toff, 
-                     self.data[filter].mag[i] - ks, 
+                     self.data[filter].mag[i] - ks - Alamb, 
                      self.data[filter].e_mag[i], flag)
             else:
+               flag = (not self.data[filter].mask[i])
                print >> f, "%.2f  %.3f  %.3f  %d" % \
                      (self.data[filter].MJD[i]-toff, 
-                     self.data[filter].mag[i], self.data[filter].e_mag[i], 0)
+                     self.data[filter].mag[i] - Alamb
+                     , self.data[filter].e_mag[i], flag)
          f.close()
          if filter in self.model._fbands:
             ts = arange(tmin, tmax+1, 1.0)
@@ -855,20 +875,18 @@ class sn(object):
          f = lambda x:  mn
       else:
          f = interp1d(x,y, bounds_error=False, 
-               fill_value=self.data[filter].mag.min())
+               fill_value=self.data[filter].mag.max())
       for filter in self.filter_order[1:]:
-         off = offs[-1] + min_off
-         while not alltrue(greater(self.data[filter].mag+off - f(self.data[filter].MJD),
-            0.5)):
-            off += 0.5
-         offs.append(off)
+         deltas = self.data[filter].mag + offs[-1] - f(self.data[filter].MJD)
+         off = - deltas.max() - 0.5
+         offs.append(offs[-1]+off)
          if self.data[filter].MJD.shape[0] > 1:
             x,y,ey = regularize(self.data[filter].MJD, self.data[filter].mag,
                self.data[filter].e_mag)
-            f = interp1d(x,y+off, bounds_error=False,
-                           fill_value=self.data[filter].mag.max())
+            f = interp1d(x,y+offs[-1], bounds_error=False,
+                           fill_value=self.data[filter].mag.max()+offs[-1])
          else:
-            f = lambda x:  self.data[filter].mag.mean()+off
+            f = lambda x:  self.data[filter].mag.mean()+offs[-1]
       return offs
 
 
@@ -918,7 +936,8 @@ class sn(object):
 
       if bands is None:
          # By default, we fit the bands whose restbands are provided by the model
-         bands = [b for b in self.data.keys() if self.restbands[b] in self.model.rbs]
+         bands = [b for b in self.data.keys() \
+               if self.restbands[b] in self.model.rbs]
 
       # Setup initial Robs (in case it is used by the model)
       for band in bands:

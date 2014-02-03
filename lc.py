@@ -154,8 +154,8 @@ class lc:
 
    def mask_epoch(self, tmin, tmax):
       '''Update the lc's mask to only include data between tmin and tmax.'''
-      self.mask[greater_equal(self.t, tmin)] = False
-      self.mask[less_equal(self.t, tmax)] = False
+      self.mask[greater_equal(self.t, tmax)] = False
+      self.mask[less_equal(self.t, tmin)] = False
 
    def mask_emag(self, max):
       '''Update the lc's mask to only include data with e_mag < max.'''

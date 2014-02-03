@@ -696,8 +696,7 @@ class max_model(model):
          raise ValueError, "This model only supports dm15 and st as shape parameters"
       self.stype = stype
       model.__init__(self, parent)
-      self.rbs = ['u','B','V','g','r','i','Y','J','H','K','Bs','Vs','Rs','Is',
-            'H_K','J_K']
+      self.rbs = ubertemp.template_bands
       self.M0s = {'u':-18.82, 'B':-19.11, 'V':-19.12, 'g':-19.16, 'r':-19.03,
                   'i':-18.50, 'Y':-18.45, 'J':-18.44, 'H':-18.38, 'K':-18.42,
                   'J_K':-18.44, 'H_K':-18.38,
@@ -745,7 +744,11 @@ class max_model(model):
          return 1.0
 
       if param.find('max') > 0:
-         M0 = self.M0s[param.replace('max','')]
+         filt = param.replace('max','')
+         if filt in self.M0s:
+            M0 = self.M0s[param.replace('max','')]
+         else:
+            M0 = -19
          if s.z < 1e-6:
             return M0
          return 43.11 + 5*log10(s.z) + M0
@@ -773,7 +776,7 @@ class max_model(model):
       # Now build the lc model
       if debug:  
          print ">>>> calling template.eval with"
-         print "t = ",t
+         print "rband = %s, t =" % (rband), t
 
       temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
       if debug:  print ">>>>  done."
@@ -840,8 +843,9 @@ class max_model(model):
                 'Hmax':array([0.01, 0.02, 0.02, 0.02, 0.02]),
                 'Kmax':array([0.00, 0.00, 0.00, 0.00, 0.00])}
       errors['st'] = errors['dm15']*13.74/30    # conversion factor from dm15 to s
-      if parameter[1:] == 'max':
-         f = parameter[0]
+      id = parameter.find('max')
+      if id > 0:
+         f = parameter[0:id]
          for band in self.parent.data:
             if self.parent.restbands[band] == f:
                break
@@ -877,7 +881,8 @@ class max_model2(model):
       self.M0s = {'u':-18.82, 'B':-19.11, 'V':-19.12, 'g':-19.16, 'r':-19.03,
                   'i':-18.50, 'Y':-18.45, 'J':-18.44, 'H':-18.38, 'K':-18.42,
                   'J_K':-18.44, 'H_K':-18.38,
-                  'Bs':-19.319, 'Vs':-19.246, 'Rs':-19.248, 'Is':-18.981}
+                  'Bs':-19.319, 'Vs':-19.246, 'Rs':-19.248, 'Is':-18.981,
+                  'UVM2':-19, 'UVW1':-19, 'UVW2':-19}
       self.parameters = {stype:None}
       self.errors = {stype:0}
       if self.stype == 'dm15':

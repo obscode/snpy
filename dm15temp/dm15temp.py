@@ -9,6 +9,8 @@ import numpy.oldnumeric as num
 import scipy
 import dm15tempc
 
+template_bands = ['Bs','Vs','Rs','Is']
+
 form = "%5.1lf %10.3lf %10.6lf %10.3lf %10.6lf %10.3lf %10.6lf %10.3lf %10.6lf"
 #dm15_path = '/Users/burns/CSP/k-corrections/dm15temp/'
 dm15_path = os.path.dirname(globals()['__file__'])

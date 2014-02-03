@@ -3,8 +3,8 @@
 rm *.eps
 rm *.snpy
 
-./test_templates.py
-./test_plots.py
-./test_fits.py
-./test_kcorr.py
+~/snpy2/bin/python test_templates.py
+~/snpy2/bin/python test_plots.py
+~/snpy2/bin/python test_fits.py
+~/snpy2/bin/python test_kcorr.py
 

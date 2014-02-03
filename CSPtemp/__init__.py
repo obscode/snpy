@@ -53,6 +53,8 @@ except ImportError:
 
 debug=0
 
+template_bands = ['u','B','V','g','r','i','Y','J','H','K','J_K','H_K']
+
 base = os.path.dirname(globals()['__file__'])
 if base == '':  base = '.'
 
@@ -147,35 +149,6 @@ def breakpoly(x, xb, coefs, before=True):
    else:
       return coefs[0] + coefs[1]*(x-xb) + (x>xb)*coefs[2]*(x-xb)**2
 
-
-#def finterp(band, t, p, param, gen):
-#   '''interpolate at time t and param p for param,gen combo.'''
-#   load_data(band,param,gen)
-#   if param == 'dm15':
-#      f = dm15_flux[(band,gen)]
-#      ef = dm15_eflux[(band,gen)]
-#   else:
-#      f = st_flux[(band,gen)]
-#      ef = st_eflux[(band,gen)]
-#
-#   if len(num.shape(t)) == 0:
-#      scalar = 1
-#   else:
-#      scalar = 0
-#   t = num.atleast_1d(t)
-#   # First the evaluation mtarix:
-#   X = num.zeros((t.shape[0],2), dtype=num.float32)
-#   X[:,0] = t
-#   X[:,1] = p
-#   Z = f(X)
-#   eZ = ef(X)
-#   mask = -num.isnan(Z)*-num.isnan(eZ)*num.greater(Z,0)
-#   Z = num.where(mask, Z, 1)
-#   eZ = num.where(mask, eZ, -1)
-#   if scalar:
-#      return Z[0],eZ[0],mask[0]
-#   else:
-#      return Z,eZ,mask
 def finterp(band, t, p, param, gen):
    '''interpolate at time t and param p for param,gen combo.'''
    load_data(band,param,gen)

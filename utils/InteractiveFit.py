@@ -144,6 +144,7 @@ class InteractiveFit:
       
    def redraw(self):
       '''Redraw the graph'''
+      x1,x2 = self.mp.axes[0].get_xlim()
       # Only change those things that need changing
       self._mod.remove()
       self._rp.remove()
@@ -156,7 +157,7 @@ class InteractiveFit:
 
       # Update the model
       xmin,xmax = self.interp.domain()
-      xs = num.linspace(xmin,xmax, 100)
+      xs = num.linspace(xmin,xmax, 1000)
       ys,m = self.interp(xs)
       self._mod, = self.mp.axes[1].plot(xs[m], ys[m], '-', color='black')
 
@@ -172,14 +173,13 @@ class InteractiveFit:
       resids = self.interp.residuals(mask=False)
       self._rp,dum,self._rl = self.mp.axes[0].errorbar(self.x, 
             resids, yerr=self.ey, capsize=0, fmt='o', color='blue')
-      self.mp.set_limits()
+      #self.mp.set_limits()
       if not num.alltrue(m):
          resids = resids[m]
          self.mp.axes[0].set_ylim((resids.min(), resids.max()))
       self.plot_stats()
       self.plot_params()
       self.redraw_x()
-
 
    def help(self):
       print "The following key bindings are in effect:"

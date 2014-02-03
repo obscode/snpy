@@ -175,7 +175,7 @@ class sqlbase:
             (self.SN_TABLE, self.SN_ID)
       self.c.execute(delete, (self.name))
 
-   def get_SN_parameter(self, attr):
+   def get_SN_parameter(self, attr, verbose=0):
       '''Gets a single attribute of a SN in the database.'''
       if not self.connected:
          raise RuntimeError, "Not connected to SQL database."
@@ -187,6 +187,8 @@ class sqlbase:
 
       slct = '''SELECT %s from %s where %s = %%s %s''' % (field, self.SN_TABLE, 
             self.SN_ID, self.SN_COND)
+      if verbose:
+         print "executing...  ",slct % (self.name)
       N = self.c.execute(slct, (self.name))
       if N == 0:
          raise AttributeError, "Attribute %s(%s) not found in SQL db" % \
@@ -211,7 +213,7 @@ class sqlbase:
             (self.SN_TABLE, field, self.SN_ID)
       self.c.execute(updt, (value, self.name))
 
-   def get_SN_photometry(self):
+   def get_SN_photometry(self, verbose=0):
       '''Get the photometry form the SQL database.  Returns a dictionary
       indexed by filter name.  Each element is a 4-tuple of arrays:
       (MJD, mag, e_mag, K).'''
@@ -227,6 +229,7 @@ class sqlbase:
                (self.PHOTO_FILT, self.PHOTO_JD, self.PHOTO_MAG, self.PHOTO_EMAG,
                 self.PHOTO_TABLE, self.PHOTO_ID, self.PHOTO_COND, self.PHOTO_JD)
       N = self.c.execute(slct, (self.name))
+      if verbose:  print "executing... ",slct % (self.name)
       if N == 0:
          raise ValueError, "No photometry for %s found" % \
                   (self.name)

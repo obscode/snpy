@@ -850,6 +850,7 @@ if pymc is not None:
       def _setup(self):
          '''Given the current set of params, setup the interpolator.'''
    
+         x,y,dy = self._regularize()
          if self.diff_degree is None:
             self.diff_degree = 3
    
@@ -857,13 +858,14 @@ if pymc is not None:
             self.amp = num.std(self.y)
    
          if self.scale is None:
-            self.scale = (self.x.max() - self.x.min())/2
+            #self.scale = (self.x.max() - self.x.min())/2
+            self.scale = 30
+            
    
          self.M = GP.Mean(self.func)
          self.C = GP.Covariance(GP.matern.euclidean, diff_degree=self.diff_degree,
                            amp=self.amp, scale=self.scale)
    
-         x,y,dy = self._regularize()
          GP.observe(self.M, self.C, obs_mesh=x, obs_vals=y, obs_V=num.power(dy,2))
          self.setup = True
          self.realization = None
