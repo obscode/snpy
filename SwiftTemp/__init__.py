@@ -46,13 +46,13 @@ class dm15_template:
 
       x,y = num.loadtxt(os.path.join(base, "SNIa_w1_template_fe.dat"),
             unpack=True)
-      self.interp['UVW1'] = interp1d(x,y, bounds_error=False, kind='cubic')
+      self.interp['UVW1'] = interp1d(x,y, bounds_error=False)
       x,y = num.loadtxt(os.path.join(base, "SNIa_w2_template_fe.dat"),
             unpack=True)
-      self.interp['UVW2'] = interp1d(x,y, bounds_error=False, kind='cubic')
+      self.interp['UVW2'] = interp1d(x,y, bounds_error=False)
       x,y = num.loadtxt(os.path.join(base, "SNIa_m2_template_fe.dat"),
             unpack=True)
-      self.interp['UVM2'] = interp1d(x,y, bounds_error=False, kind='cubic')
+      self.interp['UVM2'] = interp1d(x,y, bounds_error=False)
 
    def mktemplate(self, dm15, dm15_int=None, dm15_colors='int', generate=0):
       '''2nd and 3rd arguments ignored.'''
