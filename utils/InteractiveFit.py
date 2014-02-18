@@ -43,7 +43,8 @@ class InteractiveFit:
       if isinstance(self.interp, fit1dcurve.Polynomial):
          self.bind_help += [('n/N','Decrease/Increase order of polynomial'),
                             ('m','specify range over which to fit')]
-      if isinstance(self.interp, fit1dcurve.GaussianProcess):
+      if fit1dcurve.GaussianProcess is not None and \
+            isinstance(self.interp, fit1dcurve.GaussianProcess):
          self.bind_help += [('s/S', 'Decrease/Increase scale by 10%'),
                             ('a/A', 'Decrease/Increase amplitude by 10%'),
                             ('d/D', 'Decrease/Increase degree of diff. by 1')]
@@ -388,7 +389,8 @@ class InteractiveFit:
          self.mp.fig.canvas.mpl_connect('key_press_event', self._bind_knot_keys)
       if isinstance(self.interp, fit1dcurve.Polynomial):
          self.mp.fig.canvas.mpl_connect('key_press_event', self._bind_poly_keys)
-      if isinstance(self.interp, fit1dcurve.GaussianProcess):
+      if fit1dcurve.GaussianProcess is not None and \
+            isinstance(self.interp, fit1dcurve.GaussianProcess):
          self._scale0 = self.interp.scale
          self._amp0 = self.interp.amp
          self._diff_degree0 = self.interp.diff_degree
