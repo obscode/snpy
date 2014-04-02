@@ -1,123 +1,16 @@
-I've used distutils to package snpy, so it's installation should be relatively
-painless.  However, it depends on a number of python packages (which is the
-pythonic way to do things, afterall).  You have a few options here:
+Instructions for installing SNooPy can be found at the following website:
 
-1)  Install snpy in your system python or a bare-bones python you've compiled
-    yourself.
-2)  Install snpy in scisoft (OSX), which includes _almost_ everything you 
-    need.
-3)  Install snpy in CarnegiePython (CarPy), a python distribution that 
-    contains all but one dependency.
-4)  Install it in your already-pumped-up python distribution that you've
-    worked hard at putting together (good for you!).
+http://csp.obs.carnegiescience.edu/data/snpy/installing_snoopy2
 
-However you want to do it, I'll list the external packages needed and in which
-of these options you'll need to install them.
+Mostly, this has to do with satisfying depencencies. So the short version is
+to install the following:
 
-PREPARATION
+ - Numpy/Scipy
+ - Matplotlib
+ - ipython
+ - pyfits
+ - pymc (optional for GP fitting)
 
-1) (option 1) SNpy is a python package, so you're going to need to install
-   python.  Most systems come with python these days, so that's not much of a
-   chore, but if you don't have python, get it:
-
-   http://www.python.org
-
-   Download, follow instructions (basically ./configure; make; make install)
-
-2) (option 1) Ipython:  Not *really* required, but do you really want to
-   work with snpy in the stock python cl?  I didn't think so.  Get it from
-   
-   http://ipython.scipy.org/dist
-
-   Then, extract it and run 'python setup.py install' in the root of the 
-   source tree.
-
-2) (option 1) NumPy:  SNpy requires NumPy version 1.2.1 or later.  Get it here:
-
-   http://sourceforge.net/project/showfiles.php?group_id=1369&package_id=175103
-
-   Download it, extract it, follow instructions.  It can be as easy as
-   python setup.py install
-
-   but if you want to get the extra bang from having ATLAS and LAPACK installed
-   you might want to invest the time to do so.  I don't think snpy's 
-   performace will be greatly reduced if you don't (hard to say... Mac's have
-   VecLib pre-installed).
-
-3) (option 1) SciPy:  version 0.7 or later.  Get it from:
-
-   http://sourceforge.net/project/showfiles.php?group_id=27747
-
-   Again, it's as simple as extracting and running 'python setup.py build'
-
-4)  (option 1) Pyfits:  Get it from 
-
-   http://www.stsci.edu/resources/software_hardware/pyfits/Download
-
-   extract, then 'python setup.py install'
-
-5)  (options 1 and 2)  PyEphem.  Get it from
-
-   http://pypi.python.org/pypi/pyephem/
-
-   extract, then 'python setup.py install'
-
-6)  (options 1 and 2)  Pygplot.  My own wrapper for pgplot.  This will
-   require you install PGPLOT fortran library:
-
-   http://www.astro.caltech.edu/~tjp/pgplot/
-
-   Then my wrapper:
-
-   http://web.mac.com/crburns/iWeb/Research/Software/Software_files/pygplot-0.92.tar.gz
-
-   Untar, go to the root, and the usual 'python setup.py install'
-
-7) (options 1 and 3)  MySQLdb.  OPTIONAL.  If you want to have have
-   access to the CSP SQL database or make your own, you'll need MySQLdb
-   for python.  This requires installing an SQL client (with libraries
-   and include files).  You can get this for your platform here:
-
-   http://dev.mysql.com/downloads/mysql/5.1.html
-
-   Then get the python module:
-
-   http://sourceforge.net/project/showfiles.php?group_id=22307
-
-   Untar, go to root, 'python setup.py install'
-
-
-
-INSTALLING SNpy
-
-There's only one last dependency that's required to build the template
-generating code:  The GNU Scientific Library (GSL).  Downlaod it from:
-
-http://www.gnu.org/software/gsl/
-
-(or your system might have it... look for a gsl dir in your include
-dirs).
-
-Once you've got all that done (whewph!), then just go to the root of the
-snpy source tree and run:
+Once you've got that installed, simply run the usual:
 
 python setup.py install
-
-That should install everything in your site-pakcages area and also install
-the script 'snpy' in the bin directory under sys.prefix.  Simply run that 
-script and you're off to the races.
-
-In the altogether likely event that these simple steps fail, get in touch with
-me and we'll work through the problems.
-
-NOTE for Mac OSX 10.4 users.
----------------------------
-
-If you get an error about not being able to find cc_dynamic, make the following
-link and try again:
-
-ln -s /usr/lib/gcc/{platform}/{version}/libgcc.a /usr/local/lib/libcc_dynamic.a
-
-where you need to supply your {platform} (e.g., i686-apple-darwin8) and the
-gcc {version} (e.g., 4.0.1).  
-

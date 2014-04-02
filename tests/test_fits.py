@@ -15,7 +15,7 @@ for model in models:
    if model == 'model': continue
    print "*******************",model,"******************"
    s = get_sn('SN2006ax_kcorr.snpy')
-   if model == 'EBV_model': 
+   if model == 'EBV_model':
       stype='dm15'
    else:
       stype='st'
@@ -23,3 +23,12 @@ for model in models:
    s.fit(['u','B','V','g','r','i','Y','J','H'], kcorr=False)
    s.summary()
    s.save('SN2006ax_%s.snpy' % model)
+   
+   if 'Bs' in s.model.rbs:
+      s.restbands['B'] = 'Bs'
+      s.restbands['V'] = 'Vs'
+      s.restbands['r'] = 'Rs'
+      s.restbands['i'] = 'Is'
+   s.fit(['u','B','V','g','r','i','Y','J','H'], kcorr=False)
+   s.save('SN2006ax_%s_st.snpy' % model)
+

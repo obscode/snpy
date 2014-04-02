@@ -23,6 +23,8 @@ def configuration(parent_package='', top_path=None):
    config.add_data_files('ipythonrc-SN')
    config.add_data_files('st_calibration2.dat')
    config.add_data_files('dm15_calibration2.dat')
+   config.add_data_files('BmX_Uniform_u_all.pickle')
+   config.add_data_files('color_priors.pickle')
    return config
 
 

@@ -1,13 +1,18 @@
 #!/usr/bin/env python
-'''A python module (and script) for generating lightcurve templates based on Prieto
-et al. 2006.  Uses Prieto's own C-code, which he made available, wrapped up for use
-in Python.
+'''A python module (and script) for generating lightcurve templates based on
+Prieto et al. 2006.  Uses Prieto's own C-code, which he made available, wrapped
+up for use in Python.
 
-August 14, 2007:  added a hack to produce NIR stretch templates valid on [-12,10].'''
+August 14, 2007:  added a hack to produce NIR stretch templates valid on 
+[-12,10].
+Feb. 2014:  The method used up to now was really inefficient. Now we do what
+             what we do with the other templates:  spline the surface.'''
 import sys,os,string
-import numpy.oldnumeric as num
+import numpy as num
 import scipy
-import dm15tempc
+#import dm15tempc
+import pickle
+from scipy.optimize import brentq
 
 template_bands = ['Bs','Vs','Rs','Is']
 
@@ -26,22 +31,26 @@ class template:
       self.dm15min = 0.83
       #/* Reading data of the templates */
 
-      self.t = num.zeros((96,), num.Float64)
-      self.et = num.zeros((96,), num.Float64)
-      self.B = num.zeros((96,), num.Float64)
-      self.eB = num.zeros((96,), num.Float64)
-      self.R = num.zeros((96,), num.Float64)
-      self.eR = num.zeros((96,), num.Float64)
-      self.I = num.zeros((96,), num.Float64)
-      self.eI = num.zeros((96,), num.Float64)
-      self.V = num.zeros((96,), num.Float64)
-      self.eV = num.zeros((96,), num.Float64)
-      self.J = num.zeros((96,), num.Float64)
-      self.eJ = num.zeros((96,), num.Float64)
-      self.H = num.zeros((96,), num.Float64)
-      self.eH = num.zeros((96,), num.Float64)
-      self.K = num.zeros((96,), num.Float64)
-      self.eK = num.zeros((96,), num.Float64)
+      self.t = None
+      self.et = None
+      self.B = None
+      self.eB = None
+      self.R = None
+      self.eR = None
+      self.I = None
+      self.eI = None
+      self.V = None
+      self.eV = None
+      self.J = None
+      self.eJ = None
+      self.H = None
+      self.eH = None
+      self.K = None
+      self.eK = None
+
+      f = open(os.path.join(dm15_path, "tck.pickle"))
+      self.tck = pickle.load(f)
+      f.close()
 
       self.shiftV = 0
       self.shiftR = 0
@@ -49,46 +58,46 @@ class template:
    def dm152s(self, dm15):
       '''Given a value of dm15, find the stretch that will convert
       the current B-lc to that value of dm15.'''
-      tck = scipy.interpolate.splrep(self.t, self.B-dm15, k=3, s=0)
-      roots = scipy.interpolate.sproot(tck)
-      if len(roots) == 0:
-         return(1)
-      else:
-         int_time = roots[-1]
-         return(15.0/int_time)
+
+      try:
+         root = brentq(lambda x: self.tck['B'].ev(x, self.dm15)-dm15,0,30)
+      except ValueError:
+         return (1)
+
+      return(15.0/root)
 
    def mktemplate(self, dm15, method=1, colors='none', generate=0):
 
-      self.dm15 = dm15
       if dm15 < 0.83:  
-         dm15=0.83
+         self.dm15=0.83
       if dm15 > 1.93:  
-         dm15=1.93
-      result = dm15tempc.dm15temp(dm15, len(self.t), self.t, self.et,
-            self.B, self.eB, self.V, self.eV, self.R, self.eR, self.I, self.eI,
-            method, dm15_path)
-      if self.dm15 < 0.83 or self.dm15 > 1.93:
-         s = self.dm152s(self.dm15)
-         self.t = self.t*s
-      npts = result[0]
-      self.eB = num.where(num.less(self.eB, 0.001), 0.001, self.eB)
-      self.eV = num.where(num.less(self.eV, 0.001), 0.001, self.eV)
-      self.eR = num.where(num.less(self.eR, 0.001), 0.001, self.eR)
-      self.eI = num.where(num.less(self.eI, 0.001), 0.001, self.eI)
-      # Here is a hack to produce a template in the same manner as Jose-Louis'
-      # code.
-      #gids = num.greater_equal(self.t, -12)*num.less_equal(self.t, 10)
-      #t = num.compress(gids, self.t)
-      self.J,self.eJ,maskJ = self.eval('J', self.t)
-      self.H,self.eH,maskH = self.eval('H', self.t)
-      self.K,self.eK,maskK = self.eval('K', self.t)
-      self.eJ = num.where(maskJ, self.eJ, -1.0)
-      self.eH = num.where(maskH, self.eH, -1.0)
-      self.eK = num.where(maskK, self.eK, -1.0)
+         self.dm15=1.93
+      if dm15 < 0.83 or dm15 > 1.93:
+         self.s = self.dm152s(dm15)
+      else:
+         self.s = 1.0
+      if generate:
+         self.t = arange(-10,71, 1.0)
+         for band in ['B','V','R','I']:
+            self.__dict__[band] = \
+                  self.tck[band].ev(self.t/self.s, self.t*0+self.dm15)
+            self.__dict__['e'+band] = \
+                  self.tck['e_'+band].ev(self.t/self.s, self.t*0+self.dm15)
+         self.eB = num.where(num.less(self.eB, 0.001), 0.001, self.eB)
+         self.eV = num.where(num.less(self.eV, 0.001), 0.001, self.eV)
+         self.eR = num.where(num.less(self.eR, 0.001), 0.001, self.eR)
+         self.eI = num.where(num.less(self.eI, 0.001), 0.001, self.eI)
+         # Here is a hack to produce a template in the same manner as Jose-Louis'
+         # code.
+         #gids = num.greater_equal(self.t, -12)*num.less_equal(self.t, 10)
+         #t = num.compress(gids, self.t)
+         self.J,self.eJ,maskJ = self.eval('J', self.t)
+         self.H,self.eH,maskH = self.eval('H', self.t)
+         self.K,self.eK,maskK = self.eval('K', self.t)
+         self.eJ = num.where(maskJ, self.eJ, -1.0)
+         self.eH = num.where(maskH, self.eH, -1.0)
+         self.eK = num.where(maskK, self.eK, -1.0)
 
-      self.shiftV = result[1]
-      self.shiftR = result[2]
-      self.shiftI = result[3]
       if colors=='none':
          BmV = 0
          BmR = 0
@@ -97,9 +106,9 @@ class template:
          BmV = self.shiftV
          BmR = self.shiftR
          BmI = self.shiftI
-      self.V -= BmV
-      self.R -= BmR
-      self.I -= BmI
+         self.V -= BmV
+         self.R -= BmR
+         self.I -= BmI
 
    def eval(self, band, times, z=0, k=1):
       '''Evaluate, using a spline, the value of the template at specific
@@ -125,27 +134,14 @@ class template:
       elif band == 'K':
          return(0.042 + evt/s*0.02728437+ 0.003194500*(evt/s)**2 - 0.0004139377*(evt/s)**3,
                0.0*evt/s + 0.08, num.greater_equal(evt/s, -12)*num.less_equal(evt/s, 10)) 
-      data = self.__dict__[band]
-      edata = self.__dict__['e'+band]
-      tck = scipy.interpolate.splrep(self.t, data, k=k, s=0)
-      tck2 = scipy.interpolate.splrep(self.t, edata, k=1, s=0)
-      # These ids give us sorted time
-      sids = num.argsort(evt)
-      # These ids get us back to the original order
-      ssids = num.argsort(sids)
-      evd = scipy.interpolate.splev(num.take(evt, sids), tck)
-      eevd = scipy.interpolate.splev(num.take(evt, sids), tck2)
-      if len(evt) == 1:
-         evd = num.array([evd])
-         eevd = num.array([eevd])
-      evd = num.take(evd, ssids)
-      eevd = num.take(eevd, ssids)
-      # Now mask out the data outside the range [-15,80]
-      bids = num.greater_equal(evt, -15) * num.less_equal(evt, 80)
+      evd = self.tck[band].ev(evt/self.s, evt*0+self.dm15)
+      eevd = self.tck['e_'+band].ev(evt/self.s, evt*0+self.dm15)
+      mask = num.greater_equal(evt/self.s, -10)*num.less_equal(evt/self.s,70)
+
       if scalar:
-         return(evd[0], eevd[0], bids[0])
+         return(evd[0], eevd[0], mask[0])
       else:
-         return(evd, eevd, bids)
+         return(evd, eevd, mask)
 
    def MMax(self, band):
       '''Given a value of dm15, return the maximum magnitude in each filter, 

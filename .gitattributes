@@ -1,4 +1,5 @@
 * text=auto !eol
+/BmX_Uniform_u_all.pickle -text
 /CHANGELOG -text
 CSPtemp/__init__.py -text
 CSPtemp/bs_error.pickle -text
@@ -245,6 +246,7 @@ CSPtemp/templates/SN2007af_r.dat -text
 CSPtemp/templates/SN2007af_u.dat -text
 /Eric -text
 /INSTALL -text
+/Ia_R_splines.pickle -text
 /MANIFEST.in -text
 /README -text
 SwiftTemp/SNIa_m2_template_fe.dat -text
@@ -256,6 +258,8 @@ SwiftTemp/setup.py -text
 bin/lcparams -text
 bin/snpy -text
 bin/update-snpy -text
+/color_coefs.pickle -text
+/color_priors.pickle -text
 /dm15_calibration2.dat -text
 dm15temp/__init__.py -text
 dm15temp/dm15temp.c -text
@@ -264,6 +268,7 @@ dm15temp/dm15temp.py -text
 dm15temp/dm15temp_CRB.c -text
 dm15temp/dm15temp_wrap.c -text
 dm15temp/dm15temps.dat -text
+dm15temp/generate_surf.py -text
 dm15temp/setup.py -text
 dm15temp/templates/sigma01el.new -text
 dm15temp/templates/sigma91bg.new -text
@@ -360,6 +365,7 @@ filters/filters/FLWO/1.2meter/filters.dat -text
 filters/filters/FLWO/1.2meter/iprime_keplercam.dat -text
 filters/filters/FLWO/1.2meter/keplercam.passbands.txt -text
 filters/filters/FLWO/1.2meter/rprime_keplercam.dat -text
+filters/filters/FLWO/1.2meter/uprime_keplercam.dat -text
 filters/filters/GeminiNorth/NIRI/NIRI_H.dat -text
 filters/filters/GeminiNorth/NIRI/NIRI_J.dat -text
 filters/filters/GeminiNorth/NIRI/filters.dat -text
@@ -744,6 +750,7 @@ lib/Eric/telluric.txt -text
 /setup_CSP.py -text
 /sn.py -text
 /snMCMC.py -text
+/snemcee.py -text
 /snpy-bootstrap.py -text
 /specobj.py -text
 spline2/MANIFEST -text
@@ -766,8 +773,10 @@ sqlmod/setup.py -text
 tests/README -text
 tests/SN2006ax.txt -text
 tests/dotests.sh -text
+tests/old_saves/SN2006ax_kcorr-2.0-279.snpy -text
 tests/test_fits.py -text
 tests/test_kcorr.py -text
+tests/test_load.py -text
 tests/test_plots.py -text
 tests/test_templates.py -text
 tspack/__init__.py -text

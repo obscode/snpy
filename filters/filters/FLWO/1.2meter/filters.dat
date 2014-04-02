@@ -5,5 +5,6 @@ R4sh R_4sh_harris.dat 15.0661 FLWO 1.2m+4Shooter Harris R filter
 I4sh I_4sh_harris.dat 14.4977 FLWO 1.2m+4Shooter Harris I filter
 Bk B_keplercam.dat 15.4004 FLWO 1.2m+Keplercam B filter
 Vk V_keplercam.dat 14.9821 FLWO 1.2m+Keplercam V filter
+uk uprime_keplercam.dat 14.4188 FLWO 1.2m+Keplercam u' filter
 rk rprime_keplercam.dat 15.2228 FLWO 1.2m+Keplercam r' filter
 ik iprime_keplercam.dat 14.9877 FLWO 1.2m+Keplercam i' filter

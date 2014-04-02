@@ -52,6 +52,12 @@ class template:
          return self.__dict__[name]
       raise AttributeError, "Error:  attribute %s not defined" % (name)
 
+   def __setstate__(self, state):
+      if 'St' not in state:
+         state['St'] = SwiftTemp.dm15_template()
+      self.__dict__ = state
+
+
 
    def mktemplate(self, dm15, dm15_int=None, dm15_colors='int', generate=0):
       args1 = {'dm15':dm15, 'method':1, 'colors':'none','generate':generate}
@@ -110,4 +116,10 @@ class stemplate:
          return(self.St.eval(band, times, z, mag, sextrap, gen, toff))
       else:
          raise AttributeError,"Sorry, band %s is not supported" % band
+
+   def __setstate__(self, state):
+      if 'St' not in state:
+         state['St'] = SwiftTemp.st_template()
+      self.__dict__ = state
+
 
