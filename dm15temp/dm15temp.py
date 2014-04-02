@@ -26,7 +26,7 @@ def dm152s(dm15):
 
 class template:
    def __init__(self):
-      self.dm15s = None
+      self.dm15 = None
       self.dm15max = 1.93
       self.dm15min = 0.83
       #/* Reading data of the templates */
@@ -68,6 +68,7 @@ class template:
 
    def mktemplate(self, dm15, method=1, colors='none', generate=0):
 
+      self.dm15 = dm15
       if dm15 < 0.83:  
          self.dm15=0.83
       if dm15 > 1.93:  

@@ -270,6 +270,7 @@ dm15temp/dm15temp_wrap.c -text
 dm15temp/dm15temps.dat -text
 dm15temp/generate_surf.py -text
 dm15temp/setup.py -text
+dm15temp/tck.pickle -text
 dm15temp/templates/sigma01el.new -text
 dm15temp/templates/sigma91bg.new -text
 dm15temp/templates/sigma91t.new -text
