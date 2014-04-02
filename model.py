@@ -99,7 +99,8 @@ class model:
       '''Determine the best R_\lambda for the foreground MW extinction.'''
       if band in self.parent.Robs:
          if type(self.parent.Robs[band]) is type(()):
-            R = scipy.interpolate.splev(t+self.Tmax, self.parent.Robs[band])
+            R = scipy.interpolate.splev(t+self.parent.Tmax, 
+                  self.parent.Robs[band])
          else:
             R = self.parent.Robs[band]
       else:
@@ -699,7 +700,7 @@ class max_model(model):
          raise ValueError, "This model only supports dm15 and st as shape parameters"
       self.stype = stype
       model.__init__(self, parent)
-      self.rbs = ubertemp.template_bands
+      self.rbs = ['u','B','V','g','r','i','Y','J','H','K']
       self.M0s = {'u':-18.82, 'B':-19.11, 'V':-19.12, 'g':-19.16, 'r':-19.03,
                   'i':-18.50, 'Y':-18.45, 'J':-18.44, 'H':-18.38, 'K':-18.42,
                   'J_K':-18.44, 'H_K':-18.38,
@@ -708,6 +709,7 @@ class max_model(model):
       self.errors = {stype:0, 'Tmax':0}
       if stype == 'dm15':
          self.template = ubertemp.template()
+         self.rbs = self.rbs + ['Bs','Vs','Rs','Is']
       else:
          self.template = ubertemp.stemplate()
       self.do_Robs = 1
@@ -879,8 +881,10 @@ class max_model2(model):
          raise ValueError, "This model only supports dm15 and st as shape parameters"
       self.stype = stype
       model.__init__(self, parent)
-      self.rbs = ['u','B','V','g','r','i','Y','J','H','K','Bs','Vs','Rs','Is',
+      self.rbs = ['u','B','V','g','r','i','Y','J','H','K',
             'H_K','J_K']
+      if self.stype == 'dm15':
+         self.rbs = self.rbs + ['Bs','Vs','Rs','Is']
       self.M0s = {'u':-18.82, 'B':-19.11, 'V':-19.12, 'g':-19.16, 'r':-19.03,
                   'i':-18.50, 'Y':-18.45, 'J':-18.44, 'H':-18.38, 'K':-18.42,
                   'J_K':-18.44, 'H_K':-18.38,
@@ -1213,6 +1217,8 @@ class color_model(model):
 
    def __init__(self, parent, stype='st'):
 
+      if stype == 'dm15':
+         raise AttributeError, "This model only supports st parameter"
       model.__init__(self, parent)
       self.rbs = ['u','B','V','g','r','i','Y','J','H']
       self.parameters = {'Bmax':None, 'st':None, 'EBVhost':None, 
