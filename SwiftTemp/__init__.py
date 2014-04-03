@@ -108,6 +108,20 @@ class st_template:
       self.t = None
       self.interp = {}
 
+      self.setup_interpolators()
+
+      self.UVM2 = None;  self.eUVM2 = None
+      self.UVW1 = None;  self.eUVW1 = None
+      self.UVW2 = None;  self.eUVW2 = None
+
+   def __getstate__(self):
+
+      d = self.__dict__.copy()
+      d['interp'] = {}
+      return d
+
+   def setup_interpolators(self):
+
       x,y = num.loadtxt(os.path.join(base, "SNIa_w1_template_fe.dat"),
             unpack=True)
       self.interp['UVW1'] = interp1d(x,y, bounds_error=False)
@@ -117,10 +131,6 @@ class st_template:
       x,y = num.loadtxt(os.path.join(base, "SNIa_m2_template_fe.dat"),
             unpack=True)
       self.interp['UVM2'] = interp1d(x,y, bounds_error=False)
-
-      self.UVM2 = None;  self.eUVM2 = None
-      self.UVW1 = None;  self.eUVW1 = None
-      self.UVW2 = None;  self.eUVW2 = None
 
    def mktemplate(self, st, dm15_int=None, dm15_colors='int', generate=0):
       '''2nd and 3rd arguments ignored.'''
@@ -149,6 +159,9 @@ class st_template:
       by using a stretch.  Use [gen] to specifiy the generation of the template.
       If you want the Tmax - Tmax(B) offset applied, set [toff] to True,
       otherwise, Tmax will be at 0 for every filter.'''
+
+      if band not in self.interp:
+         self.setup_interpolators()
 
       if toff:
          evt = (times - self.deltaTmax(band))/(1+z)
