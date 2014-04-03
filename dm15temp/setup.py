@@ -7,6 +7,7 @@ def configuration(parent_package='', top_path=None):
                         libraries=['m']
                         )
    config.add_data_files('dm15temps.dat')
+   config.add_data_files('tck.pickle')
    config.add_data_dir('templates')
    return config
 
