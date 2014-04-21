@@ -316,7 +316,8 @@ class EBV_model(model):
       self.calibration = self.args.get('calibration',6)
       self.gen = self.args.get('gen',2)
       for band in self._fbands:
-         cal = self.args.get('cal',6)
+         #cal = self.args.get('cal',6)
+         cal = self.calibration
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
                self.Rv_host[cal], self.parent.Rv_gal, self.parent.k_version)
       
