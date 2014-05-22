@@ -355,6 +355,18 @@ class system:
       for SED in self.SEDs:
          print "\t"+self.SEDs[SED].name
 
+   def keys(self):
+      return self.SEDs.keys()
+
+   def values(self):
+      return self.SEDs.values()
+
+   def __contains__(self, item):
+      return self.SEDs.__contains__(item)
+
+   def __iter__(self):
+      return self.SEDs.__iter__()
+
    def __getattr__(self, attr):
       if attr in self.__dict__['SEDs']:
          return self.__dict__['SEDs'][attr]

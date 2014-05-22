@@ -61,6 +61,10 @@ except:
 ipshell=InteractiveShellEmbed(banner1='Welcome to SNooPy')
 ipshell.enable_pylab(gui=gui)
 from snpy import *
+try:
+   from matplotlib.pyplot import *
+except:
+   pass
 if "lowz" in sys.argv:
    del sys.argv[sys.argv.index("lowz")]
    sqlmod.default_sql = sqlmod.sql_lowz()

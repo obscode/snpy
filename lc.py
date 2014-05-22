@@ -142,6 +142,7 @@ class lc:
       odict = self.__dict__.copy()
       if 'mp' in odict:  del odict['mp']
       if 'pts' in odict:  del odict['pts']
+      if '_lc_labs' in odict: del odict['_lc_labs']
       return odict
 
    def time_sort(self):
