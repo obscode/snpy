@@ -377,7 +377,7 @@ class lc:
          self.mp.bc.disconnect()
       except:
          pass
-      return plotmod.plot_lc(self, epoch, flux, symbol)
+      return plotmod.plot_lc(self, epoch, flux, symbol, outfile=outfile)
 
    def replot(self):
       '''Replot a figure, if it exists and belongs to this instance.'''
