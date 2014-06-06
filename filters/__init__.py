@@ -277,7 +277,7 @@ class filter(spectrum):
       input spectrum by this amount.'''
       res = self.response(specwave,flux=flux,z=z,zeropad=zeropad)
       if res <= 0:
-         return(-1)
+         return(nan)
       else:
          return(-2.5*num.log10(res) + self.zp)
 
@@ -287,6 +287,9 @@ class filter(spectrum):
       the filter by this amount (ie, you are observing a redshifed spectrum).'''
       numer = self.response(specwave, flux=flux, z=z, zeropad=zeropad,
             photons=0)
+      if numer <= 0:
+         return(nan)
+
       if not isinstance(specwave, spectrum):
          denom = self.response(specwave, 2.997925e18/num.power(specwave,2), 
                photons=0)
@@ -310,6 +313,8 @@ class filter(spectrum):
 
       numer = self.response(s_wave, flux=s_flux*s_wave, z=z, zeropad=zeropad)
       denom = self.response(s_wave, flux=s_flux, z=z, zeropad=zeropad)
+      if numer <= 0 or denom <=0:
+         return(nan)
       return(numer/denom)
 
 
@@ -332,6 +337,8 @@ class filter(spectrum):
       if wave is None:
          wave,flux = standards['Vega']['VegaB'].wave, standards['Vega']['VegaB'].resp
       flux0 = self.response(wave, flux, z, photons=1)
+      if flux0 <= 0:
+         return(nan)
       redf = unred(wave, flux, -EBV, Rv, z, redlaw=redlaw, 
             strict_ccm=strict_ccm)[0]
       fluxr = self.response(wave, redf, z, photons=1)
