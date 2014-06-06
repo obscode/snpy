@@ -260,6 +260,8 @@ bin/snpy -text
 bin/update-snpy -text
 /color_coefs.pickle -text
 /color_priors.pickle -text
+depricated/plot_sne_pg.py -text
+depricated/snMCMC.py -text
 /dm15_calibration2.dat -text
 dm15temp/__init__.py -text
 dm15temp/dm15temp.c -text
@@ -1267,12 +1269,10 @@ lib/Eric/telluric.txt -text
 /model.py -text
 /myplotlib.py -text
 /plot_sne_mpl.py -text
-/plot_sne_pg.py -text
 /plotmod.py -text
 /setup.py -text
 /setup_CSP.py -text
 /sn.py -text
-/snMCMC.py -text
 /snemcee.py -text
 /snpy-bootstrap.py -text
 /specobj.py -text

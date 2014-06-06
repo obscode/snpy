@@ -131,7 +131,9 @@ def generateSampler(snobj, bands, nwalkers, threads=1, **args):
    and standard deviation 10. You can also set any parameter to a
    constant value. Lastly, you can set a parameter equal to a function
    that takes a single argument and returns the log-probability as
-   a prior. This function returns:  sampler,p0
+   a prior. 
+   
+   This function returns:  sampler,p0
    where sampler is an emcee sampler, and p0 is [nwalkers] starting
    points.'''
    if not snobj.model._fbands:
@@ -143,9 +145,3 @@ def generateSampler(snobj, bands, nwalkers, threads=1, **args):
    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(vinfo, snobj, bands),
          threads=threads)
    return sampler,vinfo,p0
-
-
-
-
-
-

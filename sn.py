@@ -6,7 +6,7 @@ import sqlmod
 if 'SQLSERVER' in os.environ:
    sqlmod.default_sql = sqlmod.__dict__['sql_'+os.environ['SQLSERVER']]()
 else:
-   sqlmod.default_sql = sqlmod.sql_highz()
+   sqlmod.default_sql = sqlmod.sql_local()
 have_sql = sqlmod.have_sql
    
 import types
@@ -798,11 +798,11 @@ class sn(object):
             self.sql.create_SN(self.ra, self.decl, self.z)
             data = {}
             for f in self.data:
-               if dokcorr:
-                  data[f] = [self.data[f].JD, self.data[f].magnitude, self.data[f].e_mag,
+               if dokcorr and data[f].K is not None:
+                  data[f] = [self.data[f].MJD, self.data[f].magnitude, self.data[f].e_mag,
                           self.data[f].K]
                else:
-                  data[f] = [self.data[f].JD, self.data[f].magnitude, self.data[f].e_mag,
+                  data[f] = [self.data[f].MJD, self.data[f].magnitude, self.data[f].e_mag,
                           None]
             self.sql.create_SN_photometry(data)
          elif dokcorr:

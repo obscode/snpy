@@ -496,9 +496,8 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
          ax.set_autoscaley_on(False)
          ax.set_ylim(yrange)
 
-   i = 0
    offsets = self.lc_offsets()
-   for filt in bands:
+   for i,filt in enumerate(bands):
       # Add extra space, if needed
       #delt = max(i*dm, i*dm + maxes[0] - maxes[i])
       #delt = round(delt, 1)
@@ -542,6 +541,9 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
          Tmax = 0
       else:
          Tmax = self.Tmax
+      if median(x-Tmax*epoch) > 100:
+         if i == 0: o = ceil((x.min()-Tmax*epoch)/10)*10
+         ax.ticklabel_format(axis='x',useOffset=o)
       ax.errorbar(x-Tmax*epoch, y, yerr=ey, barsabove=True, capsize=0,
             elinewidth=1, fmt=symbols[filt], ms=msize, 
             mfc=colors[filt], label=filt+'+'+'%.1f' % delt, linestyle='None',
@@ -588,7 +590,6 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
                       relative*rel_off))
          ax.plot(t[gids] - self.Tmax*epoch, y[gids], color='k',
                linewidth=linewidth)
-      i = i + 1
 
       if single and legend:
          ax.legend(loc='upper right', numpoints=1,ncol=2, prop={'size':'small'})

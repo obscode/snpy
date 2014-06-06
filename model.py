@@ -170,7 +170,9 @@ class model:
       
       # update errors and covariance matrix
       if C is None:
-         raise RuntimeError, "Error:  Corariance Matrix is singular.  No errors computed"
+         raise RuntimeError, "Error:  Covariance Matrix is singular.  " + \
+               "Either two or more parameters are degenerate or the model" + \
+               "has become insensitive to one or more parameters."
       C = C*self.rchisquare    # the trick for underestimated errors.
       self.C = {}
       for p in self.parameters:  self.errors[p] = self._extra_error(p)
@@ -1225,7 +1227,7 @@ class color_model(model):
       self.parameters = {'Bmax':None, 'st':None, 'EBVhost':None, 
             'Rv':None, 'Tmax':None}
       self.errors = {'Bmax':0, 'st':0, 'EBVhost':0, 'Tmax':0, 'Rv':0}
-      self.template = ubertemp.template()
+      self.template = ubertemp.stemplate()
 
 
    def setup(self):
@@ -1252,7 +1254,7 @@ class color_model(model):
       cdata = pickle.load(f)
       if self.redlaw not in cdata or \
             self.rvprior not in cdata[self.redlaw]:
-         raise ValueError, "Intrinsic colors for %s prior and %s reddeing law not found" %\
+         raise ValueError, "Intrinsic colors for %s prior and %s reddening law not found" %\
                (self.rvprior,self.redlaw)
 
       d = cdata[self.redlaw][self.rvprior]
@@ -1374,7 +1376,7 @@ class color_model(model):
 
    def systematics(self, calibration=1, include_Ho=False):
       '''Returns the systematic errors in the paramters as a dictionary.  
-      If no estimate is available, return None for that paramter.'''
+      If no estimate is available, return None for that parameter.'''
       systs = dict.fromkeys(self.parameters.keys())
       # DM contains systematics for Ho, plus average of calibration
       #  uncertainties

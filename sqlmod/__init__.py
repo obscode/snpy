@@ -145,8 +145,8 @@ class sqlbase:
       if not self.connected:
          raise RuntimeError, "Not connected to SQL database."
       insrt = '''INSERT INTO %s (%s,%s,%s,%s) VALUES (%%s,%%s,%%s,%%s)''' % \
-            (self.SN_TABLE, self.SN_ID, self.sql_field('name'),
-             self.sql_field('ra'), self.sql_field('decl'), self.sql_field('z'))
+            (self.SN_TABLE, self.SN_ID, self.sql_field('ra'), self.sql_field('decl'), 
+                  self.sql_field('z'))
       self.c.execute(insrt, (self.name, ra, decl, z))
 
    def create_SN_photometry(self, data):
@@ -383,6 +383,32 @@ class sql_lowz(sqlbase):
    user = "cburns"
    passwd = None
    db = "Phot"
+   port = 3306
+   readonly = 1
+
+   #FILTER_KEYS = {'B':'Bs',    # Over-ride Swope B and V
+   #               'V':'Vs'}
+
+   SN_TABLE = "SNList"
+   SN_ID = "SN"
+   ATTR_KEYS = {'z':'zc/300000.0',
+                'ra':'ra*15.0',
+                'decl':'de'}
+   PHOTO_TABLE = "SNPHOT"
+   PHOTO_ID = "SN"
+   PHOTO_JD = "JD"
+   PHOTO_MAG = "MNAT"
+   PHOTO_EMAG = "NATERR"
+   PHOTO_FILT = "FILT"
+   PHOTO_K = None      # No K-corrections in the DB
+   PHOTO_COND = "and MNAT is not NULL and MNAT > 0"
+   JD_OFFSET = 52999.5    # database is JD - 2453000, so +2999.5 gives MJD
+
+class sql_local(sqlbase):
+   host = "kepler.obs.carnegiescience.edu"
+   user = "cburns"
+   passwd = None
+   db = "CSP"
    port = 3306
    readonly = 1
 

@@ -547,7 +547,7 @@ dmf
 \end_inset
 
  as parameters).
- Here are a couple of examples:
+ Here is another example:
 \end_layout
 
 \begin_layout Standard
@@ -578,12 +578,12 @@ In [9] seds = getSED([1,2,3,4,5])
 
 \begin_layout Plain Layout
 
-In [10] Bmags = array([B.synthmag(sed) for sed in seds]) 
+In [10] Bmags = array([B.synth_mag(sed) for sed in seds]) 
 \end_layout
 
 \begin_layout Plain Layout
 
-In [11] Vmags = array([V.synthmag(sed) for sed in seds]) 
+In [11] Vmags = array([V.synth_mag(sed) for sed in seds]) 
 \end_layout
 
 \begin_layout Plain Layout
@@ -657,254 +657,6 @@ reference "sec:Filters-and-Spectra"
  and what you get by making synthetic magnitudes from Eric's SED template.
  Note that the template is defined from day -15, so element 15 is day 0,
  16 is day 1, etc.
-\end_layout
-
-\begin_layout Section
-Data Structure
-\end_layout
-
-\begin_layout Standard
-Python is object-oriented and SNooPy has been designed
-\begin_inset Foot
-status collapsed
-
-\begin_layout Plain Layout
-If you can call this cobbled-together-late-at-night-while-observing code
- a design.
-\end_layout
-
-\end_inset
-
- with this in mind.
- As such, the data are organized into a hierarchical structure of objects.
- The base (or parent) object is the supernova itself (the 
-\family typewriter
-sn
-\family default
- class).
- It contains scalar variables like coordinates, redshift, Milky-Way reddening,
- etc.
- It has functions for plotting, fitting, and saving itself (see section
- 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "sec:Data-Persistance"
-
-\end_inset
-
-).
- It has variables that control the way the light-curves are fit.
- 
-\end_layout
-
-\begin_layout Standard
-The 
-\family typewriter
-sn
-\family default
- instance also contains references to a number of light-curves, one for
- each filter (the 
-\family typewriter
-lc
-\family default
- class), which are stored in a python dictionary called 
-\family typewriter
-data
-\family default
-.
- The dictionary is indexed by the observed filter name.
- These lc objects contain the data (time, magnitude, flux, errors, etc),
- as well as functions for plotting, interpolation, and other useful tasks
- that apply to one light-curve at a time.
- Each 
-\family typewriter
-lc
-\family default
- object also has a reference to a 
-\family typewriter
-filter
-\family default
- object that defines the filter response, the zero-point, and lots of other
- goodies.
- There is also a shortcut for accessing the 
-\family typewriter
-lc
-\family default
- instances: you can refer to them as member variables.
- So 
-\family typewriter
-s.data['B']
-\family default
- and 
-\family typewriter
-s.B
-\family default
- are equivalent.
-\end_layout
-
-\begin_layout Standard
-Lastly, the sn instance also has an object that defines the model that will
- be used to fit the data.
- It holds the parameter values, errors, 
-\begin_inset Formula $\chi^{2}$
-\end_inset
-
-, etc.
- It also does all the heavy lifting when fitting the model to the data.
- Because the model is an abstract object, it can be replaced with other
- model objects transparently (so long as the replacement model object conforms
- to the structure expected by SNooPy; see section 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "sec:Model-class"
-
-\end_inset
-
-).
-\end_layout
-
-\begin_layout Standard
-The outline of the major objects is show in figure 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "fig:Object-structure"
-
-\end_inset
-
-.
- This is not exhaustive
-\end_layout
-
-\begin_layout Standard
-\begin_inset Float figure
-wide false
-sideways false
-status open
-
-\begin_layout Plain Layout
-\begin_inset Graphics
-	filename object_structure.001.png
-	lyxscale 50
-	width 4in
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Plain Layout
-\begin_inset Caption
-
-\begin_layout Plain Layout
-Object structure in SNooPy.
-\begin_inset CommandInset label
-LatexCommand label
-name "fig:Object-structure"
-
-\end_inset
-
-
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Section
-Data Persistence
-\begin_inset CommandInset label
-LatexCommand label
-name "sec:Data-Persistance"
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Standard
-The current version of 
-\family typewriter
-SNooPy
-\family default
- gets and saves its data from three possible sources: a 
-\family typewriter
-mySQL
-\family default
- database, a file that was created using the 
-\family typewriter
-sn.save()
-\family default
- function, or a flat text file of the proper format.
- A single convenience function, 
-\family typewriter
-get_sn()
-\family default
- can be used to load a sn object from any of these sources.
- 
-\end_layout
-
-\begin_layout Standard
-For large datasets, I highly recommend using the mySQL solution: it allows
- for data persistence that is kept separate from one user/computer combination.
- The major downside is you have to install mySQL (not too bad) and setup
- a schema which matches what SNooPy expects (still not too bad) and possibly
- learning mySQL in the first place (well, you always 
-\emph on
-meant
-\emph default
- to learn it, didn't you? This is your excuse).
- I'm not going to explain how to install mySQL and setup a schema, that's
- best left for the SQL documentation.
- The required schema is detailed in Appendix 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "sec:mySQL-Schema"
-
-\end_inset
-
-.
-\end_layout
-
-\begin_layout Standard
-If you don't want the bother of SQL, then you can load initial data from
- a flat ascii data file (see section 
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "sub:flatfile"
-
-\end_inset
-
-).
- When you're done fitting and want to save the sn object, with all its state
- variables, simply use the 
-\family typewriter
-sn.save('filename')
-\family default
- function to save the 
-\family typewriter
-sn
-\family default
- instance as a python pickle file.
- You can later load it in using 
-\family typewriter
-get_sn('filename')
-\family default
-.
- 
-\end_layout
-
-\begin_layout Standard
-WARNING: because the pickle file will contain the entire data structure
- of the SN object, there is no guarantee that pickle files will be loadable
- by different versions of SNooPy.
- In fact, I can pretty-much guarantee that major upgrades of SNooPy will
- result in non-compatibility in pickled files.
 \end_layout
 
 \begin_layout Section
@@ -1314,6 +1066,13 @@ stype='dm15'
 stype='st' 
 \family default
 to select the two different light-curve parameters.
+ Please keep in mind that this model is likely to change until it is officially
+ published.
+ Until that time, it is best to use the 
+\family typewriter
+EBV_model
+\family default
+ instead.
 \end_layout
 
 \begin_layout Subsection
@@ -1838,6 +1597,804 @@ lc
 \family default
  (light-curve) class.
  You can ask for help on any python object (including variables).
+\end_layout
+
+\begin_layout Subsection
+The Art of Interpolating 
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Splining"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Sometimes, you may simply be interested in getting information about a light-cur
+ve independent of model or light-curve template.
+ SNooPy has several interpolation schemes built in.
+ Which ones depends on whether you have 
+\family typewriter
+pymc
+\family default
+ installed (for the Gaussian Processes) and how recent your 
+\family typewriter
+numpy
+\family default
+ is (for the polynomials).
+ Use the command '
+\family typewriter
+list_types()
+\family default
+' to list which are available to you.
+ Here are brief explanations of how each scheme works.
+ Unlike the template fitting, interpolation is done filter-by-filter, and
+ so the routines are accessed at the light-curve instance level, instead
+ of the supernova instance level.
+\end_layout
+
+\begin_layout Subsubsection
+Gaussian Processes
+\end_layout
+
+\begin_layout Standard
+If you have installed the 
+\family typewriter
+pymc
+\family default
+ package, it comes with an interpolating package that uses Gaussian Processes
+ (GP).
+ GP's are fantastic for interpolating when you may have missing data (gaps).
+ This is usually where other fitters like Dierckx splines and hypersplines
+ (see next sections) go awry.
+ That's not to say that GP somehow magically know what to do in the absense
+ of data, but they tend to not 
+\begin_inset Quotes eld
+\end_inset
+
+go crazy
+\begin_inset Quotes erd
+\end_inset
+
+ like splines and they properly compute the uncertainty in the interpolator
+ when there is missing data.
+ In this way, GP's are more 
+\begin_inset Quotes eld
+\end_inset
+
+honest
+\begin_inset Quotes erd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+I'm not going to explain everything about GP's, but suffice it to say that
+ GP's are like 
+\begin_inset Quotes eld
+\end_inset
+
+fuzzy functions
+\begin_inset Quotes erd
+\end_inset
+
+.
+ They have a mean value (mean function) and a error (covariance function).
+ In SNooPy's implementation, we employ the Matern covariance function, which
+ has 3 parameters: 
+\family typewriter
+scale
+\family default
+, 
+\family typewriter
+amp
+\family default
+ (amplitude), and 
+\family typewriter
+diff_degree
+\family default
+ (degree if differentiability).
+ These are conceptually very easy to understand: scale is the scale over
+ which the function typically varies (on the x-axis).
+ Amplitude is the amount by which the function varies on these scales.
+ The degree of differentiability is the 
+\begin_inset Quotes eld
+\end_inset
+
+smoothness
+\begin_inset Quotes erd
+\end_inset
+
+ of the function.
+ These are the only 3 parameters you need to specify to the template() function
+ to get a fit (or don't specify them at all and take the defaults, which
+ are pretty good for light-curves).
+ If the function does not capture the full behaviour of the light-curve
+ (too smooth), try decreasing the scale and increase the amplitude.
+ If it captures too much of the 
+\begin_inset Quotes eld
+\end_inset
+
+noise
+\begin_inset Quotes erd
+\end_inset
+
+, increase the scale, lower the amplitde and/or increase the diff_degree.
+\end_layout
+
+\begin_layout Standard
+Here is an example:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+s.B.template(method='gp', scale=10, amp=s.B.mag.std(), diff_degree=3)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Here we choose the method (
+\family sans
+gp
+\family default
+ = Gaussian process), set the scale to 10 days, compute the standard deviation
+ of the B lightcurve and use that as the amplitude, and set the degree of
+ differentiability to 3.
+ The downside to GP's is that they are slower to solve than the other interpolat
+ion methods.
+ But I feel that the error estimates that come out (especially in the regions
+ with gaps) are much more robust.
+\end_layout
+
+\begin_layout Subsubsection
+Dierckx splines
+\end_layout
+
+\begin_layout Standard
+Splines are a great way to represent data, but they have one very serious
+ drawback: a variable number of parameters.
+ Not only do you have to specify the order of the spline (usually one chooses
+ k=3 for a cubic spline), you also have to choose how many knot points to
+ use.
+ Each knot point has two parameters: its placement on the time axis and
+ the coefficient of the spline at that knot point.
+ You can therefore have the number of knot points equal to the number of
+ data points (plus 2k end-point knots to properly define the spline on the
+ boundaries) and get a spline that's guaranteed to pass through each and
+ every point (an interpolating spline).
+ But real data has noise, so this isn't what you want.
+ At the other extreme, you could use the bare minimum of 2k+2 knots which
+ would give the smoothest spline, but then you lose any interesting structure
+ in the light-curve.
+\end_layout
+
+\begin_layout Standard
+Luckily, 
+\family typewriter
+scipy
+\family default
+ makes many of the algorithms from Paul Dierckx's book 
+\begin_inset Quotes eld
+\end_inset
+
+Curve and Surface Fitting with Splines
+\begin_inset Quotes erd
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand citep
+key "Dierckx1993"
+
+\end_inset
+
+ available.
+ These algorithms deal with automatic choice of the number and placement
+ of the spline knots.
+ They distill the problem down to one parameter: the smoothing, 
+\family typewriter
+s
+\family default
+.
+ The larger 
+\family typewriter
+s
+\family default
+, the smoother (fewer knots) the curve and the smaller, the more the spline
+ will approach an interpolating spline (s=0).
+ If the weights you provide the spline fitter are proper 1-sigma errors,
+ then setting s to the number of data points should result in a curve with
+ reduced 
+\begin_inset Formula $\chi_{\nu}^{2}\simeq1$
+\end_inset
+
+, which is what we really want.
+ The first time you fit the spline, set task=0 and the routine will choose
+ an initial set of knot points.
+ If you wish to play around with the smoothing parameter, but keep the knots
+ fixed, use task=1; otherwise, new knots will be chosen each time.
+\end_layout
+
+\begin_layout Standard
+It may be that the resulting spline doesn't 
+\begin_inset Quotes eld
+\end_inset
+
+look right
+\begin_inset Quotes erd
+\end_inset
+
+.
+ Most likely, this is due to badly estimated weights (variances).
+ The solution is to vary s until you get something that looks right, but
+ of course, this is purely subjective.
+ With proper 1-sigma errors, one can legitimately play around with s in
+ the range 
+\begin_inset Formula $N-\sqrt{2N}<s<N+\sqrt{2N}$
+\end_inset
+
+ until the spline looks acceptable
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+I tend to shy away from this, preferring to remove the subjectivity.
+ Rather, I would re-examine the weights and decide whether they are correct.
+ Playing around with s is effectively like globally increasing the errors.
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Another way to spline is to impose what you think are sensible knots.
+ In this case, simply specify them as an array with the knots argument to
+ the 
+\family typewriter
+template()
+\family default
+ function and set 
+\family typewriter
+task=-1
+\family default
+.
+ In this case, the smoothing is ignored and you get the least-squares spline
+ using these knots.
+ For example:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+s.B.template(method='spline', task=0, s=len(s.B.mag))
+\end_layout
+
+\begin_layout Plain Layout
+
+s.B.template(method='spline', task=1, s=len(s.B.mag) - sqrt(2*len(s.B.mag)))
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Hyperspline
+\end_layout
+
+\begin_layout Standard
+The problem of choosing the correct value of s in the previous section can
+ be removed by using another set of spline routines developed by 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "297968"
+
+\end_inset
+
+.
+ Rather than using 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+ as a statistic for determining the best-fit spline, they use a statistic
+ call the Durbin-Watson statistic.
+ Without getting into the details, this statistic relies more on the auto-correl
+ation in the residuals, which to first order is insensitive to the individual
+ errors of the points.
+ In essence, you're using the pattern of the points to tell you what is
+ noise and what is a true trend.
+\end_layout
+
+\begin_layout Standard
+This spline method, when it works, is the most automatic of the interpolation
+ methods, requiring no parameters (at least initially).
+ Of course, the Achilles-heal of this method is the presence of correlated
+ errors among the data points.
+ But this is likely also a problem with Dierckx splines.
+\end_layout
+
+\begin_layout Standard
+Another case where hyperspline has problems is when there are large gaps
+ in the data.
+ Here, you might want to split up the problem in to two (or more) segments
+ and work on them individually.
+ I hope to add this feature eventually.
+ The parameter you'll most likely need to play with is 
+\family typewriter
+lopt
+\family default
+ (set the initial number of knots).
+ Set it higher if you find the spline is too smooth.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Polynomials
+\end_layout
+
+\begin_layout Standard
+If you have a sufficiently recent version of numpy, you'll have access to
+ several types of polynomials: 
+\family typewriter
+polynomial
+\family default
+, 
+\family typewriter
+chebyshev
+\family default
+, 
+\family typewriter
+laguerre
+\family default
+, 
+\family typewriter
+hermite
+\family default
+, and 
+\family typewriter
+hermiteE
+\family default
+.
+ Simply use any of these as the method argument to template().
+ The polynomials have only one free parameter: 
+\family typewriter
+n
+\family default
+, the order of the polynomial.
+ For example to fit a Chebyshev polynomial:
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{verbatim}
+\end_layout
+
+\begin_layout Plain Layout
+
+s.B.template(method='chebyshev', n=5)
+\end_layout
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{verbatim}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Interactive Fitting
+\end_layout
+
+\begin_layout Standard
+A new feature is the ability to interactively fit the data using the 
+\family typewriter
+matplotlib
+\family default
+ library.
+ Simply specify 
+\family typewriter
+interactive=True 
+\family default
+when you call the 
+\family typewriter
+template() 
+\family default
+member function.
+ A window that loos like figure XXX will pop up, showing you the light-curve,
+ the current fit, and the residuals from the fit.
+ You will then have access to certain keystrokes depending on the fitting
+ method.
+ In all cases, you can use the following keys:
+\end_layout
+
+\begin_layout Itemize
+'x': The point closest to the mouse pointer will be masked (red X will cover
+ it and it won't contribute to the fit).
+ If you use 'x' again near this point, you un-mask the data.
+\end_layout
+
+\begin_layout Itemize
+'r': re-fit the plot (if necessary) and re-draw the plot.
+\end_layout
+
+\begin_layout Itemize
+'c': (re)compute the light-curve parameters and plot them on the light-curve.
+\end_layout
+
+\begin_layout Itemize
+'q': quit the interactive plotting and close the graph.
+\end_layout
+
+\begin_layout Itemize
+'?': quick help on what keystrokes are available
+\end_layout
+
+\begin_layout Standard
+When fitting Gaussian Processes, the following keys can be used:
+\end_layout
+
+\begin_layout Itemize
+'s' and 'S': decrease and increase the scale by 10%, respectively.
+\end_layout
+
+\begin_layout Itemize
+'a' and 'A': decrease and increase the amplitude by 10%, respectively.
+\end_layout
+
+\begin_layout Itemize
+'d' and 'D': decrease and increase the degree of differentiability by 1
+\end_layout
+
+\begin_layout Standard
+When fitting with Dierckx splines, the following keys can be used:
+\end_layout
+
+\begin_layout Itemize
+'a': Add a knot point at the cursor position.
+ Note: this will change the 
+\family typewriter
+task
+\family default
+ parameter to -1.
+\end_layout
+
+\begin_layout Itemize
+'d': Delete knot point closest to the cursor position.
+ Note: this will change the 
+\family typewriter
+task
+\family default
+ parameter to -1.
+\end_layout
+
+\begin_layout Itemize
+'m': Move the knot point closest to the cursor position to a new position
+ (hit 'm' again).
+ Note: this will change the 
+\family typewriter
+task
+\family default
+ parameter to -1.
+\end_layout
+
+\begin_layout Standard
+When fitting with polynomials, the following keys can be used:
+\end_layout
+
+\begin_layout Itemize
+'n' and 'N': decrease and increase the order of the polynomial by 1
+\end_layout
+
+\begin_layout Itemize
+'m': specify range over which to fit (press 'm' at beginning and again at
+ end).
+ Pressing 'm' twice in the same location will reset to default range.
+\end_layout
+
+\begin_layout Section
+SNooPy's Internal Structure
+\end_layout
+
+\begin_layout Standard
+The rest of this document involves the inner workings of SNooPy, more appropriat
+e for those who want to work with SNooPy programatically, or want to make
+ their own models.
+ Python is object-oriented and SNooPy has been designed
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+If you can call this cobbled-together-late-at-night-while-observing code
+ a design.
+\end_layout
+
+\end_inset
+
+ with this in mind.
+ As such, the data are organized into a hierarchical structure of objects.
+ The base (or parent) object is the supernova itself (the 
+\family typewriter
+sn
+\family default
+ class).
+ It contains scalar variables like coordinates, redshift, Milky-Way reddening,
+ etc.
+ It has functions for plotting, fitting, and saving itself (see section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Data-Persistance"
+
+\end_inset
+
+).
+ It has variables that control the way the light-curves are fit.
+ 
+\end_layout
+
+\begin_layout Standard
+The 
+\family typewriter
+sn
+\family default
+ instance also contains references to a number of light-curves, one for
+ each filter (the 
+\family typewriter
+lc
+\family default
+ class), which are stored in a python dictionary called 
+\family typewriter
+data
+\family default
+.
+ The dictionary is indexed by the observed filter name.
+ These lc objects contain the data (time, magnitude, flux, errors, etc),
+ as well as functions for plotting, interpolation, and other useful tasks
+ that apply to one light-curve at a time.
+ Each 
+\family typewriter
+lc
+\family default
+ object also has a reference to a 
+\family typewriter
+filter
+\family default
+ object that defines the filter response, the zero-point, and lots of other
+ goodies.
+ There is also a shortcut for accessing the 
+\family typewriter
+lc
+\family default
+ instances: you can refer to them as member variables.
+ So 
+\family typewriter
+s.data['B']
+\family default
+ and 
+\family typewriter
+s.B
+\family default
+ are equivalent.
+\end_layout
+
+\begin_layout Standard
+Lastly, the sn instance also has an object that defines the model that will
+ be used to fit the data.
+ It holds the parameter values, errors, 
+\begin_inset Formula $\chi^{2}$
+\end_inset
+
+, etc.
+ It also does all the heavy lifting when fitting the model to the data.
+ Because the model is an abstract object, it can be replaced with other
+ model objects transparently (so long as the replacement model object conforms
+ to the structure expected by SNooPy; see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Model-class"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+The outline of the major objects is show in figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Object-structure"
+
+\end_inset
+
+.
+ This is not exhaustive
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename object_structure.001.png
+	lyxscale 50
+	width 4in
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Object structure in SNooPy.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Object-structure"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Data Persistence
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Data-Persistance"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The current version of 
+\family typewriter
+SNooPy
+\family default
+ gets and saves its data from three possible sources: a 
+\family typewriter
+mySQL
+\family default
+ database, a file that was created using the 
+\family typewriter
+sn.save()
+\family default
+ function, or a flat text file of the proper format.
+ A single convenience function, 
+\family typewriter
+get_sn()
+\family default
+ can be used to load a sn object from any of these sources.
+ 
+\end_layout
+
+\begin_layout Standard
+For large datasets, I highly recommend using the mySQL solution: it allows
+ for data persistence that is kept separate from one user/computer combination.
+ The major downside is you have to install mySQL (not too bad) and setup
+ a schema which matches what SNooPy expects (still not too bad) and possibly
+ learning mySQL in the first place (well, you always 
+\emph on
+meant
+\emph default
+ to learn it, didn't you? This is your excuse).
+ I'm not going to explain how to install mySQL and setup a schema, that's
+ best left for the SQL documentation.
+ The required schema is detailed in Appendix 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:mySQL-Schema"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+If you don't want the bother of SQL, then you can load initial data from
+ a flat ascii data file (see section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:flatfile"
+
+\end_inset
+
+).
+ When you're done fitting and want to save the sn object, with all its state
+ variables, simply use the 
+\family typewriter
+sn.save('filename')
+\family default
+ function to save the 
+\family typewriter
+sn
+\family default
+ instance as a python pickle file.
+ You can later load it in using 
+\family typewriter
+get_sn('filename')
+\family default
+.
+ 
+\end_layout
+
+\begin_layout Standard
+WARNING: because the pickle file will contain the entire data structure
+ of the SN object, there is no guarantee that pickle files will be loadable
+ by different versions of SNooPy.
+ In fact, I can pretty-much guarantee that major upgrades of SNooPy will
+ result in non-compatibility in pickled files.
 \end_layout
 
 \begin_layout Section
@@ -4622,541 +5179,6 @@ plot(self, flux=0):
 Note: If you fit a template and then use the parent sn instance's plot()
  function, the spline will be plotted on top of the data (unless there is
  already a model defined from a fit(), which takes precedence).
-\end_layout
-
-\begin_layout Subsection
-The Art of Interpolating 
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:Splining"
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Standard
-SNooPy has several interpolation schemes built in.
- Which ones depends on whether you have 
-\family typewriter
-pymc
-\family default
- installed (for the Gaussian Processes) and how recent your 
-\family typewriter
-numpy
-\family default
- is (for the polynomials).
- Use the command '
-\family typewriter
-list_types()
-\family default
-' to list which are available to you.
- Here are brief explanations of how each scheme works.
-\end_layout
-
-\begin_layout Subsubsection
-Gaussian Processes
-\end_layout
-
-\begin_layout Standard
-If you have installed the 
-\family typewriter
-pymc
-\family default
- package, it comes with an interpolating package that uses Gaussian Processes
- (GP).
- GP's are fantastic for interpolating when you may have missing data (gaps).
- This is usually where other fitters like Dierckx splines and hypersplines
- (see next sections) go awry.
- That's not to say that GP somehow magically know what to do in the absense
- of data, but they tend to not 
-\begin_inset Quotes eld
-\end_inset
-
-go crazy
-\begin_inset Quotes erd
-\end_inset
-
- like splines and they properly compute the uncertainty in the interpolator
- when there is missing data.
- In this way, GP's are more 
-\begin_inset Quotes eld
-\end_inset
-
-honest
-\begin_inset Quotes erd
-\end_inset
-
-.
-\end_layout
-
-\begin_layout Standard
-I'm not going to explain everything about GP's, but suffice it to say that
- GP's are like 
-\begin_inset Quotes eld
-\end_inset
-
-fuzzy functions
-\begin_inset Quotes erd
-\end_inset
-
-.
- They have a mean value (mean function) and a error (covariance function).
- In SNooPy's implementation, we employ the Matern covariance function, which
- has 3 parameters: 
-\family typewriter
-scale
-\family default
-, 
-\family typewriter
-amp
-\family default
- (amplitude), and 
-\family typewriter
-diff_degree
-\family default
- (degree if differentiability).
- These are conceptually very easy to understand: scale is the scale over
- which the function typically varies (on the x-axis).
- Amplitude is the amount by which the function varies on these scales.
- The degree of differentiability is the 
-\begin_inset Quotes eld
-\end_inset
-
-smoothness
-\begin_inset Quotes erd
-\end_inset
-
- of the function.
- These are the only 3 parameters you need to specify to the template() function
- to get a fit (or don't specify them at all and take the defaults, which
- are pretty good for light-curves).
- If the function does not capture the full behaviour of the light-curve
- (too smooth), try decreasing the scale and increase the amplitude.
- If it captures too much of the 
-\begin_inset Quotes eld
-\end_inset
-
-noise
-\begin_inset Quotes erd
-\end_inset
-
-, increase the scale, lower the amplitde and/or increase the diff_degree.
-\end_layout
-
-\begin_layout Standard
-Here is an example:
-\end_layout
-
-\begin_layout Standard
-\begin_inset ERT
-status open
-
-\begin_layout Plain Layout
-
-
-\backslash
-begin{verbatim}
-\end_layout
-
-\begin_layout Plain Layout
-
-s.B.template(method='gp', scale=10, amp=s.B.mag.std(), diff_degree=3)
-\end_layout
-
-\begin_layout Plain Layout
-
-
-\backslash
-end{verbatim}
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Standard
-The downside to GP's is that they are slower to solve than the other interpolati
-on methods.
- But I feel that the error estimates that come out (especially in the regions
- with gaps) are much more robust.
-\end_layout
-
-\begin_layout Subsubsection
-Dierckx splines
-\end_layout
-
-\begin_layout Standard
-Splines are a great way to represent data, but they have one very serious
- drawback: a variable number of parameters.
- Not only do you have to specify the order of the spline (usually one chooses
- k=3 for a cubic spline), you also have to choose how many knot points to
- use.
- Each knot point has two parameters: its placement on the time axis and
- the coefficient of the spline at that knot point.
- You can therefore have the number of knot points equal to the number of
- data points (plus 2k end-point knots to properly define the spline on the
- boundaries) and get a spline that's guaranteed to pass through each and
- every point (an interpolating spline).
- But real data has noise, so this isn't what you want.
- At the other extreme, you could use the bare minimum of 2k+2 knots which
- would give the smoothest spline, but then you lose any interesting structure
- in the light-curve.
-\end_layout
-
-\begin_layout Standard
-Luckily, 
-\family typewriter
-scipy
-\family default
- makes many of the algorithms from Paul Dierckx's book 
-\begin_inset Quotes eld
-\end_inset
-
-Curve and Surface Fitting with Splines
-\begin_inset Quotes erd
-\end_inset
-
- 
-\begin_inset CommandInset citation
-LatexCommand citep
-key "Dierckx1993"
-
-\end_inset
-
- available.
- These algorithms deal with automatic choice of the number and placement
- of the spline knots.
- They distill the problem down to one parameter: the smoothing, 
-\family typewriter
-s
-\family default
-.
- The larger 
-\family typewriter
-s
-\family default
-, the smoother (fewer knots) the curve and the smaller, the more the spline
- will approach an interpolating spline (s=0).
- If the weights you provide the spline fitter are proper 1-sigma errors,
- then setting s to the number of data points should result in a curve with
- reduced 
-\begin_inset Formula $\chi_{\nu}^{2}\simeq1$
-\end_inset
-
-, which is what we really want.
- The first time you fit the spline, set task=0 and the routine will choose
- an initial set of knot points.
- If you wish to play around with the smoothing parameter, but keep the knots
- fixed, use task=1; otherwise, new knots will be chosen each time.
-\end_layout
-
-\begin_layout Standard
-It may be that the resulting spline doesn't 
-\begin_inset Quotes eld
-\end_inset
-
-look right
-\begin_inset Quotes erd
-\end_inset
-
-.
- Most likely, this is due to badly estimated weights (variances).
- The solution is to vary s until you get something that looks right, but
- of course, this is purely subjective.
- With proper 1-sigma errors, one can legitimately play around with s in
- the range 
-\begin_inset Formula $N-\sqrt{2N}<s<N+\sqrt{2N}$
-\end_inset
-
- until the spline looks acceptable
-\begin_inset Foot
-status collapsed
-
-\begin_layout Plain Layout
-I tend to shy away from this, preferring to remove the subjectivity.
- Rather, I would re-examine the weights and decide whether they are correct.
- Playing around with s is effectively like globally increasing the errors.
-\end_layout
-
-\end_inset
-
-.
-\end_layout
-
-\begin_layout Standard
-Another way to spline is to impose what you think are sensible knots.
- In this case, simply specify them as an array with the knots argument to
- the 
-\family typewriter
-template()
-\family default
- function and set 
-\family typewriter
-task=-1
-\family default
-.
- In this case, the smoothing is ignored and you get the least-squares spline
- using these knots.
- For example:
-\end_layout
-
-\begin_layout Standard
-\begin_inset ERT
-status open
-
-\begin_layout Plain Layout
-
-
-\backslash
-begin{verbatim}
-\end_layout
-
-\begin_layout Plain Layout
-
-s.B.template(method='spline', task=0, s=len(s.B.mag))
-\end_layout
-
-\begin_layout Plain Layout
-
-s.B.template(method='spline', task=1, s=len(s.B.mag) - sqrt(2*len(s.B.mag)))
-\end_layout
-
-\begin_layout Plain Layout
-
-
-\backslash
-end{verbatim}
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Subsubsection
-Hyperspline
-\end_layout
-
-\begin_layout Standard
-The problem of choosing the correct value of s in the previous section can
- be removed by using another set of spline routines developed by 
-\begin_inset CommandInset citation
-LatexCommand citet
-key "297968"
-
-\end_inset
-
-.
- Rather than using 
-\begin_inset Formula $\chi^{2}$
-\end_inset
-
- as a statistic for determining the best-fit spline, they use a statistic
- call the Durbin-Watson statistic.
- Without getting into the details, this statistic relies more on the auto-correl
-ation in the residuals, which to first order is insensitive to the individual
- errors of the points.
- In essence, you're using the pattern of the points to tell you what is
- noise and what is a true trend.
-\end_layout
-
-\begin_layout Standard
-This spline method, when it works, is the most automatic of the interpolation
- methods, requiring no parameters (at least initially).
- Of course, the Achilles-heal of this method is the presence of correlated
- errors among the data points.
- But this is likely also a problem with Dierckx splines.
-\end_layout
-
-\begin_layout Standard
-Another case where hyperspline has problems is when there are large gaps
- in the data.
- Here, you might want to split up the problem in to two (or more) segments
- and work on them individually.
- I hope to add this feature eventually.
- The parameter you'll most likely need to play with is 
-\family typewriter
-lopt
-\family default
- (set the initial number of knots).
- Set it higher if you find the spline is too smooth.
- 
-\end_layout
-
-\begin_layout Subsubsection
-Polynomials
-\end_layout
-
-\begin_layout Standard
-If you have a sufficiently recent version of numpy, you'll have access to
- several types of polynomials: 
-\family typewriter
-polynomial
-\family default
-, 
-\family typewriter
-chebyshev
-\family default
-, 
-\family typewriter
-laguerre
-\family default
-, 
-\family typewriter
-hermite
-\family default
-, and 
-\family typewriter
-hermiteE
-\family default
-.
- Simply use any of these as the method argument to template().
- The polynomials have only one free parameter: 
-\family typewriter
-n
-\family default
-, the order of the polynomial.
- For example to fit a Chebyshev polynomial:
-\end_layout
-
-\begin_layout Standard
-\begin_inset ERT
-status open
-
-\begin_layout Plain Layout
-
-
-\backslash
-begin{verbatim}
-\end_layout
-
-\begin_layout Plain Layout
-
-s.B.template(method='chebyshev', n=5)
-\end_layout
-
-\begin_layout Plain Layout
-
-
-\backslash
-end{verbatim}
-\end_layout
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Subsubsection
-Interactive Fitting
-\end_layout
-
-\begin_layout Standard
-A new feature is the ability to interactively fit the data using the 
-\family typewriter
-matplotlib
-\family default
- library.
- Simply specify 
-\family typewriter
-interactive=True 
-\family default
-when you call the 
-\family typewriter
-template() 
-\family default
-member function.
- A window that loos like figure XXX will pop up, showing you the light-curve,
- the current fit, and the residuals from the fit.
- You will then have access to certain keystrokes depending on the fitting
- method.
- In all cases, you can use the following keys:
-\end_layout
-
-\begin_layout Itemize
-'x': The point closest to the mouse pointer will be masked (red X will cover
- it and it won't contribute to the fit).
- If you use 'x' again near this point, you un-mask the data.
-\end_layout
-
-\begin_layout Itemize
-'r': re-fit the plot (if necessary) and re-draw the plot.
-\end_layout
-
-\begin_layout Itemize
-'c': (re)compute the light-curve parameters and plot them on the light-curve.
-\end_layout
-
-\begin_layout Itemize
-'q': quit the interactive plotting and close the graph.
-\end_layout
-
-\begin_layout Itemize
-'?': quick help on what keystrokes are available
-\end_layout
-
-\begin_layout Standard
-When fitting Gaussian Processes, the following keys can be used:
-\end_layout
-
-\begin_layout Itemize
-'s' and 'S': decrease and increase the scale by 10%, respectively.
-\end_layout
-
-\begin_layout Itemize
-'a' and 'A': decrease and increase the amplitude by 10%, respectively.
-\end_layout
-
-\begin_layout Itemize
-'d' and 'D': decrease and increase the degree of differentiability by 1
-\end_layout
-
-\begin_layout Standard
-When fitting with Dierckx splines, the following keys can be used:
-\end_layout
-
-\begin_layout Itemize
-'a': Add a knot point at the cursor position.
- Note: this will change the 
-\family typewriter
-task
-\family default
- parameter to -1.
-\end_layout
-
-\begin_layout Itemize
-'d': Delete knot point closest to the cursor position.
- Note: this will change the 
-\family typewriter
-task
-\family default
- parameter to -1.
-\end_layout
-
-\begin_layout Itemize
-'m': Move the knot point closest to the cursor position to a new position
- (hit 'm' again).
- Note: this will change the 
-\family typewriter
-task
-\family default
- parameter to -1.
-\end_layout
-
-\begin_layout Standard
-When fitting with polynomials, the following keys can be used:
-\end_layout
-
-\begin_layout Itemize
-'n' and 'N': decrease and increase the order of the polynomial by 1
-\end_layout
-
-\begin_layout Itemize
-'m': specify range over which to fit (press 'm' at beginning and again at
- end).
- Pressing 'm' twice in the same location will reset to default range.
 \end_layout
 
 \begin_layout Section
