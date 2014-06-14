@@ -8,6 +8,16 @@ if 'SQLSERVER' in os.environ:
 else:
    sqlmod.default_sql = sqlmod.sql_local()
 have_sql = sqlmod.have_sql
+
+try:
+   import snemcee
+except ImportError:
+   snemcee = None
+
+try:
+   import triangle
+except ImportError:
+   triangle=None
    
 import types
 import plot_sne_mpl as plotmod
@@ -986,6 +996,128 @@ class sn(object):
             self.model.fit(bands, **args)
       if self.replot:
          self.plot()
+
+   def fitMCMC(self, bands=None, Nwalkers=None, threads=1, Niter=500, 
+         burn=200, tracefile=None, verbose=False, plot_triangle=False,**args):
+      '''Fit the N light curves of filters specified in [bands]
+      (default fits all bands) with the currently set model (see 
+      self.choose_model()) using MCMC. Note that this function requires
+      the emcee module to do the sampling. You should do an initial fit
+      using the regular least-squares fit() function to compute good
+      K-corrections and also get a starting point. The parameters that can be i
+      varried or held fixed depend on the model being used (try
+      help(self.model) for this info).  Parameters can be given priors by
+      setting values to them as arguments (e.g., Tmax=0). This can be done in
+      one of several ways: 
+         o specify a floating point number. The parameter is
+           held fixed at that value.  
+         o specify a shorthand string: 
+            o U,a,b: Uniform prior with lower/upper limits equal to a/b 
+            o G,m,s:  Gaussian prior with mean m and std dev. s.  
+            o E,t:    Exponential positive prior: p = exp(-x/tau)/tau x > 0 
+         o specify a function that takes a single argument:  the value of the
+           parameter and returns thei the prior as a log-probability.
+
+      There are several optional arguments that change how MCMC sampling is
+      done.
+         - Nwalkers:  Number of walkers for the ensemble sampler. See
+                      emcee documentation. Default:  10*number of free
+                      parameters.
+         - threads:   Run the MCMC in parallel using specified number of
+                      threads (default: 1)
+         - Niter:     Number of MCMC steps. Note that you will end up wit
+                      Niter*Nwalkers samples.
+         - burn:      Number of intial steps to discard as burn-in. Note
+                      that each walker will take Niter+burn steps.
+         - tracefile:  If specified, the MCMC samples will be saved as
+                      [tracefile] using numpy's writetxt() function.'''
+
+      if snemcee is None:
+         print "Sorry, in order to fit with MCMC sampler, you need to install"
+         print "the emcee module (http://dan.iel.fm/emcee/current/)"
+         return None
+
+      if bands is None:
+         # By default, we fit the bands whose restbands are provided by the model
+         bands = [b for b in self.data.keys() \
+               if self.restbands[b] in self.model.rbs]
+      if verbose:
+         print "Fitting "," ".join(bands)
+
+      Nparam = len(self.model.parameters.keys())
+      if Nwalkers is None:
+         Nwalkers = Nparam*10
+      if verbose:
+         print "Setting up %d walkers..." % Nwalkers
+      
+      # Set up the inverse covariance matrices and determinants
+      self.invcovar = {}
+      self.detcovar = {}
+      for band in bands:
+         # in fluxes
+         thiscov = self.data[band].get_covar()
+         if len(thiscov.shape) == 1:
+            thiscov = diagflat(thiscov)
+         if self.model.model_in_mags:
+            modcov = self.model.get_covar(band, self.data[band].t)
+            modcov = modcov*outer(self.data[band].flux, self.data[band].flux)*1.087**2
+         else:
+            thiscov = thiscov + self.model.get_covar(band, self.data[band].t)
+         self.invcovar[band] = linalg.inv(thiscov)
+         self.detcovar[band] = linalg.det(thiscov)
+
+      # This step needs to be done because we are bypassing the usual
+      # model setup
+      self.model.args = args.copy()
+
+      sampler,vinfo,p0 = snemcee.generateSampler(self, bands, Nwalkers, threads,
+            **args)
+
+      if verbose:
+         print "Doing initial burn-in of %d iterations" % burn
+      pos,prob,state = sampler.run_mcmc(p0, burn)
+      if verbose:
+         print "Now doing productuion run of %d iterations" % Niter
+      sampler.reset()
+      pos,prob,state, sampler.run_mcmc(pos, Niter)
+
+      # The parameters in order of the sampler
+      pars = ['']*Nparam
+      for par in vinfo:
+         if type(vinfo[par]) is type({}) and 'index' in vinfo[par]:
+            pars[vinfo[par]['index']] = par
+
+      # Save the tracefile is requested
+      if tracefile is not None:
+         f = open(tracefile, 'w')
+         for i in range(len(pars)):
+            f.write('# Col(%d) = %s\n' % (i+1,pars[i]))
+         savetxt(f, sampler.flatchain, fmt="%15.10g")
+         f.close()
+      # Now that we have the samples, we can infer the median and covariance
+      meds = median(sampler.flatchain, axis=0)
+      covar = cov(sampler.flatchain.T)
+      
+      self.model.C = {}
+      for par in self.model.parameters:
+         if not vinfo[par]['fixed']:
+            ind = vinfo[par]['index']
+            self.model.parameters[par] = meds[ind]
+            self.model.errors[par] = sqrt(covar[ind,ind])
+            self.model.C[par] = {}
+            for par2 in self.model.parameters:
+               if not vinfo[par2]['fixed']:
+                  ind2 = vinfo[par2]['index']
+                  self.model.C[par][par2] = covar[ind,ind2]
+      if self.replot:
+         self.plot()
+
+      if plot_triangle:
+         if triangle is None:
+            print "Sorry, but if you want a triangle plot, you have to install"
+            print "the triangle module (http://github.com/dfm/triangle.py)"
+         else:
+            triangle.corner(sampler.flatchain, labels=pars, truths=meds)
 
    def systematics(self, **args):
       '''Returns a dictionary of systematics errors keyed by paramter

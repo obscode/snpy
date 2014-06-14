@@ -48,7 +48,14 @@ def setup_varinfo(snobj, args):
    for var in varinfo['varlist']:
       varinfo[var] = {}
       if var in args:
-         if type(args[var]) is types.FloatType:
+         if type(args[var]) is types.StringType:
+            varinfo[var]['fixed'] = False
+            varinfo[var]['index'] = i
+            varinfo['free'].append(var)
+            i += 1
+            varinfo[var]['prior'] = args[var]
+            varinfo[var]['prior_type'] = 'builtin'
+         elif type(args[var]) in np.ScalarType:
             varinfo[var]['value'] = args[var]
             varinfo[var]['fixed'] = True
          elif type(args[var]) is types.FunctionType:
@@ -58,13 +65,6 @@ def setup_varinfo(snobj, args):
             i += 1
             varinfo[var]['prior'] = args[var]
             varinfo[var]['prior_type'] = 'function'
-         elif type(args[var]) is types.StringType:
-            varinfo[var]['fixed'] = False
-            varinfo[var]['index'] = i
-            varinfo['free'].append(var)
-            i += 1
-            varinfo[var]['prior'] = args[var]
-            varinfo[var]['prior_type'] = 'builtin'
       else:
          varinfo[var]['fixed'] = False
          varinfo[var]['index'] = i
@@ -101,17 +101,21 @@ def lnlike(p, varinfo, snobj, bands):
       mod,err,mask = snobj.model.__call__(band, snobj.data[band].MJD)
       if snobj.model.model_in_mags:
          f = np.power(10, -0.4*(mod - snobj.data[band].filter.zp))
-         cov_f = np.power(f*err/1.0857,2)
+         #cov_f = np.power(f*err/1.0857,2)
       else:
          f = mod
-         cov_f = np.power(err, 2)
+         #cov_f = np.power(err, 2)
       m = mask*snobj.data[band].mask
       if not np.sometrue(m):
          # We're outside the support of the data
          return -np.inf
-      denom = cov_f + np.power(snobj.data[band].e_flux,2)
-      lp = lp - 0.5*np.sum(np.power(snobj.data[band].flux - f,2)/denom + \
-            np.log(denom) + np.log(2*np.pi))
+      N = mod.shape[0]
+      X = snobj.data[band].flux - f
+      lp = lp - 0.5*np.log(2*np.pi**N*snobj.detcovar[band]) -\
+            0.5*np.dot(X, np.dot(snobj.invcovar[band],X))
+      #denom = cov_f + np.power(snobj.data[band].e_flux,2)
+      #lp = lp - 0.5*np.sum(np.power(snobj.data[band].flux - f,2)/denom + \
+      #      np.log(denom) + np.log(2*np.pi))
    return lp
 
 def lnprob(p, varinfo, snobj, bands):

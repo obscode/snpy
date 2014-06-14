@@ -187,6 +187,9 @@ class model:
          for j in range(len(self._free)):
             self.C[self._free[i]][self._free[j]] = C[i,j]
 
+   def covar(self, band, t):
+      return zeros((t.shape[0],t.shape[0]))
+
    def systematics(self):
       '''compute the systematic errors associated with the model paramters.'''
       systs = dict.fromkeys(self.paramters.keys())
@@ -1267,12 +1270,30 @@ class color_model(model):
       self.b = d['mean'][self.Nf:self.Nf*2]
       self.c = d['mean'][2*self.Nf:self.Nf*3]
       self.evar = d['vars']
+      # Now we setup a covariance matrix for the data for each
+      # band.  Right now, only including intrinsic color error
       self.covar = d['covar']
       self.gen = self.args.get('gen',2)
       if self.rvprior == 'bin':
          self.mu_i = d['mu_i']
          self.tau_i = d['tau_i']
          self.bins = d['bins']
+      elif self.rvprior == 'mix':
+         self.mu_i = d['mu_i']
+         self.tau_i = d['tau_i']
+         self.pi_i = d['pi_i']
+
+   def get_covar(self, band, t):
+      '''Return a covariance matrix to handle systematics'''
+      cov_f = ones((t.shape[0],t.shape[0]))
+      if band == "B":
+         return cov_f*0
+      else:
+         return cov_f*self.evar[self.Xfilters.index(band)]
+
+
+
+
 
    def guess(self, param):
       s = self.parent
@@ -1306,6 +1327,9 @@ class color_model(model):
             id = searchsorted(self.bins, self.parameters['EBVhost'])
             return gconst - 0.5*power(value-self.mu_i[id],2)*self.tau_i[id] + \
                   0.5*log(self.tau_i[id])
+         elif self.rvprior == 'mix':
+            p = sum(pi_i*sqrt(tau_i/2/pi)*exp(-0.5*power(value-self.mu_i,2)*self.tau_i))
+            return log(p)
 
       return 0.0
 

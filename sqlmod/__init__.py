@@ -406,7 +406,7 @@ class sql_lowz(sqlbase):
 
 class sql_local(sqlbase):
    host = "kepler.obs.carnegiescience.edu"
-   user = "cburns"
+   user = "CSP"
    passwd = None
    db = "CSP"
    port = 3306
