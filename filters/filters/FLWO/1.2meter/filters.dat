@@ -3,8 +3,10 @@ B4sh B_4sh_harris.dat 15.3936 FLWO 1.2m+4Shooter Harris B filter
 V4sh V_4sh_harris.dat 14.9964 FLWO 1.2m+4Shooter Harris V filter
 R4sh R_4sh_harris.dat 15.0661 FLWO 1.2m+4Shooter Harris R filter
 I4sh I_4sh_harris.dat 14.4977 FLWO 1.2m+4Shooter Harris I filter
-Bk B_keplercam.dat 15.4004 FLWO 1.2m+Keplercam B filter
-Vk V_keplercam.dat 14.9821 FLWO 1.2m+Keplercam V filter
+Bk BHJune2011.txt VegaB=0.03 FLWO 1.2m+Keplercam B filter CfA3 + CfA4 period1
+Bk2 BHOct2010.txt VegaB=0.03 FLWO 1.2m+Keplercam B filter CfA4 period 2
+Vk VH_smooth_June.dat VegaB=0.03 FLWO 1.2m+Keplercam V filter CfA3 + CfA4 period 1
+Vk2 VH_smooth_Oct.dat VegaB=0.03 FLWO 1.2m+Keplercam V filter CfA4 period 2
 uk uprime_keplercam.dat 14.4188 FLWO 1.2m+Keplercam u' filter
-rk rprime_keplercam.dat 15.2228 FLWO 1.2m+Keplercam r' filter
-ik iprime_keplercam.dat 14.9877 FLWO 1.2m+Keplercam i' filter
+rk rfunction.txt bd17B=9.3594 FLWO 1.2m+Keplercam r' filter
+ik ifunction.txt bd17B=9.2606 FLWO 1.2m+Keplercam i' filter
