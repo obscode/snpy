@@ -10,5 +10,11 @@ Vk VH_smooth_June.dat VegaB=0.03 FLWO 1.2m+Keplercam V filter CfA3 + CfA4 period
 Vk1 VH_smooth_June.dat VegaB=0.03 FLWO 1.2m+Keplercam V filter CfA3 + CfA4 period 1
 Vk2 VH_smooth_Oct.dat VegaB=0.03 FLWO 1.2m+Keplercam V filter CfA4 period 2
 uk uprime_keplercam.dat 14.4188 FLWO 1.2m+Keplercam u' filter
+uk1 uprime_keplercam.dat 14.4188 FLWO 1.2m+Keplercam u' filter
+uk2 uprime_keplercam.dat 14.4188 FLWO 1.2m+Keplercam u' filter CfA4 period 2
 rk rfunction.txt bd17B=9.3594 FLWO 1.2m+Keplercam r' filter
+rk1 rfunction.txt bd17B=9.3594 FLWO 1.2m+Keplercam r' filter CfA3 + CfA4 period 1
+rk2 rfunction.txt bd17B=9.3594 FLWO 1.2m+Keplercam r' filter CfA4 period 2
 ik ifunction.txt bd17B=9.2606 FLWO 1.2m+Keplercam i' filter
+ik1 ifunction.txt bd17B=9.2606 FLWO 1.2m+Keplercam i' filter CfA3 + CfA4 period 1
+ik2 ifunction.txt bd17B=9.2606 FLWO 1.2m+Keplercam i' filter CfA4 period 2
