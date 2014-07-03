@@ -1255,6 +1255,7 @@ class color_model(model):
       self.rvprior = self.args.get('rvprior', 'uniform')
       f = open(cfile)
       cdata = pickle.load(f)
+      f.close()
       if self.redlaw not in cdata or \
             self.rvprior not in cdata[self.redlaw]:
          raise ValueError, "Intrinsic colors for %s prior and %s reddening law not found" %\
@@ -1290,10 +1291,6 @@ class color_model(model):
          return cov_f*0
       else:
          return cov_f*self.evar[self.Xfilters.index(band)]
-
-
-
-
 
    def guess(self, param):
       s = self.parent

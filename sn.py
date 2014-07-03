@@ -1037,6 +1037,10 @@ class sn(object):
          print "the emcee module (http://dan.iel.fm/emcee/current/)"
          return None
 
+      if len(self.model._fbands) == 0:
+         raise AttributeError, "In order to fit with the MCMC sampler, you need to do \
+              an initial fit first."
+
       if bands is None:
          # By default, we fit the bands whose restbands are provided by the model
          bands = [b for b in self.data.keys() \
@@ -1056,13 +1060,14 @@ class sn(object):
       for band in bands:
          # in fluxes
          thiscov = self.data[band].get_covar()
+         rband = self.restbands[band]
          if len(thiscov.shape) == 1:
             thiscov = diagflat(thiscov)
          if self.model.model_in_mags:
-            modcov = self.model.get_covar(band, self.data[band].t)
+            modcov = self.model.get_covar(rband, self.data[band].t)
             modcov = modcov*outer(self.data[band].flux, self.data[band].flux)*1.087**2
          else:
-            thiscov = thiscov + self.model.get_covar(band, self.data[band].t)
+            thiscov = thiscov + self.model.get_covar(rband, self.data[band].t)
          self.invcovar[band] = linalg.inv(thiscov)
          self.detcovar[band] = linalg.det(thiscov)
 
