@@ -1055,8 +1055,9 @@ class sn(object):
          print "Setting up %d walkers..." % Nwalkers
       
       # Set up the inverse covariance matrices and determinants
-      self.invcovar = {}
-      self.detcovar = {}
+      #self.invcovar = {}
+      #self.detcovar = {}
+      self.bcovar = {}
       for band in bands:
          # in fluxes
          thiscov = self.data[band].get_covar()
@@ -1066,10 +1067,11 @@ class sn(object):
          if self.model.model_in_mags:
             modcov = self.model.get_covar(rband, self.data[band].t)
             modcov = modcov*outer(self.data[band].flux, self.data[band].flux)*1.087**2
+            thiscov = thiscov + modcov
          else:
             thiscov = thiscov + self.model.get_covar(rband, self.data[band].t)
-         self.invcovar[band] = linalg.inv(thiscov)
-         self.detcovar[band] = linalg.det(thiscov)
+         #self.invcovar[band] = linalg.inv(thiscov)
+         self.bcovar[band] = thiscov
 
       # This step needs to be done because we are bypassing the usual
       # model setup

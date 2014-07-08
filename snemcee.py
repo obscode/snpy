@@ -109,10 +109,18 @@ def lnlike(p, varinfo, snobj, bands):
       if not np.sometrue(m):
          # We're outside the support of the data
          return -np.inf
-      N = mod.shape[0]
-      X = snobj.data[band].flux - f
-      lp = lp - 0.5*np.log(2*np.pi**N*snobj.detcovar[band]) -\
-            0.5*np.dot(X, np.dot(snobj.invcovar[band],X))
+      N = sum(m)
+      X = snobj.data[band].flux[m] - f[m]
+      if not np.alltrue(m):
+         ids = np.nonzero(-m)[0]
+         thiscovar = np.delete(np.delete(snobj.bcovar[band],ids,axis=0), 
+               ids, axis=1)
+      else:
+         thiscovar = snobj.bcovar[band]
+      detcovar = np.linalg.det(thiscovar)
+      invcovar = np.linalg.inv(thiscovar)
+      lp = lp - 0.5*np.log(2*np.pi**N*detcovar) -\
+            0.5*np.dot(X, np.dot(invcovar,X))
       #denom = cov_f + np.power(snobj.data[band].e_flux,2)
       #lp = lp - 0.5*np.sum(np.power(snobj.data[band].flux - f,2)/denom + \
       #      np.log(denom) + np.log(2*np.pi))

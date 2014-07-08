@@ -1344,7 +1344,7 @@ class color_model(model):
       # Apply reddening correction:
       # Figure out the reddening law
       # Milky-Way reddening:
-      mwRB = redlaw.R_lambda('B', 3.1, self.parent.EBVgal, redlaw=self.redlaw)
+      #mwRB = redlaw.R_lambda('B', 3.1, self.parent.EBVgal, redlaw=self.redlaw)
 
       temp = temp + self.Bmax # + mwRB*self.parent.EBVgal
       # Colors and reddening differential:
