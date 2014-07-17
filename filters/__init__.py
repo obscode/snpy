@@ -277,7 +277,7 @@ class filter(spectrum):
       input spectrum by this amount.'''
       res = self.response(specwave,flux=flux,z=z,zeropad=zeropad)
       if res <= 0:
-         return(nan)
+         return(num.nan)
       else:
          return(-2.5*num.log10(res) + self.zp)
 

@@ -1060,17 +1060,19 @@ class sn(object):
       self.bcovar = {}
       for band in bands:
          # in fluxes
-         thiscov = self.data[band].get_covar()
+         thiscov = self.data[band].get_covar(flux=1)
+         #thiscov = self.data[band].get_covar(flux=0)
          rband = self.restbands[band]
          if len(thiscov.shape) == 1:
             thiscov = diagflat(thiscov)
-         if self.model.model_in_mags:
-            modcov = self.model.get_covar(rband, self.data[band].t)
-            modcov = modcov*outer(self.data[band].flux, self.data[band].flux)*1.087**2
-            thiscov = thiscov + modcov
-         else:
-            thiscov = thiscov + self.model.get_covar(rband, self.data[band].t)
-         #self.invcovar[band] = linalg.inv(thiscov)
+         #if self.model.model_in_mags:
+         #   modcov = self.model.get_covar(rband, self.data[band].t)
+         #   #modcov = modcov*outer(self.data[band].flux, self.data[band].flux)*1.087**2
+         #   #thiscov = thiscov + modcov
+         #else:
+         #   #thiscov = thiscov + self.model.get_covar(rband, self.data[band].t)
+         #   #raise RuntimeError, "model must be in mags"
+         ##self.invcovar[band] = linalg.inv(thiscov)
          self.bcovar[band] = thiscov
 
       # This step needs to be done because we are bypassing the usual
@@ -1084,22 +1086,26 @@ class sn(object):
          print "Doing initial burn-in of %d iterations" % burn
       pos,prob,state = sampler.run_mcmc(p0, burn)
       if verbose:
-         print "Now doing productuion run of %d iterations" % Niter
+         print "Now doing production run of %d iterations" % Niter
       sampler.reset()
       pos,prob,state, sampler.run_mcmc(pos, Niter)
 
       # The parameters in order of the sampler
-      pars = ['']*Nparam
+      pars = []
+      samples = []
       for par in vinfo:
-         if type(vinfo[par]) is type({}) and 'index' in vinfo[par]:
-            pars[vinfo[par]['index']] = par
+         if type(vinfo[par]) is type({}) and 'index' in vinfo[par] \
+               and vinfo[par]['prior_type'] != 'nuissance':
+            pars.append(par)
+            samples.append(sampler.flatchain[:,vinfo[par]['index']])
+      samples = array(samples).T
 
-      # Save the tracefile is requested
+      # Save the tracefile as requested
       if tracefile is not None:
          f = open(tracefile, 'w')
          for i in range(len(pars)):
             f.write('# Col(%d) = %s\n' % (i+1,pars[i]))
-         savetxt(f, sampler.flatchain, fmt="%15.10g")
+         savetxt(f, samples, fmt="%15.10g")
          f.close()
       # Now that we have the samples, we can infer the median and covariance
       meds = median(sampler.flatchain, axis=0)
@@ -1124,7 +1130,7 @@ class sn(object):
             print "Sorry, but if you want a triangle plot, you have to install"
             print "the triangle module (http://github.com/dfm/triangle.py)"
          else:
-            triangle.corner(sampler.flatchain, labels=pars, truths=meds)
+            triangle.corner(samples, labels=pars, truths=meds)
 
    def systematics(self, **args):
       '''Returns a dictionary of systematics errors keyed by paramter

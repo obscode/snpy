@@ -541,9 +541,9 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
          Tmax = 0
       else:
          Tmax = self.Tmax
-      if median(x-Tmax*epoch) > 100:
-         if i == 0: o = ceil((x.min()-Tmax*epoch)/10)*10
-         ax.ticklabel_format(axis='x',useOffset=o)
+      #if median(x-Tmax*epoch) > 100:
+      #   if i == 0: o = ceil((x.min()-Tmax*epoch)/10)*10
+      #   ax.ticklabel_format(axis='x',useOffset=o)
       ax.errorbar(x-Tmax*epoch, y, yerr=ey, barsabove=True, capsize=0,
             elinewidth=1, fmt=symbols[filt], ms=msize, 
             mfc=colors[filt], label=filt+'+'+'%.1f' % delt, linestyle='None',

@@ -39,7 +39,9 @@ class model:
       self.parent = parent       # make a link to the SN object
       self.parent.model = self   # make a link to the model
       self.parameters = {}    # dictionary of parameters of the model
+      self.nparameters = {}    # dictionary of nuissance parameters of the model
       self.errors = {}        # dictionary of errors on the parameters
+      self.enparameters = {}    # dictionary of nuissance parameter errors
       self.fixed = []         # list of parameters that are held fixed
       self.do_kcorr = 1       # Do we perform initial k-corrections?
       self.rbs = []           # List of rest-frame filters this model supports
@@ -1229,6 +1231,8 @@ class color_model(model):
       self.rbs = ['u','B','V','g','r','i','Y','J','H']
       self.parameters = {'Bmax':None, 'st':None, 'EBVhost':None, 
             'Rv':None, 'Tmax':None}
+      self.nparameters = {'a':None, 'b':None, 'c':None}
+      self.enparameters = {'a':None, 'b':None, 'c':None}
       self.errors = {'Bmax':0, 'st':0, 'EBVhost':0, 'Tmax':0, 'Rv':0}
       self.template = ubertemp.stemplate()
 
@@ -1267,10 +1271,10 @@ class color_model(model):
       self.Xfilters = [color[1] for color in self.colors]
       self.Nf = len(self.Xfilters)
       Nf = len(self.Xfilters)
-      self.a = d['mean'][0:self.Nf]
-      self.b = d['mean'][self.Nf:self.Nf*2]
-      self.c = d['mean'][2*self.Nf:self.Nf*3]
-      self.evar = d['vars']
+      self.nparameters['a'] = d['mean'][0:self.Nf]
+      self.nparameters['b'] = d['mean'][self.Nf:self.Nf*2]
+      self.nparameters['c'] = d['mean'][2*self.Nf:self.Nf*3]
+      self.enparameters['a'] = sqrt(d['vars'])
       # Now we setup a covariance matrix for the data for each
       # band.  Right now, only including intrinsic color error
       self.covar = d['covar']
@@ -1289,8 +1293,8 @@ class color_model(model):
       cov_f = ones((t.shape[0],t.shape[0]))
       if band == "B":
          return cov_f*0
-      else:
-         return cov_f*self.evar[self.Xfilters.index(band)]
+      #else:
+      #   return cov_f*self.evar[self.Xfilters.index(band)]
 
    def guess(self, param):
       s = self.parent
@@ -1347,12 +1351,14 @@ class color_model(model):
       #mwRB = redlaw.R_lambda('B', 3.1, self.parent.EBVgal, redlaw=self.redlaw)
 
       temp = temp + self.Bmax # + mwRB*self.parent.EBVgal
+      a = self.nparameters['a']
+      b = self.nparameters['b']
+      c = self.nparameters['c']
       # Colors and reddening differential:
       if rband != 'B':
          cid = self.Xfilters.index(rband)
-         temp = temp - self.a[cid] - self.b[cid]*(self.st-1) - \
-               self.c[cid]*(self.st -1)**2
-         etemp = sqrt(power(etemp,2) + self.evar[cid])
+         temp = temp - a[cid] - b[cid]*(self.st-1) - c[cid]*(self.st -1)**2
+         #etemp = sqrt(power(etemp,2) + self.evar[cid])
       # Host reddening
       #RB = redlaw.R_lambda('B', self.Rv, self.EBVhost)
       RX = redlaw.R_lambda(rband, self.Rv, self.EBVhost, redlaw=self.redlaw)

@@ -28,13 +28,20 @@ def builtin_priors(x, st):
       tau = float(st.split(',')[1])
       return -np.log(tau) - x/tau
 
+def vecgauss(x, mu, sig):
+   '''A simple vector-based Gaussian with mean mu and std sig'''
+   return np.sum(gconst - 0.5*np.power(x-mu,2)/np.power(sig,2) - np.log(sig))
+
 def guess(varinfo, snobj):
    '''Get starting values from the fitter.'''
    p = np.zeros((varinfo['Nvar'],))
-   for id,var in enumerate(varinfo['free']):
-      if snobj.model.parameters[var] is None:
-         raise ValueError, "model parameters not set, run initial fit() first"
-      p[id] = snobj.model.parameters[var]
+   for var in varinfo['free']:
+      if var in snobj.model.nparameters:
+         p[varinfo[var]['index']] = snobj.model.nparameters[var]
+      else:
+         if snobj.model.parameters[var] is None:
+            raise ValueError, "model parameters not set, run initial fit() first"
+         p[varinfo[var]['index']] = snobj.model.parameters[var]
    return p
 
 
@@ -43,6 +50,8 @@ def setup_varinfo(snobj, args):
    '''Given a sn object and its associated model, setup the varinfo.'''
    varinfo = {}
    varinfo['varlist'] = snobj.model.parameters.keys()
+   # Nuissance parameters
+   varinfo['varlist'] = varinfo['varlist'] + snobj.model.nparameters.keys()
    i  = 0
    varinfo['free'] = []
    for var in varinfo['varlist']:
@@ -66,18 +75,36 @@ def setup_varinfo(snobj, args):
             varinfo[var]['prior'] = args[var]
             varinfo[var]['prior_type'] = 'function'
       else:
-         varinfo[var]['fixed'] = False
-         varinfo[var]['index'] = i
-         varinfo['free'].append(var)
-         i += 1
-         varinfo[var]['prior_type'] = 'model'
+         if var in snobj.model.nparameters:
+            if snobj.model.enparameters[var] is not None:
+               varinfo[var]['fixed'] = False
+               varinfo[var]['prior_type'] = 'nuissance'
+               varinfo[var]['value'] = snobj.model.nparameters[var]
+               varinfo[var]['std'] = snobj.model.enparameters[var]
+               if len(np.shape(varinfo[var]['value'])) == 1:
+                  varinfo[var]['index'] = slice(i,i+varinfo[var]['value'].shape[0])
+                  i += varinfo[var]['value'].shape[0]
+               else:
+                  varinfo[var]['index'] = i
+                  i += 1
+               varinfo['free'].append(var)
+            else:
+               varinfo[var]['fixed'] = True
+               varinfo[var]['value'] = snobj.model.nparameters[var]
+         else:
+            varinfo[var]['fixed'] = False
+            varinfo[var]['index'] = i
+            varinfo['free'].append(var)
+            i += 1
+            varinfo[var]['prior_type'] = 'model'
    varinfo['Nvar'] = i
    return varinfo
 
 
 def lnprior(p, varinfo, snobj):
    lp = 0
-   for id,var in enumerate(varinfo['free']):
+   for var in varinfo['free']:
+      id = varinfo[var]['index']
       val = p[id]
       if varinfo[var]['prior_type'] == 'function':
          lp += varinfo[var]['prior'](val)
@@ -85,6 +112,8 @@ def lnprior(p, varinfo, snobj):
          lp += builtin_priors(val, varinfo[var]['prior'])
       elif varinfo[var]['prior_type'] == 'model':
          lp += snobj.model.prior(var,val)
+      elif varinfo[var]['prior_type'] == 'nuissance':
+         lp += vecgauss(p[id], varinfo[var]['value'], varinfo[var]['std'])
    return lp
 
 def lnlike(p, varinfo, snobj, bands):
@@ -94,36 +123,40 @@ def lnlike(p, varinfo, snobj, bands):
          snobj.model.parameters[var] = varinfo[var]['value']
       else:
          val = p[varinfo[var]['index']]
-         snobj.model.parameters[var] = val
-
+         if var in snobj.model.parameters:
+            snobj.model.parameters[var] = val
+         else:
+            snobj.model.nparameters[var] = p[varinfo[var]['index']]
    lp = 0
    for band in bands:
       mod,err,mask = snobj.model.__call__(band, snobj.data[band].MJD)
       if snobj.model.model_in_mags:
          f = np.power(10, -0.4*(mod - snobj.data[band].filter.zp))
-         #cov_f = np.power(f*err/1.0857,2)
+         cov_f = np.power(f*err/1.0857,2)
+         #f = mod
       else:
+         #raise RuntimeError, "Model must be in mags"
          f = mod
-         #cov_f = np.power(err, 2)
+         cov_f = np.power(err, 2)
       m = mask*snobj.data[band].mask
       if not np.sometrue(m):
          # We're outside the support of the data
          return -np.inf
       N = sum(m)
       X = snobj.data[band].flux[m] - f[m]
-      if not np.alltrue(m):
-         ids = np.nonzero(-m)[0]
-         thiscovar = np.delete(np.delete(snobj.bcovar[band],ids,axis=0), 
-               ids, axis=1)
-      else:
-         thiscovar = snobj.bcovar[band]
-      detcovar = np.linalg.det(thiscovar)
-      invcovar = np.linalg.inv(thiscovar)
-      lp = lp - 0.5*np.log(2*np.pi**N*detcovar) -\
-            0.5*np.dot(X, np.dot(invcovar,X))
-      #denom = cov_f + np.power(snobj.data[band].e_flux,2)
-      #lp = lp - 0.5*np.sum(np.power(snobj.data[band].flux - f,2)/denom + \
-      #      np.log(denom) + np.log(2*np.pi))
+      #if not np.alltrue(m):
+      #   ids = np.nonzero(-m)[0]
+      #   thiscovar = np.delete(np.delete(snobj.bcovar[band],ids,axis=0), 
+      #         ids, axis=1)
+      #else:
+      #   thiscovar = snobj.bcovar[band]
+      #detcovar = np.linalg.det(thiscovar)
+      #invcovar = np.linalg.inv(thiscovar)
+      #lp = lp - 0.5*np.log(2*np.pi**N*detcovar) -\
+      #      0.5*np.dot(X, np.dot(invcovar,X))
+      denom = cov_f[m] + np.power(snobj.data[band].e_flux[m],2)
+      lp = lp - 0.5*np.sum(np.power(X,2)/denom + \
+            np.log(denom) + np.log(2*np.pi))
    return lp
 
 def lnprob(p, varinfo, snobj, bands):
@@ -152,6 +185,11 @@ def generateSampler(snobj, bands, nwalkers, threads=1, **args):
       raise ValueError, "You need to do an initial fit to the SN first"
    vinfo = setup_varinfo(snobj, args)
    p = guess(vinfo, snobj)
+
+   # Find the ML:
+   nll = lambda *args: -lnlike(*args)
+   result = minimize(nll, p, args=(vinfo,snobj,bands))
+   p = result["x"]
    ndim = p.shape[0]
    p0 = [p + 1.0e-4*np.random.randn(ndim) for i in range(nwalkers)]
    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(vinfo, snobj, bands),
