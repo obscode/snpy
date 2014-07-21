@@ -36,6 +36,8 @@ class lc:
       self.band = band         # observed filter
       self.MJD = MJD           # time (in Modified Julian Day... or whatever)
       self.magnitude = mag     # magnitude
+      self._flux = None        # Caching
+      self._eflux = None       #    "
       self.e_mag = e_mag       # error in magnitude
       if sometrue(equal(self.e_mag,0)):
          print "Warning:  you have errors that are zero:  setting them to 0.001 mag."
@@ -50,12 +52,6 @@ class lc:
       self.mask = ones(self.mag.shape, dtype=bool) 
       self.filter = fset[self.band] # instance of filter object for this band
 
-      #self.tck = None          # Spline solution
-      #self.model = None        # a model
-      #self.model_t = None      #  time for the model
-      #self.model_ks = None     #  k-corrections for the model
-      #self.model_type = None   #  How the model was constructed:  'template',
-      #                         #  'template_colors', or 'spline'
       self.interp = None
       self.model_flux = 0       # is the model in flux-space?
       self.tmin = None         # range over which the model is valid
@@ -79,10 +75,14 @@ class lc:
       return(t)
 
    def get_flux(self):
-      return(power(10.0, -0.4*(self.mag - self.filter.zp)))
+      if getattr(self, '_flux', None) is None:
+         self._flux = power(10.0, -0.4*(self.mag - self.filter.zp))
+      return self._flux
 
    def get_e_flux(self):
-      return(self.get_flux()*self.e_mag/1.0857)
+      if getattr(self, '_eflux', None) is None:
+         self._eflux = self.get_flux()*self.e_mag/1.0857
+      return self._eflux
 
    def get_covar(self, flux=1):
       '''returns the error matrix in flux units (unless flux=0).  If this was
@@ -143,6 +143,8 @@ class lc:
       if 'mp' in odict:  del odict['mp']
       if 'pts' in odict:  del odict['pts']
       if '_lc_labs' in odict: del odict['_lc_labs']
+      if '_eflux' in odict: del odict['_eflux']
+      if '_flux' in odict: del odict['_flux']
       return odict
 
    def time_sort(self):

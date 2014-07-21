@@ -35,14 +35,18 @@ def vecgauss(x, mu, sig):
 def guess(varinfo, snobj):
    '''Get starting values from the fitter.'''
    p = np.zeros((varinfo['Nvar'],))
+   ep = np.zeros((varinfo['Nvar'],))
    for var in varinfo['free']:
       if var in snobj.model.nparameters:
          p[varinfo[var]['index']] = snobj.model.nparameters[var]
+         ep[varinfo[var]['index']] = snobj.model.enparameters[var]
       else:
          if snobj.model.parameters[var] is None:
             raise ValueError, "model parameters not set, run initial fit() first"
          p[varinfo[var]['index']] = snobj.model.parameters[var]
-   return p
+         #ep[varinfo[var]['index']] = max(0.001,snobj.model.errors[var])
+         ep[varinfo[var]['index']] = 1e-4
+   return p,ep
 
 
 
@@ -52,6 +56,7 @@ def setup_varinfo(snobj, args):
    varinfo['varlist'] = snobj.model.parameters.keys()
    # Nuissance parameters
    varinfo['varlist'] = varinfo['varlist'] + snobj.model.nparameters.keys()
+   varinfo['fitflux'] = args.get('fitflux',True)
    i  = 0
    varinfo['free'] = []
    for var in varinfo['varlist']:
@@ -120,7 +125,10 @@ def lnlike(p, varinfo, snobj, bands):
    # first, assign all variables to the model:
    for id,var in enumerate(varinfo['varlist']):
       if varinfo[var]['fixed']:
-         snobj.model.parameters[var] = varinfo[var]['value']
+         if var in snobj.model.parameters:
+            snobj.model.parameters[var] = varinfo[var]['value']
+         else:
+            snobj.model.nparameters[var] = varinfo[var]['value']
       else:
          val = p[varinfo[var]['index']]
          if var in snobj.model.parameters:
@@ -130,14 +138,22 @@ def lnlike(p, varinfo, snobj, bands):
    lp = 0
    for band in bands:
       mod,err,mask = snobj.model.__call__(band, snobj.data[band].MJD)
-      if snobj.model.model_in_mags:
-         f = np.power(10, -0.4*(mod - snobj.data[band].filter.zp))
-         cov_f = np.power(f*err/1.0857,2)
-         #f = mod
+      fitflux = varinfo['fitflux']
+      if fitflux:
+         if snobj.model.model_in_mags:
+            f = np.power(10, -0.4*(mod - snobj.data[band].filter.zp))
+            cov_f = np.power(f*err/1.0857,2)
+         else:
+            f = mod
+            cov_f = np.power(err, 2)
       else:
-         #raise RuntimeError, "Model must be in mags"
-         f = mod
-         cov_f = np.power(err, 2)
+         if snobj.model.model_in_mags:
+            f = mod
+            cov_f = np.power(err, 2)
+         else:
+            f = -2.5*log10(mod) + snobj.data[band].filter.zp
+            cov_f = np.power(err/mod*1.0857,2)
+
       m = mask*snobj.data[band].mask
       if not np.sometrue(m):
          # We're outside the support of the data
@@ -165,6 +181,8 @@ def lnprob(p, varinfo, snobj, bands):
    if not np.isfinite(lprior):
       return -np.inf
    return lprior + lnlike(p, varinfo, snobj, bands)
+            #raise RuntimeError, "Model must be in mags"
+            #raise RuntimeError, "Model must be in mags"
 
 
 def generateSampler(snobj, bands, nwalkers, threads=1, **args):
@@ -184,14 +202,23 @@ def generateSampler(snobj, bands, nwalkers, threads=1, **args):
    if not snobj.model._fbands:
       raise ValueError, "You need to do an initial fit to the SN first"
    vinfo = setup_varinfo(snobj, args)
-   p = guess(vinfo, snobj)
+   p,ep = guess(vinfo, snobj)
 
    # Find the ML:
-   nll = lambda *args: -lnlike(*args)
-   result = minimize(nll, p, args=(vinfo,snobj,bands))
-   p = result["x"]
+   #nll = lambda *args: -lnlike(*args)
+   #result = minimize(nll, p, args=(vinfo,snobj,bands))
+   #p = result["x"]
    ndim = p.shape[0]
-   p0 = [p + 1.0e-4*np.random.randn(ndim) for i in range(nwalkers)]
+   p0 = [];  fail=0
+   while len(p0) < nwalkers and fail < 1000:
+      pp = p + ep*np.random.randn(ndim)
+      if not np.isinf(lnprior(pp, vinfo, snobj)):
+         p0.append(pp)
+      else:
+         fail += 1
+   if len(p0) < nwalkers:
+      raise RuntimeError, "Could not establish an initial set of MCMC walkers.\n" +\
+            "Make sure your priors are consistent with your intial fit solution"
    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(vinfo, snobj, bands),
          threads=threads)
    return sampler,vinfo,p0

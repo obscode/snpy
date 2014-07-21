@@ -1321,9 +1321,10 @@ class color_model(model):
 
    def prior(self, param, value):
       if param == "Rv":
+         if value < 0.5:
+            return -inf
          if self.rvprior == 'uniform':
-            if value < 0:
-               return -inf
+            return 0.0
          elif self.rvprior == 'bin':
             id = searchsorted(self.bins, self.parameters['EBVhost'])
             return gconst - 0.5*power(value-self.mu_i[id],2)*self.tau_i[id] + \
