@@ -998,7 +998,8 @@ class sn(object):
          self.plot()
 
    def fitMCMC(self, bands=None, Nwalkers=None, threads=1, Niter=500, 
-         burn=200, tracefile=None, verbose=False, plot_triangle=False,**args):
+         burn=200, tracefile=None, verbose=False, plot_triangle=False,
+         **args):
       '''Fit the N light curves of filters specified in [bands]
       (default fits all bands) with the currently set model (see 
       self.choose_model()) using MCMC. Note that this function requires
@@ -1029,8 +1030,10 @@ class sn(object):
                       Niter*Nwalkers samples.
          - burn:      Number of intial steps to discard as burn-in. Note
                       that each walker will take Niter+burn steps.
-         - tracefile:  If specified, the MCMC samples will be saved as
-                      [tracefile] using numpy's writetxt() function.'''
+         - tracefile:  If specified and the tracefile does not exist, the 
+                       MCMC samples will be saved as [tracefile] using numpy's 
+                       writetxt() function. If the file exists, the final
+                       positions are used as initial starting points.'''
 
       if snemcee is None:
          print "Sorry, in order to fit with MCMC sampler, you need to install"
@@ -1080,15 +1083,17 @@ class sn(object):
       self.model.args = args.copy()
 
       sampler,vinfo,p0 = snemcee.generateSampler(self, bands, Nwalkers, threads,
-            **args)
-
+            tracefile, **args)
       if verbose:
          print "Doing initial burn-in of %d iterations" % burn
-      pos,prob,state = sampler.run_mcmc(p0, burn)
-      if verbose:
-         print "Now doing production run of %d iterations" % Niter
-      sampler.reset()
-      pos,prob,state, sampler.run_mcmc(pos, Niter)
+      if burn > 0:
+         pos,prob,state = sampler.run_mcmc(p0, burn)
+         if verbose:
+            print "Now doing production run of %d iterations" % Niter
+         sampler.reset()
+      else:
+         pos = p0
+      pos,prob,state = sampler.run_mcmc(pos, Niter)
 
       # The parameters in order of the sampler
       pars = []
@@ -1102,6 +1107,10 @@ class sn(object):
 
       # Save the tracefile as requested
       if tracefile is not None:
+         d = dict(samples=samples, vinfo=vinfo, pos=pos, prob=prob, state=state)
+         f = open(tracefile+"_full", 'w')
+         pickle.dump(d, f)
+         f.close()
          f = open(tracefile, 'w')
          for i in range(len(pars)):
             f.write('# Col(%d) = %s\n' % (i+1,pars[i]))

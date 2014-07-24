@@ -5,7 +5,7 @@ left is to define prior probabilities.'''
 import emcee
 import numpy as np
 from scipy.optimize import minimize
-import types
+import types,os
 
 gconst = -0.5*np.log(2*np.pi)
 
@@ -185,7 +185,7 @@ def lnprob(p, varinfo, snobj, bands):
             #raise RuntimeError, "Model must be in mags"
 
 
-def generateSampler(snobj, bands, nwalkers, threads=1, **args):
+def generateSampler(snobj, bands, nwalkers, threads=1, tracefile=None, **args):
    '''Generate an emcee sampler from the sn object [snobj] and its
    associated model (chosen with snobj.choose_model). You must set the
    number of walkers (see emcee documentation).  You can control
@@ -199,6 +199,26 @@ def generateSampler(snobj, bands, nwalkers, threads=1, **args):
    This function returns:  sampler,p0
    where sampler is an emcee sampler, and p0 is [nwalkers] starting
    points.'''
+
+   tp0 = None
+   if tracefile is not None:
+      if os.path.isfile(tracefile):
+         tpars = []
+         f = open(tracefile)
+         line = f.readline()
+         Nwalkers = 50
+         while line[0] == '#':
+            if line.find('Col') > 0:
+               tpars.append(line.split()[-1])
+            elif line.find('Nwalkers') >= 0:
+               Nwalkers = int(line.split()[-1])
+            line = f.readline()
+         f.close()
+         data = np.loadtxt(tracefile)
+         Niter = data.shape[0]/Nwalkers
+         endids = [(i+1)*Niter-1 for i in range(Nwalkers)]
+         tp0 = [data[ids,:] for ids in endids]
+
    if not snobj.model._fbands:
       raise ValueError, "You need to do an initial fit to the SN first"
    vinfo = setup_varinfo(snobj, args)
@@ -219,6 +239,11 @@ def generateSampler(snobj, bands, nwalkers, threads=1, **args):
    if len(p0) < nwalkers:
       raise RuntimeError, "Could not establish an initial set of MCMC walkers.\n" +\
             "Make sure your priors are consistent with your intial fit solution"
+   if tp0 is not None:
+      for i in range(len(p0)):
+         for ii,par in enumerate(tpars):
+            j = vinfo[par]['index']
+            p0[i][j] = tp0[i][ii]
    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(vinfo, snobj, bands),
          threads=threads)
    return sampler,vinfo,p0
