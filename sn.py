@@ -151,6 +151,8 @@ class sn(object):
       if 'data' in self.__dict__:
          if name in self.data:
             return(self.data[name])
+      if name == 'zcmb':
+         return self.get_zcmb()
 
       if name == 'Tmax':
          if 'model' in self.__dict__:
@@ -694,6 +696,16 @@ class sn(object):
       else:
          print "Error:  need ra and dec to be defined, E(B-V)_gal not computed"
 
+   def get_zcmb(self):
+      '''Gets the CMB redshift from NED calculator and stores it locally.'''
+      zcmb = getattr(self, '_zcmb', None)
+      if zcmb is not None:
+         return zcmb
+      else:
+         import utils.zCMB
+         self._zcmb = utils.zCMB.z_cmb(self.z, self.ra, self.decl)
+         return self._zcmb
+
    def summary(self, out=sys.stdout):
       '''Get a quick summary of the data for this SN, along with fitted 
       parameters (if such exist).'''
@@ -1107,7 +1119,8 @@ class sn(object):
 
       # Save the tracefile as requested
       if tracefile is not None:
-         d = dict(samples=samples, vinfo=vinfo, pos=pos, prob=prob, state=state)
+         d = dict(samples=samples, vinfo=vinfo, pos=pos, prob=prob, state=state,
+               pars=pars)
          f = open(tracefile+"_full", 'w')
          pickle.dump(d, f)
          f.close()
