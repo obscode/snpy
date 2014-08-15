@@ -395,6 +395,10 @@ filters/filters/LCO/Dupont/J_DUP_TAM_scan_atm.dat -text
 filters/filters/LCO/Dupont/K_DUP_TAM_scan_atm.dat -text
 filters/filters/LCO/Dupont/Y_DUP_TAM_scan_atm.dat -text
 filters/filters/LCO/Dupont/filters.dat -text
+filters/filters/LCO/Persson/H_persson_alum_atm.dat -text
+filters/filters/LCO/Persson/J_persson_alum_atm.dat -text
+filters/filters/LCO/Persson/Ks_persson_alum_atm.dat -text
+filters/filters/LCO/Persson/filters.dat -text
 filters/filters/LCO/Swope/B.SWO.txt -text
 filters/filters/LCO/Swope/Bmax_WLcorr_atm.txt -text
 filters/filters/LCO/Swope/Btexas_ctioextinction.txt -text
