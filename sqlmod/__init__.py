@@ -23,6 +23,7 @@ class sqlbase:
 
    SN_TABLE = "SNe"        # SQL Table of supernova attributes
    SN_ID = "name"          # Unique SN ID field in SN_TABLE
+   SN_ID2 = None           # Possible seoncary name (ugh!)
    SN_COND = ""            # Any extra SN query conditions
    PHOTO_TABLE = "Photo"   # SQL Table of photometry
    PHOTO_ID = "name"       # Unique SN ID field in PHOTO_TABLE
@@ -95,8 +96,12 @@ class sqlbase:
          self.PHOTO_table_info = self.get_table_info(self.PHOTO_TABLE)
 
          # See if the SN object exists
-         slct = '''SELECT * from %s where %s = %%s %s''' % (self.SN_TABLE, self.SN_ID,
-               self.SN_COND)
+         if self.SN_ID2 is not None:
+            slct = '''SELECT %s,%s from %s where %s = %%s %s''' % \
+                (self.SN_ID,self.SN_ID2,self.SN_TABLE, self.SN_ID, self.SN_COND)
+         else:
+            slct = '''SELECT %s from %s where %s = %%s %s''' % \
+                (self.SN_ID,self.SN_TABLE, self.SN_ID, self.SN_COND)
          N = self.c.execute(slct, (self.name))
          if N == 0:
             return 0
@@ -104,6 +109,11 @@ class sqlbase:
             print "Warning!  %s is not unique in the database, taking first" %\
                   (self.name)
             return N
+         if self.SN_ID2 is not None:
+            l = self.c.fetchall()[0]
+            self.name2 = l[1]
+         else:
+            self.name2 = None
          return 1
 
    def get_table_info(self, table):
@@ -219,17 +229,22 @@ class sqlbase:
       (MJD, mag, e_mag, K).'''
       if not self.connected:
          raise RuntimeError, "Not connected to SQL database."
+      if self.name2 is not None:
+         name_where = '(%s="%s" or %s="%s")' % (self.PHOTO_ID,self.name,
+                                                self.PHOTO_ID,self.name2)
+      else:
+         name_where = '%s="%s"' % (self.PHOTO_ID,self.name)
       if self.PHOTO_K is not None:
-         slct = '''SELECT %s,%s,%s,%s,%s from %s where %s=%%s %s ORDER by %s''' % \
+         slct = '''SELECT %s,%s,%s,%s,%s from %s where %s %s ORDER by %s''' % \
                (self.PHOTO_FILT, self.PHOTO_JD, self.PHOTO_MAG, self.PHOTO_EMAG,
-                self.PHOTO_K, self.PHOTO_TABLE, self.PHOTO_ID, self.PHOTO_COND,
+                self.PHOTO_K, self.PHOTO_TABLE, name_where, self.PHOTO_COND,
                 self.PHOTO_JD)
       else:
-         slct = '''SELECT %s,%s,%s,%s from %s where %s=%%s %s ORDER by %s''' % \
+         slct = '''SELECT %s,%s,%s,%s from %s where %s %s ORDER by %s''' % \
                (self.PHOTO_FILT, self.PHOTO_JD, self.PHOTO_MAG, self.PHOTO_EMAG,
-                self.PHOTO_TABLE, self.PHOTO_ID, self.PHOTO_COND, self.PHOTO_JD)
-      N = self.c.execute(slct, (self.name))
-      if verbose:  print "executing... ",slct % (self.name)
+                self.PHOTO_TABLE, name_where, self.PHOTO_COND, self.PHOTO_JD)
+      if verbose:  print "executing... ",slct
+      N = self.c.execute(slct)
       if N == 0:
          raise ValueError, "No photometry for %s found" % \
                   (self.name)
@@ -440,6 +455,7 @@ class sql_csp2(sqlbase):
 
    SN_TABLE = "SNList"
    SN_ID = "SN"
+   SN_ID2 = "NAME_CSP"
    ATTR_KEYS = {'z':'zc/300000.0',
                 'ra':'ra*15.0',
                 'decl':'de'}

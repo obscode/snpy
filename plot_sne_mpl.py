@@ -401,10 +401,89 @@ def plot_filters(self, bands=None, day=0, fill=0, outfile=None):
    return p
 
 
-def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0, 
-      single=0, offset=True, fsize=12., linewidth=1, symbols=None, colors=None, 
-      relative=0, legend=1, mask=1, label_bad=0, flux=0, epoch=1, msize=6,
-      outfile=None):
+def plot_SN_panel(obj, ax, filt, delt, symbol, color, **kwargs):
+   label = filt
+   ax.mylabels = []
+   single = kwargs.get('single', False)
+   flux = kwargs.get('flux', False)
+   epoch = kwargs.get('epoch', False)
+   msize = kwargs.get('msize', 6)
+   linewidth=kwargs.get('linewidth', 1)
+
+   if not single:
+      ax.mylabels.append(ax.text(0.9, 0.9, label, transform=ax.transAxes, 
+         horizontalalignment='right', fontsize=kwargs.get('fsize', 12), 
+         verticalalignment='top'))
+   if kwargs.get('mask', False):
+      x = obj.data[filt].MJD[obj.data[filt].mask]
+      if not flux:
+         y = obj.data[filt].mag[obj.data[filt].mask] + delt
+         ey = obj.data[filt].e_mag[obj.data[filt].mask]
+      else:
+         y = obj.data[filt].flux[obj.data[filt].mask]*power(10, -0.4*delt)
+         ey = obj.data[filt].e_flux[obj.data[filt].mask]
+   else:
+      x = obj.data[filt].MJD
+      if not flux:
+         y = obj.data[filt].mag + delt
+         ey = obj.data[filt].e_mag
+      else:
+         y = obj.data[filt].flux*power(10, -0.4*(delt))
+         ey = obj.data[filt].e_flux
+
+   if obj.Tmax is None:  
+      Tmax = 0
+   else:
+      Tmax = obj.Tmax
+   ax.errorbar(x-Tmax*epoch, y, yerr=ey, barsabove=True, capsize=0,
+         elinewidth=1, fmt=symbol, ms=msize, 
+         mfc=color, label=filt+'+'+'%.1f' % delt, linestyle='None',
+           ecolor='black')
+   if kwargs.get('label_bad', False):
+      gids = equal(obj.data[filt].mask, 0)
+      if sometrue(gids):
+         x = obj.data[filt].MJD[gids] - Tmax*epoch
+         if not flux:
+            y = obj.data[filt].mag[gids] + delt
+         else:
+            y = obj.data[filt].flux[gids]*power(10, -0.4*(delt))
+         ax.plot(x, y, marker='x', mec='red', ms=12, mew=1, linestyle='')
+
+   # Now check to see if there is a model to plot:
+   if kwargs.get('plotmodel', True) and obj.model.Tmax is not None and \
+         filt in obj.model._fbands:
+      t = arange(-10,70,1.0) + obj.Tmax
+      mag,err,gids = obj.model(filt, t)
+      if not flux:
+         y = mag + delt
+      else:
+         zp = fset[filt].zp
+         y = power(10, -0.4*(mag - zp + delt))
+      ax.plot(compress(gids,t-obj.Tmax*epoch), compress(gids,y), 
+            color='k', linewidth=linewidth)
+      l = ax.plot(compress(gids,t-obj.Tmax*epoch), compress(gids,y+err), 
+            '--',color='k', linewidth=linewidth)
+      l[0].autoscale=False
+      l = ax.plot(compress(gids,t-obj.Tmax*epoch), compress(gids,y-err), 
+            '--',color='k', linewidth=linewidth)
+      l[0].autoscale=False
+   elif obj.data[filt].interp is not None:
+      d = obj.data[filt].interp.domain()
+      t = arange(d[0], d[1]+1.0, 1.0)
+      mag,gids = obj.data[filt].eval(t, t_tol=-1)
+      if not flux:
+         y = mag + delt
+      else:
+         zp = fset[filt].zp
+         y = power(10, -0.4*(mag - zp + delt))
+      ax.plot(t[gids] - obj.Tmax*epoch, y[gids], color='k',
+            linewidth=linewidth)
+
+   if single and kwargs.get('legend', True):
+      ax.legend(loc='upper right', numpoints=1,ncol=2, prop={'size':'small'})
+
+
+def plot_sn(self, **kwargs):
    '''Plot out the supernova data in a nice format.  There are several 
    options:
       - xrange,yrange:  specify the ranges to plot as lists [xmin,xmax], 
@@ -421,14 +500,20 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
       - legend:  do we plot the legend?
       - mask:  Omit plotting masked out data?
       - label_bad:  label the masked data with red x's?
+      - overplot: specify another SN object to plot along with this one.
+                  restbands will be used to match filters if there isn't
+                  a one-to-one correspondence.
    '''
 
-   if not xrange:  xrange=self.xrange
-   if not yrange:  yrange=self.yrange
-   if not symbols:  symbols = symbol_dict()
-   if not colors:  colors = color_dict()
-   if fsize is None:  fsize = 12
-   if linewidth is None:  linewidth=1
+   xrange = kwargs.get('xrange', self.xrange)
+   yrange = kwargs.get('yrange',self.yrange)
+   symbols = kwargs.get('symbols',symbol_dict())
+   colors = kwargs.get('colors', color_dict())
+   linewidth = kwargs.get('linewidth', 1)
+   single = kwargs.get('single', False)
+   offset = kwargs.get('offset', False)
+   flux = kwargs.get('flux', False)
+   oobj = kwargs.pop('overplot', None)
 
    # See  what filters we're going to use:
    if self.filter_order is not None:
@@ -450,7 +535,7 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
       else:
          if b not in colors:  colors[b] = 'black'
          if b not in symbols:  symbols[b] = 'o'
-   if relative:
+   if kwargs.get('relative', False):
       if self.data[bands[0]].model is not None:
          rel_off = min(self.data[bands[0]].model)
       else:
@@ -476,11 +561,9 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
    else:
       p = myplotlib.SimplePlot(num=110, figsize=(8,8))
 
-   if title is not None:  
-      p.title(title)
-   else:
-      p.title(self.name)
-   if epoch:
+   title = kwargs.get('title', self.name)
+   p.title(title)
+   if kwargs.get('epoch', False):
       p.xlabel('Days after B maximum')
    else:
       p.xlabel('Date')
@@ -497,106 +580,59 @@ def plot_sn(self, xrange=None, yrange=None, title=None, interactive=0,
          ax.set_ylim(yrange)
 
    offsets = self.lc_offsets()
+
    for i,filt in enumerate(bands):
       # Add extra space, if needed
       #delt = max(i*dm, i*dm + maxes[0] - maxes[i])
       #delt = round(delt, 1)
-      if offset:
-        delt = offsets[i]
-      else:
-        delt = 0
+      delt = rel_off
+      if offset and single:
+        delt = delt + offsets[i]
       if not single:
          ax = p.axes[i]
          # make a reference to the lightcruve we are plotting.
          ax.lc = self.data[filt]
       else:
          ax = p.axes[0]
-      label = filt
-      ax.mylabels = []
-      if not single:
-         ax.mylabels.append(ax.text(0.9, 0.9, label, transform=ax.transAxes, 
-            horizontalalignment='right', fontsize=fsize, 
-            verticalalignment='top'))
-      if mask:
-         x = self.data[filt].MJD[self.data[filt].mask]
-         if not flux:
-            y = self.data[filt].mag[self.data[filt].mask] + \
-                  single*delt - relative*rel_off
-            ey = self.data[filt].e_mag[self.data[filt].mask]
-         else:
-            y = self.data[filt].flux[self.data[filt].mask]* \
-                  power(10, -0.4*(single*delt-relative*rel_off))
-            ey = self.data[filt].e_flux[self.data[filt].mask]
+      plot_SN_panel(self, ax, filt, delt, symbols[filt], colors[filt], **kwargs)
+
+   if oobj is not None:
+      if single:
+         raise RuntimeError, "Ploting multple objects in a single panel is not supported"
+      # PLotting a second object on top of this one.
+      # See  what filters we're going to use:
+      if oobj.filter_order is not None:
+         obands = oobj.filter_order
       else:
-         x = self.data[filt].MJD
-         if not flux:
-            y = self.data[filt].mag + single*delt - relative*rel_off
-            ey = self.data[filt].e_mag
+         obands = oobj.data.keys()
+         eff_wavs = []
+         for filt in obands:
+            eff_wavs.append(fset[filt].ave_wave)
+         eff_wavs = asarray(eff_wavs)
+         ids = argsort(eff_wavs)
+         oobj.filter_order = [obands[i] for i in ids]
+         obands = oobj.filter_order
+      for filt in obands:
+         # Figure out the pairing
+         if filt in bands:
+            # one-to-one
+            i = bands.index(filt)
+         elif filt in self.restbands.dict.values():
+            i = -1
+            for band in self.restbands:
+               if self.restbands[band] == filt and band in bands:
+                  i = bands.index(band)
+                  break
          else:
-            y = self.data[filt].flux* \
-                  power(10, -0.4*(single*delt-relative*rel_off))
-            ey = self.data[filt].e_flux
+            i = -1
 
-      if self.Tmax is None:  
-         Tmax = 0
-      else:
-         Tmax = self.Tmax
-      #if median(x-Tmax*epoch) > 100:
-      #   if i == 0: o = ceil((x.min()-Tmax*epoch)/10)*10
-      #   ax.ticklabel_format(axis='x',useOffset=o)
-      ax.errorbar(x-Tmax*epoch, y, yerr=ey, barsabove=True, capsize=0,
-            elinewidth=1, fmt=symbols[filt], ms=msize, 
-            mfc=colors[filt], label=filt+'+'+'%.1f' % delt, linestyle='None',
-              ecolor='black')
-      if label_bad:
-         gids = equal(self.data[filt].mask, 0)
-         if sometrue(gids):
-            x = self.data[filt].MJD[gids] - Tmax*epoch
-            if not flux:
-               y = self.data[filt].mag[gids] + \
-                     single*delt - relative*rel_off
-            else:
-               y = self.data[filt].flux[gids]* \
-                     power(10, -0.4*(single*delt-relative*rel_off))
-            ax.plot(x, y, marker='x', mec='red', ms=12, mew=1, linestyle='')
-
-      # Now check to see if there is a model to plot:
-      if self.model.Tmax is not None and filt in self.model._fbands:
-         t = arange(-10,70,1.0) + self.Tmax
-         mag,err,gids = self.model(filt, t)
-         if not flux:
-            y = mag + single*delt - relative*rel_off
-         else:
-            zp = fset[filt].zp
-            y = power(10, -0.4*(mag - zp + single*delt - \
-                                relative*rel_off))
-         ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y), 
-               color='k', linewidth=linewidth)
-         l = ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y+err), 
-               '--',color='k', linewidth=linewidth)
-         l[0].autoscale=False
-         l = ax.plot(compress(gids,t-self.Tmax*epoch), compress(gids,y-err), 
-               '--',color='k', linewidth=linewidth)
-         l[0].autoscale=False
-      elif self.data[filt].interp is not None:
-         d = self.data[filt].interp.domain()
-         t = arange(d[0], d[1]+1.0, 1.0)
-         mag,gids = self.data[filt].eval(t, t_tol=-1)
-         if not flux:
-            y = mag + single*delt - relative*rel_off
-         else:
-            zp = fset[filt].zp
-            y = power(10, -0.4*(mag - zp + single*delt - \
-                      relative*rel_off))
-         ax.plot(t[gids] - self.Tmax*epoch, y[gids], color='k',
-               linewidth=linewidth)
-
-      if single and legend:
-         ax.legend(loc='upper right', numpoints=1,ncol=2, prop={'size':'small'})
+         if i < 0:  continue
+         plot_SN_panel(oobj, p.axes[i], bands[i], rel_off, 's', 'r', **kwargs)
    
    #p.draw()
    p.set_limits(dox=(xrange is None), doy=(yrange is None), all_equal=1)
    p.draw()
+   outfile = kwargs.get('outfile', None)
    if outfile is not None:
       p.fig.savefig(outfile)
    return(p)
@@ -723,8 +759,8 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None):
       m_m,m_em,m_mask = self.parent.model(self.band, self.MJD)
       x = self.MJD
       if flux and self.parent.model.model_in_mags:
-         p._model = p.plot(t[mask]-epoch*Tmax, power(10, -0.4*(m-self.filter.zp)), '-',
-               color='black')[0]
+         p._model = p.plot(t[mask]-epoch*Tmax, power(10, -0.4*(m[mask]-self.filter.zp)), 
+               '-', color='black')[0]
          y = self.flux - power(10,-0.4*(m_m - self.filter.zp))
          dy = self.e_flux
       elif not flux and not self.parent.model.model_in_mags:

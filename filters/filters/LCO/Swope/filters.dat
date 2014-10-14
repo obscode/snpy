@@ -1,9 +1,3 @@
-#oBs B.SWO.txt 13.66485  Old B filter for Swope at LCO
-#oVs V.SWO.txt 13.79754  Old V filter for Swope at LCO
-#ou up.SWO.txt 13.03294  Old u filter for Swope at LCO
-#og gp.SWO.txt 14.415601  Old g filter for Swope at LCO
-#or rp.SWO.txt 14.14376 Old r filter for Swope at LCO
-#oi ip.SWO.txt 13.687309 Old i filter on Swope at LCO
 B Bmax_WLcorr_atm.txt 14.356 TAM scanned B filter for Swope at LCO + CTIO extinction
 V VLC9844_max_WLcorr_atm.txt 14.458 TAM scanned current V filter for Swope at LCO + CTIO extinction
 V1 VLC3009_max_WLcorr_atm.txt 14.489 TAM scanned V intermediate filter for Swope at LCO + CTIO extinction

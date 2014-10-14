@@ -1207,10 +1207,7 @@ class sn(object):
       '''
       return plotmod.mask_data(self)
    
-   def plot(self, xrange=None, yrange=None,  title=None, interactive=0, single=0,
-         offset=True, fsize=None, linewidth=None, symbols=None, colors=None, 
-         relative=0, legend=1, mask=1, label_bad=0, flux=0, epoch=1, msize=6, 
-         outfile=None):
+   def plot(self, **kwargs):
       '''Plot out the supernova data in a nice format.  There are several 
       options:
          - xrange,yrange:  specify the ranges to plot as lists [xmin,xmax], 
@@ -1232,10 +1229,7 @@ class sn(object):
          - outfile:  if supplied, save the plot to [outfile]
       '''
 
-      return plotmod.plot_sn(self, xrange, yrange,
-         title, interactive, single, offset, fsize, linewidth,
-         symbols, colors, relative, legend, mask, label_bad,
-         flux, epoch, msize, outfile)
+      return plotmod.plot_sn(self, **kwargs)
 
    def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
       '''Plot the derived k-corrections after they have been computed.
