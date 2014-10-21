@@ -255,6 +255,9 @@ class lc:
          y = self.mag
          ey = self.e_mag
 
+      xx,yy,ee = fit1dcurve.regularize(x, y, ey)
+      if len(xx) < 2:
+         raise ValueError, "Cannot interpolate data with less than two distinct data points"
       self.interp = fit1dcurve.Interpolator(method, x, y, ey, self.mask, **args)
       if interactive:
          self.mp = plotmod.launch_int_fit(self, fitflux=fitflux)

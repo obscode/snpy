@@ -33,7 +33,8 @@ def R_lambda(f, Rv, EBV, redlaw='ccm'):
    scalar = (len(np.shape(Rv)) == 0 and len(np.shape(EBV)) == 0)
    Rv = np.atleast_1d(Rv)
    EBV = np.atleast_1d(EBV)
-   res = np.diag(Bspls[redlaw][f](Rv,EBV))
+   #res = np.diag(Bspls[redlaw][f](Rv,EBV))
+   res = Bspls[redlaw][f].ev(Rv,EBV)
    if scalar:
       return res[0]
    else:

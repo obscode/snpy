@@ -902,9 +902,9 @@ class sn(object):
          deltas = self.data[filter].mag + offs[-1] - f(self.data[filter].MJD)
          off = - deltas.max() - 0.5
          offs.append(offs[-1]+off)
-         if self.data[filter].MJD.shape[0] > 1:
-            x,y,ey = regularize(self.data[filter].MJD, self.data[filter].mag,
-               self.data[filter].e_mag)
+         x,y,ey = regularize(self.data[filter].MJD, self.data[filter].mag,
+            self.data[filter].e_mag)
+         if len(x) > 1:
             f = interp1d(x,y+offs[-1], bounds_error=False,
                            fill_value=self.data[filter].mag.max()+offs[-1])
          else:

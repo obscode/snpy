@@ -126,15 +126,24 @@ class sqlbase:
                    'extra': extra info}, ..., } '''
       if not self.connected:
          raise RuntimeError, "Not connected to SQL database."
-      self.c.execute('''DESCRIBE %s''' % table)
-      l = self.c.fetchall()
+      if type(table) is not type([]):
+         tables = [table]
+      else:
+         tables = table
+
       data = {}
-      for item in l:
-         data[item[0]] = {'type':item[1],
-                          'null':item[2],
-                          'key':item[3],
-                          'default':item[4],
-                          'extra':item[5]}
+      for table in tables: 
+         data[table] = {}
+         self.c.execute('''DESCRIBE %s''' % table)
+         l = self.c.fetchall()
+         for item in l:
+            data[table][item[0]] = {'type':item[1],
+                             'null':item[2],
+                             'key':item[3],
+                             'default':item[4],
+                             'extra':item[5]}
+      if len(tables) == 1:
+         data = data[tables[0]]
       return(data)
 
    def close(self):
@@ -165,6 +174,8 @@ class sqlbase:
       if not self.connected:
          raise RuntimeError, "Not connected to SQL database."
       filters = data.keys()
+      if type(PHOTO_TABLE) is type([]):
+         raise TypeError, "function not supported for table joins"
       insrt = '''INSERT INTO %s (%s,%s,%s,%s,%s,%s) VALUES (%%s,%%s,%%s,%%s,%%s,%%s)''' %\
             (self.PHOTO_TABLE,self.PHOTO_ID,self.PHOTO_FILT,self.PHOTO_JD,
              self.PHOTO_MAG, self.PHOTO_EMAG, self.PHOTO_K)
@@ -234,15 +245,20 @@ class sqlbase:
                                                 self.PHOTO_ID,self.name2)
       else:
          name_where = '%s="%s"' % (self.PHOTO_ID,self.name)
+
+      if type(self.PHOTO_TABLE) is type([]):
+         phot_table = ','.join(self.PHOTO_TABLE)
+      else:
+         phot_table = self.PHOTO_TABLE
       if self.PHOTO_K is not None:
          slct = '''SELECT %s,%s,%s,%s,%s from %s where %s %s ORDER by %s''' % \
                (self.PHOTO_FILT, self.PHOTO_JD, self.PHOTO_MAG, self.PHOTO_EMAG,
-                self.PHOTO_K, self.PHOTO_TABLE, name_where, self.PHOTO_COND,
+                self.PHOTO_K, phot_table, name_where, self.PHOTO_COND,
                 self.PHOTO_JD)
       else:
          slct = '''SELECT %s,%s,%s,%s from %s where %s %s ORDER by %s''' % \
                (self.PHOTO_FILT, self.PHOTO_JD, self.PHOTO_MAG, self.PHOTO_EMAG,
-                self.PHOTO_TABLE, name_where, self.PHOTO_COND, self.PHOTO_JD)
+                phot_table, name_where, self.PHOTO_COND, self.PHOTO_JD)
       if verbose:  print "executing... ",slct
       N = self.c.execute(slct)
       if N == 0:
@@ -312,6 +328,9 @@ class sqlbase:
       those for which filter matches and the times parameter is less than
       tol from the values in the table.  attr for row i is changed to
       values[i]'''
+      if type(self.PHOTO_TABLE) is type([]):
+         raise TypeError, "This function is not available on table joins"
+
       if not self.connected:
          raise RuntimeError, "Not connected to SQL database."
 
@@ -459,14 +478,14 @@ class sql_csp2(sqlbase):
    ATTR_KEYS = {'z':'zc/300000.0',
                 'ra':'ra*15.0',
                 'decl':'de'}
-   PHOTO_TABLE = "MAGSN"
-   PHOTO_ID = "field"
-   PHOTO_JD = "JD"
-   PHOTO_MAG = "mag"
-   PHOTO_EMAG = "sqrt(err*err + fiterr*fiterr)"
-   PHOTO_FILT = "filt"
+   PHOTO_TABLE = ["MAGSN","MAGINS"]
+   PHOTO_ID = "MAGSN.field"
+   PHOTO_JD = "MAGSN.JD"
+   PHOTO_MAG = "MAGSN.mag"
+   PHOTO_EMAG = "sqrt(MAGSN.err*MAGSN.err + MAGSN.fiterr*MAGSN.fiterr)"
+   PHOTO_FILT = "MAGSN.filt"
    PHOTO_K = None      # No K-corrections in the DB
-   PHOTO_COND = "and obj=-1 and mag > 0"
-   JD_OFFSET = 2400000.5    # database is JD, JD-2400000.5 gives MJD
+   PHOTO_COND = "and MAGSN.obj=-1 and MAGSN.mag > 0 and MAGSN.fits=MAGINS.fits and MAGSN.obj=MAGINS.obj and MAGINS.flux/sqrt(MAGINS.flux + MAGINS.sky*200) > 5"
+   JD_OFFSET = -2400000.5    # database is JD, JD-2400000.5 gives MJD
 
 default_sql = None

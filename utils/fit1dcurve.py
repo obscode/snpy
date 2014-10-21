@@ -36,6 +36,8 @@ def regularize(x, y, ey):
    '''Given (x,y,dy) pairs of points, make sure the data is strictly
    monatonic with respect to x and elimitate repeated values.'''
    # x-values need to be strictly ascending.
+   if x.shape[0] < 2:
+      return x,y,ey
    sids = num.argsort(x)
    x = x[sids]
    y = y[sids]
