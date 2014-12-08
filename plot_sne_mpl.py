@@ -842,25 +842,25 @@ def replot_lc(self):
    # First, transfer the current mask to the interp's mask
    if not pyplot.fignum_exists(111):  return
    fig = pyplot.figure(111)
-   if fig is not self.mp.mp.fig:
+   if fig is not self.mp.fig:
       return
 
    if self.interp is None:
-      p = self.mp.mp.axes[0]
+      p = self.mp.axes[0]
       # Only need to deal with possible mask
       if p._x:  p._x.remove()
       if not alltrue(self.mask):
          xx,yy = p.lines[0].get_data()
          p._x, = p.plot(xx[-self.mask], yy[-self.mask], 'o', color='red')
-         self.mp.mp.fig.canvas.draw()
-         return
+         self.mp.fig.canvas.draw()
+      return
 
    self.interp.mask = self.mask
    self.interp.setup = False
    m,mask = self.eval(self._t, t_tol=-1)
    m_model,m_mask = self.eval(self.MJD, t_tol=-1)
-   p = self.mp.mp.axes[1]
-   p2 = self.mp.mp.axes[0]
+   p = self.mp.axes[1]
+   p2 = self.mp.axes[0]
    t = self._t
    epoch = self._epoch
 
@@ -907,7 +907,7 @@ def replot_lc(self):
    else:
       p2.set_ylim(y[self.mask*m_mask].max(), 
             y[self.mask*m_mask].min())
-   self.mp.mp.fig.canvas.draw()
+   self.mp.fig.canvas.draw()
 
 
 def plot_kcorrs(self, colors=None, symbols=None, outfile=None):

@@ -859,10 +859,15 @@ class sn(object):
             data = self.sql.get_SN_photometry()
             for filter in data:
                d = data[filter]
-               #if d[3] is not None:
-               #   self.data[filter] = lc(self, filter, d[0], d[1], d[2], K=d[3])
-               #else:
-               self.data[filter] = lc(self, filter, d[0], d[1], d[2])
+               if 'K' in d:
+                  K = d['K']
+               else:
+                  K = None
+               if 'SNR' in d:
+                  SNR = d['SNR']
+               else:
+                  SNR = None
+               self.data[filter] = lc(self, filter, d['t'], d['m'], d['em'], K=K, SNR=SNR)
          finally:
             self.sql.close()
 
@@ -1206,6 +1211,22 @@ class sn(object):
       two bindings are "A" (click):  mask the data and "u" to unmask the data.
       '''
       return plotmod.mask_data(self)
+
+   def mask_epoch(self, tmin, tmax):
+      '''Mask out data between [tmin] and [tmax] (relative to B maximum) for all 
+      filters.'''
+      for f in self.data:
+         self.data[f].mask_epoch(tmin, mtax)
+
+   def mask_emag(self, emax):
+      '''Mask out data with (magnitude) error larger than [emax]'''
+      for f in self.data:
+         self.data[f].mask_emag(emax)
+
+   def mask_SNR(self, minSNR):
+      '''Mask out data with signal-to-noise less than [minSNR]'''
+      for f in self.data:
+         self.data[f].mask_SNR(minSNR)
    
    def plot(self, **kwargs):
       '''Plot out the supernova data in a nice format.  There are several 

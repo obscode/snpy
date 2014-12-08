@@ -31,7 +31,7 @@ class lc:
                             inappropriate values
       - self.filter         reference to the filter instance'''
 
-   def __init__(self, parent, band, MJD, mag, e_mag, restband=None, K=None):
+   def __init__(self, parent, band, MJD, mag, e_mag, restband=None, K=None, SNR=None):
       self.parent = parent     # pointer to the SN containing class
       self.band = band         # observed filter
       self.MJD = MJD           # time (in Modified Julian Day... or whatever)
@@ -39,6 +39,7 @@ class lc:
       self._flux = None        # Caching
       self._eflux = None       #    "
       self.e_mag = e_mag       # error in magnitude
+      self._SNR = SNR           # Signal-to-noise ratio
       if sometrue(equal(self.e_mag,0)):
          print "Warning:  you have errors that are zero:  setting them to 0.001 mag."
          print "If you don't like that, fix your errors."
@@ -79,6 +80,11 @@ class lc:
          self._flux = power(10.0, -0.4*(self.mag - self.filter.zp))
       return self._flux
 
+   def get_SNR(self):
+      if getattr(self, '_SNR', None) is None:
+         return 1.087/self.e_mag
+      return self._SNR
+
    def get_e_flux(self):
       if getattr(self, '_eflux', None) is None:
          self._eflux = self.get_flux()*self.e_mag/1.0857
@@ -104,6 +110,8 @@ class lc:
          return self.get_flux()
       elif name == "e_flux":
          return self.get_e_flux()
+      elif name == "SNR":
+         return self.get_SNR()
       elif name == "t":
          return self.get_t()
       elif name == 'mag':
@@ -160,9 +168,12 @@ class lc:
       self.mask[greater_equal(self.t, tmax)] = False
       self.mask[less_equal(self.t, tmin)] = False
 
-   def mask_emag(self, max):
+   def mask_emag(self, emax):
       '''Update the lc's mask to only include data with e_mag < max.'''
-      self.mask *= less_equal(self.e_mag, max)
+      self.mask *= less_equal(self.e_mag, emax)
+
+   def mask_SNR(self, minSNR):
+      self.mask *= greater_equal(self.SNR, minSNR)
 
    def eval(self, times, t_tol=-1, epoch=0):
       '''Interpolate (if required) the data to time 'times'.  If there is a data point 

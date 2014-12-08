@@ -1,7 +1,6 @@
 import os,sys
 import numpy
 import getpass
-#from snpy import filters
 
 try:
    import pymysql as sql
@@ -48,6 +47,7 @@ class sqlbase:
    JD_OFFSET = -2400000.5   #  An offset added to the JD before returning
    PHOTO_MAG = "m"       # SQL field in PHOTO_TABLE that gives magnitude
    PHOTO_EMAG = "e_m"    # SQL field in PHOTO_TABLE that gives error
+   PHOTO_SNR = None      # SQL field that gives the signal-to-noise ratio
    PHOTO_K = "K"           # SQL field in PHOTO_TABLE that gives K-corrections
    PHOTO_FILT = "filter"   # SQL field in PHOTO_TABLE that gives filter name
    PHOTO_COND = ""         # Any extra WHERE conditions
@@ -236,7 +236,7 @@ class sqlbase:
 
    def get_SN_photometry(self, verbose=0):
       '''Get the photometry form the SQL database.  Returns a dictionary
-      indexed by filter name.  Each element is a 4-tuple of arrays:
+      indexed by filter name.  Each element is a 5-tuple of arrays:
       (MJD, mag, e_mag, K).'''
       if not self.connected:
          raise RuntimeError, "Not connected to SQL database."
@@ -250,15 +250,17 @@ class sqlbase:
          phot_table = ','.join(self.PHOTO_TABLE)
       else:
          phot_table = self.PHOTO_TABLE
+
+      slct = '''SELECT %s,%s,%s,%s''' % \
+            (self.PHOTO_FILT, self.PHOTO_JD, self.PHOTO_MAG, self.PHOTO_EMAG)
+
       if self.PHOTO_K is not None:
-         slct = '''SELECT %s,%s,%s,%s,%s from %s where %s %s ORDER by %s''' % \
-               (self.PHOTO_FILT, self.PHOTO_JD, self.PHOTO_MAG, self.PHOTO_EMAG,
-                self.PHOTO_K, phot_table, name_where, self.PHOTO_COND,
-                self.PHOTO_JD)
-      else:
-         slct = '''SELECT %s,%s,%s,%s from %s where %s %s ORDER by %s''' % \
-               (self.PHOTO_FILT, self.PHOTO_JD, self.PHOTO_MAG, self.PHOTO_EMAG,
-                phot_table, name_where, self.PHOTO_COND, self.PHOTO_JD)
+         slct += ",%s" % (self.PHOTO_K)
+      if self.PHOTO_SNR is not None:
+         slct += ",%s" % (self.PHOTO_SNR)
+
+      slct += " from %s where %s %s ORDER by %s" % \
+            (phot_table, name_where, self.PHOTO_COND, self.PHOTO_JD)
       if verbose:  print "executing... ",slct
       N = self.c.execute(slct)
       if N == 0:
@@ -274,23 +276,26 @@ class sqlbase:
          else:
             filter = self.FILTER_KEYS[l[0]]
          if filter in data:
-            data[filter][0].append(l[1] + self.JD_OFFSET)
-            data[filter][1].append(l[2])
-            data[filter][2].append(l[3])
+            data[filter]['t'].append(l[1] + self.JD_OFFSET)
+            data[filter]['m'].append(l[2])
+            data[filter]['em'].append(l[3])
+            ii = 0
             if self.PHOTO_K is not None:
-               data[filter][3].append(l[4])
+               data[filter]['K'].append(l[4])
+               ii += 1
+            if self.PHOTO_SNR is not None:
+               data[filter]['SNR'].append(l[4+ii])
          else:
+            data[filter] = {'t':[l[1] + self.JD_OFFSET],
+                            'm':[l[2]], 'em':[l[3]]}
+            ii = 0
             if self.PHOTO_K is not None:
-               data[filter] = [[l[1] + self.JD_OFFSET],
-                               [l[2]], [l[3]], [l[4]]]
-            else:
-               data[filter] = [[l[1] + self.JD_OFFSET],
-                               [l[2]], [l[3]], None]
+               data[filter]['K'] = [l[4]]
+            if self.PHOTO_SNR is not None:
+               data[filter]['SNR'] = [l[4+ii]]
       for key in data:
-         for i in range(3):
-            data[key][i] = numpy.array(data[key][i])
-         if data[key][-1] is not None:
-            data[key][-1] = numpy.array(data[key][-1])
+         for key2 in data[key]:
+            data[key][key2] = numpy.array(data[key][key2])
       return(data)
 
    def get_SN_spectra(self):
@@ -485,7 +490,8 @@ class sql_csp2(sqlbase):
    PHOTO_EMAG = "sqrt(MAGSN.err*MAGSN.err + MAGSN.fiterr*MAGSN.fiterr)"
    PHOTO_FILT = "MAGSN.filt"
    PHOTO_K = None      # No K-corrections in the DB
-   PHOTO_COND = "and MAGSN.obj=-1 and MAGSN.mag > 0 and MAGSN.fits=MAGINS.fits and MAGSN.obj=MAGINS.obj and MAGINS.flux/sqrt(MAGINS.flux + MAGINS.sky*200) > 5"
+   PHOTO_SNR = "CASE WHEN ins='WI' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/1.6)) WHEN ins='DC' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/3.0)) ELSE 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/2.0)) END"
+   PHOTO_COND = "and MAGSN.obj=-1 and MAGSN.mag > 0 and MAGSN.fits=MAGINS.fits and MAGSN.obj=MAGINS.obj"
    JD_OFFSET = -2400000.5    # database is JD, JD-2400000.5 gives MJD
 
 default_sql = None
