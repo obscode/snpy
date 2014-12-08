@@ -402,6 +402,7 @@ def plot_filters(self, bands=None, day=0, fill=0, outfile=None):
 
 
 def plot_SN_panel(obj, ax, filt, delt, symbol, color, **kwargs):
+   '''plot a single SN photometry panel'''
    label = filt
    ax.mylabels = []
    single = kwargs.get('single', False)
@@ -409,6 +410,7 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, **kwargs):
    epoch = kwargs.get('epoch', False)
    msize = kwargs.get('msize', 6)
    linewidth=kwargs.get('linewidth', 1)
+   SNR = kwargs.get('SNR_flag', None)
 
    if not single:
       ax.mylabels.append(ax.text(0.9, 0.9, label, transform=ax.transAxes, 
@@ -448,6 +450,18 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, **kwargs):
          else:
             y = obj.data[filt].flux[gids]*power(10, -0.4*(delt))
          ax.plot(x, y, marker='x', mec='red', ms=12, mew=1, linestyle='')
+   if not single and SNR is not None:
+      cs = ['orange','red']
+      for i in range(2): 
+         gids = less(obj.data[filt].SNR, SNR[i])
+         if sometrue(gids):
+            x = obj.data[filt].MJD[gids] - Tmax*epoch
+            if not flux:
+               y = obj.data[filt].mag[gids] + delt
+            else:
+               y = obj.data[filt].flux[gids]*power(10, -0.4*(delt))
+            ax.plot(x, y, symbol, mfc=cs[i], ms=msize)
+
 
    # Now check to see if there is a model to plot:
    if kwargs.get('plotmodel', True) and obj.model.Tmax is not None and \
@@ -500,6 +514,7 @@ def plot_sn(self, **kwargs):
       - legend:  do we plot the legend?
       - mask:  Omit plotting masked out data?
       - label_bad:  label the masked data with red x's?
+      - SNR_flag: If a tuple, SNR levels to flag in the plot
       - overplot: specify another SN object to plot along with this one.
                   restbands will be used to match filters if there isn't
                   a one-to-one correspondence.

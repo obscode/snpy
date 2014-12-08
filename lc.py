@@ -170,10 +170,10 @@ class lc:
 
    def mask_emag(self, emax):
       '''Update the lc's mask to only include data with e_mag < max.'''
-      self.mask *= less_equal(self.e_mag, emax)
+      self.mask[greater(self.e_mag, emax)] = False
 
    def mask_SNR(self, minSNR):
-      self.mask *= greater_equal(self.SNR, minSNR)
+      self.mask[less(self.SNR, minSNR)] = False
 
    def eval(self, times, t_tol=-1, epoch=0):
       '''Interpolate (if required) the data to time 'times'.  If there is a data point 
