@@ -7,14 +7,13 @@ from snpy.utils import fit_spline
 from scipy.interpolate import splrep,splev,sproot
 from scipy.optimize import brentq, newton
 from scipy.misc import derivative as deriv
-from distutils.version import StrictVersion as sv
 try:
    from snpy.spline2 import spline2, evalsp,eval_extrema,eval_x
 except:
    spline2 = None
-if sv(num.__version__) >= sv('1.6'):
+try:
    from numpy import polynomial
-else:
+except:
    polynomial = None
 try:
    import pymc
@@ -85,6 +84,9 @@ class oneDcurve:
          self.mask = num.ones(x.shape, dtype=bool)  # mask for the data
       else:
          self.mask = mask
+
+      if len(self.xdata[self.mask]) < 2:
+         raise ValueError, "(masked) data must have more than one point!"
 
       self.realization = None
       self.realizations = []
@@ -281,10 +283,10 @@ if polynomial is not None:
             self.pars[key] = args[key]
    
          if self.xmin is None:
-            self.xmin = self.xdata.min()
+            self.xmin = self.x.min()
          if self.xmax is None:
-            self.xmax = self.xdata.max()
-   
+            self.xmax = self.x.max()
+  
          # no need to regularize
          self._setup()
          self.realization = None
@@ -926,6 +928,8 @@ if pymc is not None:
    
       def rchisquare(self):
          chisq = self.chisquare()
+         if len(self.x) < 5:
+            return -1
          return chisq/(len(self.x) - 4)
    
       def deriv(self, x, n=1):
