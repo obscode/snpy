@@ -158,9 +158,6 @@ Given that this is a very modular way to program, it doesn't lend itself
  astronomical community.
  However, it now appears that matplotlib is winning out as the most standard
  plotting package for python, so I have integrated it in as well.
- PGPLOT is still faster and more tested, so I recommend it, but if you prefer
- matplotlib, you can use it instead (see installation instructions for selecting
- plotting package).
  For the arrays, I've chosen Numpy, which his now the de-facto array handling
  package.
 \end_layout
@@ -691,11 +688,15 @@ model
  class defines the model that will be used to fit the light-curves.
  I did it this way so that adding new models (or modifying existing ones)
  would be easier.
- SNooPy comes with three built-in models: 
+ SNooPy comes with four built-in models: 
 \family typewriter
 EBV_model, EBV_model2,
 \family default
- and 
+ 
+\family typewriter
+color_model
+\family default
+, and 
 \family typewriter
 max_model
 \family default
@@ -741,8 +742,47 @@ dmf
 \begin_inset Formula $s_{BV}$
 \end_inset
 
- which is introduced in the CSP's most recent analysis paper (Burns et al.,
- (in prep)).
+ which is introduced in the CSP's most recent analysis paper 
+\begin_inset CommandInset citation
+LatexCommand citep
+key "Burns2014"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+With the advent of increased complexity of the models and the need for adding
+ priors to parameters, a new experimental version of the 
+\family typewriter
+fit()
+\family default
+ function is now available: fitMCMC().
+ Unlike the original, which uses the Levenberg-Marquardt least-squares fitter,
+ fitMCMC uses a Markov Chain Monte Carlo fitter called 
+\family typewriter
+emcee
+\family default
+.
+ The advantage of this is that MCMC, being a Bayesian framework, allows
+ you to specify priors on your parameters very easily.
+ This can be particularly useful if the model you are trying to fit is insenstiv
+e to one or more of its parameters.
+ This can happen when your light-curve has very few points (so that shape
+ is not well defined) or you are using the 
+\family typewriter
+color_model
+\family default
+ at low 
+\family typewriter
+E(B-V)
+\family default
+.
+ Before, you would simply have had to keep those parameters fixed a reasonable
+ values.
+ Now you can specify simple priors so that the uncertainties are far more
+ realistic.
 \end_layout
 
 \begin_layout Subsection
@@ -1211,6 +1251,164 @@ rchisq
 \end_layout
 
 \begin_layout Subsection
+color_model
+\end_layout
+
+\begin_layout Standard
+In this model, intrinsic colors from 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "Burns2014"
+
+\end_inset
+
+ are used to infer the amout of extinction 
+\begin_inset Formula $E(B-V)$
+\end_inset
+
+ as well as the shape reddening law 
+\begin_inset Formula $R_{V}$
+\end_inset
+
+.
+ Mathematically, the model being fit to the light-curves is:
+\begin_inset Formula 
+\begin{eqnarray*}
+m_{X}\left(t-t_{max}\right) & = & T_{Y}\left(\left(t^{\prime}-t_{max}\right)/(1+z),\Delta m_{15}\right)+B_{max}+(X-B)\left(s_{BV}\right)+R_{X}E\left(B-V\right)_{gal}+R_{Y}\left(R_{V}\right)E\left(B-V\right)_{host}\\
+ &  & K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z),E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)
+\end{eqnarray*}
+
+\end_inset
+
+where 
+\begin_inset Formula $B_{max}$
+\end_inset
+
+ is the de-reddened and K-corrected 
+\begin_inset Formula $B$
+\end_inset
+
+ maximum (treated as a free parameter) and 
+\begin_inset Formula $(X-B)\left(s_{BV}\right)$
+\end_inset
+
+ is the intrinsic 
+\begin_inset Formula $X-B$
+\end_inset
+
+ color, which is a function of 
+\begin_inset Formula $s_{BV}$
+\end_inset
+
+.
+ In 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "Burns2014"
+
+\end_inset
+
+, it is modeled as a 2nd degree polynomial in 
+\begin_inset Formula $\left(s_{BV}-1\right)$
+\end_inset
+
+.
+ All other variables have the same meaning as in previous models.
+ The model has 5 free parameters: 
+\begin_inset Formula $s_{BV}$
+\end_inset
+
+, 
+\begin_inset Formula $T_{max}$
+\end_inset
+
+, 
+\begin_inset Formula $B_{max}$
+\end_inset
+
+, 
+\begin_inset Formula $E(B-V)$
+\end_inset
+
+, and 
+\begin_inset Formula $R_{V}$
+\end_inset
+
+.
+ Note that the distance modulus is not included in this model.
+\end_layout
+
+\begin_layout Standard
+A major complication of this model is that two parameters, 
+\begin_inset Formula $R_{V}$
+\end_inset
+
+ and 
+\begin_inset Formula $E(B-V)$
+\end_inset
+
+, appear as multiplicative factors in the same term.
+ At best, they will be highly covariant.
+ At worst (for low values of 
+\begin_inset Formula $E(B-V)$
+\end_inset
+
+), the model becomse insensitive to 
+\begin_inset Formula $R_{V}$
+\end_inset
+
+.
+ For this reason, it may be necessary to impose priors on 
+\begin_inset Formula $R_{V}$
+\end_inset
+
+.
+ Two such priors were introduced in 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "Burns2014"
+
+\end_inset
+
+: a Gaussian mixture model that applies to all SNeIa, and a binned prior,
+ where a separate Gaussian prior is applied to the SNIa depending on its
+ value of 
+\begin_inset Formula $E(B-V)$
+\end_inset
+
+.
+ Because SNooPy uses the LM least-squares algorithm by default, there is
+ no natural way to incorporate these priors using the standard 
+\family typewriter
+fit()
+\family default
+ routine.
+ Instead, use the 
+\family typewriter
+fitMCMC()
+\family default
+ routine, which fits the light-curves using Markov Chain Monte Carlo and
+ allows priors to be specified on parameters.
+ In this case, use the keyword argument 
+\family typewriter
+rvprior='mix'
+\family default
+ for the Gaussian mixture model, or 
+\family typewriter
+rvprior='bin'
+\family default
+ for the binned prior.
+ See section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Fit-MCMC"
+
+\end_inset
+
+ for more details.
+\end_layout
+
+\begin_layout Subsection
 K-corrections and Reddening coefficients
 \end_layout
 
@@ -1220,7 +1418,7 @@ Regardless of the method used, there are two generic problems when fitting
  First, because you are observing a SN that is at some redshift, the observed
  spectral energy distribution (SED) is shifted to the red compared to what
  would be observed at zero redshift.
- As as a result, the filters are sampling a bluer part of the SNIa spectrum.
+ As a result, the filters are sampling a bluer part of the SNIa spectrum.
  K-corrections are needed to take this into account and we therefore need
  either observed spectra of the SN or some kind of SED template to make
  this calculation.
@@ -3789,7 +3987,8 @@ name "sub:Fit"
 
 \family typewriter
 \series bold
-fit(bands=None, {parameter values}, kcorr=1, mangle=1, method='tspline')
+fit(bands=None, {parameter values}, kcorr=True, reset_kcorrs=True, mangle=True,
+ margs={}, **args)
 \end_layout
 
 \begin_layout Standard
@@ -3857,6 +4056,20 @@ kcorr=0
 \end_layout
 
 \begin_layout Itemize
+reset_kcorrs: If true, zero-out any previously determined k-corrections
+ before the fitting starts.
+ If you have computed your own k-corrections and applied them, use 
+\family typewriter
+reset_kcorrs=False
+\family default
+ and 
+\family typewriter
+kcorr=False
+\family default
+.
+\end_layout
+
+\begin_layout Itemize
 
 \family typewriter
 mangle
@@ -3875,29 +4088,183 @@ mangled
 \end_layout
 
 \begin_layout Itemize
-method: If mangling, then the functional form to use when mangling.
- Currently, a tension spline ('
+margs: Optionally, you can modify how the k-corrections are performed by
+ passing arguments as a dictionary.
+ See section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:kcorr"
+
+\end_inset
+
+ for optional arguments.
+\end_layout
+
+\begin_layout Itemize
+
 \family typewriter
-tspline
+**args
 \family default
-') and Cardelli law ('
+: Any optional arguments that the particular model accepts.
+ For example, the 
 \family typewriter
-ccm
+EBV_model
 \family default
-') are the two options.
- '
+ accepts the 
 \family typewriter
-ccm
+calibration
 \family default
-' is safer (smoother, fewer parameters), but not as versatile as '
+ keyword argument..
+\end_layout
+
+\begin_layout Subsubsection
+Fit using MCMC
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Fit-MCMC"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
 \family typewriter
-tspline
+\series bold
+fitMCMC(bands=None, {parameter values}, kcorr=1, reset_kcorrs=True, mangle=True,
+ margs={}, Nwalkers=None, threads=1, Niter=500, burn=200, tracefile=None,
+ plot_triangle=False, **args)
+\end_layout
+
+\begin_layout Standard
+This function is an alternate version of the more traditional 
+\family typewriter
+fit()
 \family default
-'.
+ function.
+ The arguments are precisely the same as in the case of fit(), with the
+ following additions and modifications:
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+Nwalkers
+\family default
+: SNooPy uses emcee as the MCMC sampler, which spawns Nwalkers parallel
+ chains.
+ These chains independently explore the shape of parameters space and more
+ are needed as the dimensionality increases.
+ If None, the default is 10 times the number of free parameters.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+threads
+\family default
+: on multi-core systems, you can run the parallel chains using muiltiple
+ threads.
+ Default is to use 1.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+burn
+\family default
+: number of iterations to discard at the beginning of each chain, called
+ burn-in time.
+ Default is 200.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+Niter
+\family default
+: total number of iterations (including burn-in) to run.
+ Default is 500.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+tracefile
+\family default
+: if you want to keep the traces (for MC sampling later), specify a filename
+ here
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+plot_triangle
+\family default
+: if you have the 
+\family typewriter
+triangle
+\family default
+ module, this will plot a nice graphical representation of the PDF's and
+ covariances.
+\end_layout
+
+\begin_layout Standard
+The other major difference (and reason for using MCMC in the first place)
+ is that you can specify priors for parameters instead of simply holding
+ them constant.
+ To do this, specify the parameter as an argument to 
+\family typewriter
+fitMCMC()
+\family default
+ and use the following strings to specify simple priors:
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+'U,a,b'
+\family default
+: A Uniform prior on the interval (a,b).
+ Replace a and b with floats.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+'G,m,s'
+\family default
+: A Gaussian prior centered on m and with standard deviation s.
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+'E,t'
+\family default
+: An exponential prior defined on 
+\begin_inset Formula $(0,\infty)$
+\end_inset
+
+ with scale length t.
+\end_layout
+
+\begin_layout Itemize
+Additionally, the model may have its own priors.
+ For instance, the color_model allows you to specify special built-in priors
+ using the rvprior keyword argument.
 \end_layout
 
 \begin_layout Subsubsection
 Making k-corrections by hand
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:kcorr"
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard

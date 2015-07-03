@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-
+import matplotlib
+matplotlib.use('Agg')
 from snpy import get_sn
 
 # Test out the plotting capabilities. This doesn't test out the interactive

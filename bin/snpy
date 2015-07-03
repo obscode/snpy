@@ -1,4 +1,4 @@
-#!/Users/cburns/snpy2/bin/python
+#!/usr/bin/env python
 import sys,os,glob
 
 if '-h' in sys.argv or '-help' in sys.argv:
@@ -52,23 +52,18 @@ if sys.platform.find('linux') >= 0:
 from numpy import *
 
 try:
-   try:
-      from IPython.terminal.embed import InteractiveShellEmbed
-   except ImportError:
-      # older version
-      from IPython.frontend.terminal.embed import InteractiveShellEmbed
+   from IPython.terminal.embed import InteractiveShellEmbed
 except:
-   print "You don't have an up-to-date version of ipython."
-   print "SNooPy requires version 0.12 or greater"
-   sys.exit(1)
+   try:
+      from IPython.frontend.terminal.embed import InteractiveShellEmbed
+   except:
+      print "You don't have an up-to-date version of ipython."
+      print "SNooPy requires version 0.12 or greater"
+      sys.exit(1)
 
 ipshell=InteractiveShellEmbed(banner1='Welcome to SNooPy')
 ipshell.enable_pylab(gui=gui)
 from snpy import *
-try:
-   from matplotlib.pyplot import *
-except:
-   pass
 if "lowz" in sys.argv:
    del sys.argv[sys.argv.index("lowz")]
    sqlmod.default_sql = sqlmod.sql_lowz()

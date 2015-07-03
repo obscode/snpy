@@ -313,6 +313,22 @@ doc/object_structure.001.png -text
 doc/pylc.tex -text
 doc/snpy.lyx -text
 doc/snpy.pdf -text svneol=unset#unset
+doc/snpy.tex -text
+docs/API.rst -text
+docs/Makefile -text
+docs/conf.py -text
+docs/fitting.rst -text
+docs/fitting_LM.rst -text
+docs/fitting_MCMC.rst -text
+docs/index.rst -text
+docs/make.bat -text
+docs/models.rst -text
+docs/modules.rst -text
+docs/overview.rst -text
+docs/snpy.CSPtemp.rst -text
+docs/snpy.dm15temp.rst -text
+docs/snpy.rst -text
+docs/snpy.utils.rst -text
 filters/README -text
 filters/__init__.py -text
 filters/filters/APO/SDSS/filters.dat -text
@@ -1308,6 +1324,7 @@ tests/SN2006ax.txt -text
 tests/dotests.sh -text
 tests/old_saves/SN2006ax_kcorr-2.0-279.snpy -text
 tests/test_fits.py -text
+tests/test_interps.py -text
 tests/test_kcorr.py -text
 tests/test_load.py -text
 tests/test_plots.py -text
@@ -1343,7 +1360,6 @@ utils/mpfit.py -text
 utils/radec2gal.py -text
 utils/redlaw.py -text
 utils/setup.py -text
-utils/stats.py -text
 utils/zCMB.py -text
 /version.py -text
 zeropoints/CFHT/compute_zpt.py -text

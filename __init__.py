@@ -1,8 +1,8 @@
 '''
-SNPY 1.0
-Author:  Chris Burns (cburns@ociw.edu)
+SNPY 2.0
+Author:  Chris Burns (cburns@carnegiescience.edu)
 
-SNPY (or SNOOPY) is a Python package for fitting the light-curves of TypeIa
+SNPY (or SNooPy) is a Python package for fitting the light-curves of TypeIa
 supernovae.  It is NOT an off-the-shelf program that will do all the work
 for you from the command line.  It is meant to be run interactively.  It
 provides many tools, but does not lock you into a specific routine for fitting
@@ -37,26 +37,6 @@ briefly, here is what SNOOPY can do:
 
    - Various plotting routines.
 
-   - Interact with a properly set-up SQL database.
-
-The subpackages include:
-
-   - filters:   a package for working with filter systems.  computing
-     zero-points, producing synthetic spectra, etc.
-
-   - dm15temp:  a python wrapper to Jose-Louis Prieto's light-curve
-     generator
-
-   - CSPtemp:  a generator for the CSP light-curve templates.
-
-   - dust_getval:  Compute the E(B-V) by Milky way using the Schlegel
-     dust maps.
-
-   - spline2:  a python wrapper to the Hyperspline (or spline2) algorithm,
-     which uses the Durbin-Watson statistic rather than chi-square.  Good
-     if you don't trust your error bars.
-
-   - tspack:  a python wrapper to the TSPACK library:  generating tension
-     splines.'''
+   - Interact with a properly set-up SQL database.'''
 
 from sn import *

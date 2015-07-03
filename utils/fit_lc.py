@@ -76,12 +76,25 @@ def d_Ialc2_dp(p,t,mag,e_mag):
    jac[9,:] = -2*jac[8,:]*(tau - t)/theta
    return jac
 
+def Ialcn(t, par, n):
+   m0,gamma,tau,theta,t0,g0,sig0 = par[0:7]
+   num = m0 + gamma*(t - t0) - g0**2*exp(-0.5*power(t-t0,2)/sig0**2)
+   denom = 1 - exp((tau-t)/theta**2)
+   for i in range(n-1):
+      ti,gi,sigi = par[7+i*3:10+i*3]
+      num -= gi**2*exp(-0.5*power(t-ti,2)/sigi**2)
+   return(num/denom)
+
 
 def wrap_Ialc1(p, x, y, dy):
    return((y - Ialc1(x, *p))/dy)
 
 def wrap_Ialc2(p, x, y, dy):
    return((y - Ialc2(x, *p))/dy)
+
+def wrap_Ialcn(p, x, y, dy, n):
+   return((y - Ialcn(x, p, n))/dy)
+
 
 def guess_pars1(t, mag, Tmax=None):
    '''Based on the input light-curve, guess the likely paramters.'''
@@ -123,19 +136,48 @@ def guess_pars2(t, mag, Tmax=None):
    p[9] = 3.
    return p
 
+def guess_parsn(t, n, mag, Tmax=None):
+   p = [0]*(7+3*(n-1))
+   if Tmax is None:
+      id = argmin(mag)
+      p[0] = mag[id]
+      p[4] = t[id]
+   else:
+      p[0] = mag[argmin(absolute(t-Tmax))]
+      p[4] = Tmax
+
+   p[1] = (p[0] - mag[-1])/(p[4] - t[-1])
+   p[2] = p[4] - 100
+   p[3] = 3.0
+   p[5] = -1.0
+   p[6] = 10.0
+   dt = (t[-1] - p[4])/n
+   for i in range(n-1):
+      p[7+i*3] = p[4]+(i+1)*dt
+      p[8+i*3] = -1.0
+      p[9+i*3] = 10.0
+   return p
+
+
 def fit_lc(t, mag, e_mag, ngauss=1, maxiter=10000, p0=None, Tmax=None):
    '''Fit a light-curve to the parameterized model.  t = time, mag = magnitudes,
    e_mag = error in magnitudes.  If ngauss=1, fit a single-peaked LC, if ngauss=2,
    fit a 2-peaked one.'''
 
-   if ngauss==1:
-      if p0 is None:
-         p0 = guess_pars1(t, mag, Tmax)
-      par,cov,info,mesg,ier = leastsq(wrap_Ialc1, p0, args=(t, mag, e_mag),
-            full_output=1, maxfev=maxiter)
-   else:
-      if p0 is None:
-         p0 = guess_pars2(t, mag, Tmax)
-      par,cov,info,mesg,ier = leastsq(wrap_Ialc2, p0, args=(t, mag, e_mag),
-            full_output=1, maxfev=maxiter)# , Dfun=d_Ialc2_dp, col_deriv=1)
+   #if ngauss==1:
+   #   if p0 is None:
+   #      p0 = guess_pars1(t, mag, Tmax)
+   #   par,cov,info,mesg,ier = leastsq(wrap_Ialc1, p0, args=(t, mag, e_mag),
+   #         full_output=1, maxfev=maxiter)
+   #elif ngauss==2:
+   #   if p0 is None:
+   #      p0 = guess_pars2(t, mag, Tmax)
+   #   par,cov,info,mesg,ier = leastsq(wrap_Ialc2, p0, args=(t, mag, e_mag),
+   #         full_output=1, maxfev=maxiter)# , Dfun=d_Ialc2_dp, col_deriv=1)
+   #else:
+   if p0 is None:
+      p0 = guess_parsn(t, ngauss, mag, Tmax)
+   par,cov,info,mesg,ier = leastsq(wrap_Ialcn, p0, 
+      args=(t, mag, e_mag, ngauss), full_output=1, maxfev=maxiter)
+
    return(par,cov,info,mesg,ier)

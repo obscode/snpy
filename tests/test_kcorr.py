@@ -3,6 +3,8 @@
 # This script creates a fake SN spectrum, puts it at several redshifts
 # and compares with kcorr
 
+import matplotlib
+matplotlib.use('Agg')
 from snpy import kcorr,getSED,fset,mangle_spectrum
 from numpy import *
 from matplotlib import pyplot as plt
