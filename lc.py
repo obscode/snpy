@@ -16,6 +16,21 @@ class lc:
    the time (in MJD), magnitudes, uncertainties, fluxes, etc.  It is meant 
    to be contained by the :class:`snpy.sn` class, to make for somewhat more 
    convenient access to the data.
+
+   Args:
+      parent (snpy.sn instance): the parent objects to which the data belongs
+      band (str): the passband the data was observed through
+      MJD (float array): date of observation. Even though it's called MJD,
+                         no assumptions are made for epoch zero-point.
+      mag (float array): observations in magnitudes
+      e_mag (float array): error of observations in magnitudes
+      restband (str): If different than the observed passs band.
+      K (float array):  If specified, K-corrections will be stored with the
+                        magnitudes. Do this to k-correct the data indpendent
+                        of fitting.
+      SNR (float array):  optional signal-to-noise of the data, if different
+                          than 1.087/e_mag.
+
    '''
 
    def __init__(self, parent, band, MJD, mag, e_mag, restband=None, K=None, SNR=None):
@@ -56,6 +71,8 @@ class lc:
       self.mp = None     # reference to multiplot or PanelPlot
 
    def get_t(self):
+      '''Get the epoch of observations relative to parent.Tmax. This can also
+      be accessed through the :attr:`.t` attribute.'''
       try:
          t = self.MJD - self.parent.Tmax
       except:
@@ -63,23 +80,35 @@ class lc:
       return(t)
 
    def get_flux(self):
+      '''Get the flux of the observations. This can also be access through
+      the :attr:`.flux` attribute.'''
       if getattr(self, '_flux', None) is None:
          self._flux = power(10.0, -0.4*(self.mag - self.filter.zp))
       return self._flux
 
    def get_SNR(self):
+      '''Get the signal-to-noise ratio of the data. This can also be 
+      accessed through the :attr:`.SNR` attribute.'''
       if getattr(self, '_SNR', None) is None:
          return 1.087/self.e_mag
       return self._SNR
 
    def get_e_flux(self):
+      '''Get the flux error of the observations. This can also be access through
+      the :attr:`.e_flux` attribute.'''
       if getattr(self, '_eflux', None) is None:
          self._eflux = self.get_flux()*self.e_mag/1.0857
       return self._eflux
 
    def get_covar(self, flux=1):
       '''returns the error matrix in flux units (unless flux=0).  If this was
-      not setup by the user, the variance will be returned as a 1-D array.'''
+      not setup by the user, the variance will be returned as a 1-D array.i
+      
+      Args:
+         flux (bool):  If true, return in flux units, otherwise in mags.
+      
+      Returns:
+         float array: the square covariance error matrix.'''
       if self.covar is not None:
          if flux:
             f = self.get_flux()
@@ -151,30 +180,75 @@ class lc:
          self.K = take(self.K, ids)
 
    def mask_epoch(self, tmin, tmax):
-      '''Update the lc's mask to only include data between tmin and tmax.'''
+      '''Update the lc's mask to only include data between tmin and tmax.i
+      
+      Args:
+         tmin,tmax (float): range over which data is considered good.
+         
+      Returns:
+         None
+         
+      Effects:
+         The mask attribute is updated.'''
       self.mask[greater_equal(self.t, tmax)] = False
       self.mask[less_equal(self.t, tmin)] = False
 
    def mask_emag(self, emax):
-      '''Update the lc's mask to only include data with e_mag < max.'''
+      '''Update the lc's mask to only include data with e_mag < max.
+      
+      Args:
+         emax (float): maximum error for good data
+         
+      Returns:
+         None
+         
+      Effects:
+         The mask attribute is updated.'''
       self.mask[greater(self.e_mag, emax)] = False
 
    def mask_SNR(self, minSNR):
+      '''Update the lc's mask to only include data with SNR > min.
+      
+      Args:
+         minSNR (float): minimum signal-to-noise for good data
+         
+      Returns:
+         None
+         
+      Effects:
+         The mask attribute is updated.'''
       self.mask[less(self.SNR, minSNR)] = False
 
    def eval(self, times, t_tol=-1, epoch=0):
-      '''Interpolate (if required) the data to time 'times'.  If there is a data point 
-      closer than t_tol away from a requested time, that value is used without 
-      interpolation.  If epoch is nonzero, then times are interpreted relative
-      to parent.Tmax'''
+      '''Interpolate (if required) the data to specific times.  If there is a
+      data point "close enough", that value is
+      used without interpolation.  If epoch is nonzero, then times are
+      interpreted relative to parent.Tmax
+      
+      Args:
+         times (float array): times at which to interpolate
+         t_tol (float):  If a data point is less than t_tol away from requested
+                         time, the data will be returned. Use -1 to always
+                         interpolate.
+         epoch (bool): If True, :attrib:`.parent.Tmax` is added to times
+         
+      Returns:
+         2-tuple:  (mag,mask)
+         
+         * mag (float array):  interpolated magnitudes
+         * mask (bool array):  True if interpolation is valid
+         
+      Raises:
+         AttributeError:  if an interpolator for the data has not been assigned
+      '''
+
       if self.interp is None:
          # Try to use a model
-         if self.band not in self.parent.model._fbands:
-            raise AttributeError, \
-                  "Error.  To interpolate, you need to fit a template or model first."
+         if self.band not in self.parent.model._fbands: raise AttributeError, \
+               "Error.  To interpolate, you need to fit a template or model
+               first."
          
-      times = atleast_1d(times)
-      if epoch: times = times + self.parent.Tmax
+      times = atleast_1d(times) if epoch: times = times + self.parent.Tmax
 
       if self.interp is not None:
          evm,mask = self.interp(times)
@@ -204,19 +278,33 @@ class lc:
 
    def spline_fit(self, fitflux=0, do_sigma=1, Nboot=100, keep_boot=1, 
          method='spline2', **args):
-      '''Make a spline template of the lightcurve.  If fitflux=1, then fit in 
-      flux-space.  If do-sigma=1, do a monte-carlo simulation to get an idea of
-      the uncertainties in the final parameters.  Nboot controls the number of
-      bootstrap interations.  You can choose to use a simple
-      spline (default) or "hyper-spline" using the method keyword.   The rest
-      of the arguments are passed to self.mkspline (if method='spline') or
-      self.mkspline2 (if method= 'spline2'.  Upon successful completion of the
-      routine, the following member variables will be populated: 
-         Tmax, e_Tmax: time of maximum (and error if do_sigma=1) 
-         Mmax, e_Mmax:   peak magnitude
-         dm15, e_dm15:   delta-m 15
-         model_type:     "spline" or "spline2"
-         tck:            spline info '''
+      '''Make a spline template of the lightcurve.  The name is a bit misleading
+      as many interpolators are available. Once this is done, the light-curve
+      can be interpolated and properties (Tmax, Mmax, etc) can be computed.
+      
+      Args:
+         fitflux (bool):  If True, fit the flux instead of magnitudes
+         do_sigma (bool):  If True, perform MC iterations to estimate the
+                           errors in the interpolations.
+         Nboot (int):  Number of MC iterations to perform.
+         keep_boot (bool): If True, keep the MC realizations for future use
+         method (str):  The interpolation method. Use :meth:`.list_types`
+                        to find out what is available.
+         args (dict):  all other arguments are sent to the constructor of
+                       the interpolator. See :mod:`snpy.utils.fit1dcurve`
+                       for documentation on this.
+
+      Returns:
+         None
+
+      Effects:
+         Upon successful completion of the
+         routine, the following member variables will be populated: 
+         * Tmax, e_Tmax: time of maximum (and error if do_sigma=1) 
+         * Mmax, e_Mmax:   peak magnitude
+         * dm15, e_dm15:   delta-m 15
+         * model_type:     "spline" or "spline2"
+         * tck:            spline info '''
       return self.template(fitflux=fitflux, do_sigma=do_sigma, Nboot=Nboot, 
             method=method, **args)
 
@@ -226,19 +314,7 @@ class lc:
 
    def template(self, fitflux=False, do_sigma=True, Nboot=50, 
          method=default_method, compute_params=True, interactive=False, **args):
-      '''Make an interpolating template of the lightcurve.  If fitflux, then fit in 
-      flux-space.  If do-sigma, do a monte-carlo simulation to get an idea of
-      the uncertainties in the final parameters.  Nboot controls the number of
-      bootstrap interations.  There are several interpolating methods that
-      can be chosen, depending on your python distribution.  To find the 
-      methods available, run self.list_types().  The rest of the arguments are 
-      passed to the interpolating method.  Upon successful completion of the
-      routine, the following member variables will be populated: 
-         Tmax, e_Tmax: time of maximum (and error if do_sigma=1) 
-         Mmax, e_Mmax:   peak magnitude
-         dm15, e_dm15:   delta-m 15
-         model_type:     'spline','hyperspline','polynomial','chebyshev','hermite',
-                         'hermiteE','gp'  (run self.list_types to see available)'''
+      '''A backwrd-compatibility alias for :meth:`.spline_fit`.'''
 
       if self.parent.Tmax > 0:
          evt = arange(int(self.t[0]), int(self.t[-1])+1)*1.0 + self.parent.Tmax
