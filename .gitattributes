@@ -1340,6 +1340,7 @@ utils/fit_lc2.py -text
 utils/fit_poly.py -text
 utils/fit_spline.py -text
 utils/mpfit.py -text
+utils/radec2gal.py -text
 utils/redlaw.py -text
 utils/setup.py -text
 utils/stats.py -text

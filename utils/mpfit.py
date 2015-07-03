@@ -277,7 +277,6 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
 								   EXAMPLE
 
    import mpfit
-   import numpy.oldnumeric as Numeric
    x = arange(100, float)
    p0 = [5.7, 2.2, 500., 1.5, 2000.]
    y = ( p[0] + p[1]*[x] + p[2]*[x**2] + p[3]*sqrt(x) +

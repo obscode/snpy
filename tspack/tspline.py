@@ -1,5 +1,5 @@
 import tspack
-from numpy.oldnumeric import *
+from numpy import *
 
 def tspsi(x, y, ncd=2, slopes=None, curvs=None, per=0, tension=None):
    # Figure out the parameters that need to go into the FORTRAN procedure.

@@ -1,17 +1,15 @@
-## Automatically adapted for numpy.oldnumeric Feb 04, 2009 by ipython
-
 #!/usr/bin/env python
 
-from Numeric import *
+from numpy import *
 from pygplot import *
 import spline2
 import sys
-import numpy.oldnumeric.random_array as RA
+from numpy import random as RA
 import scipy
 
 xs = arange(0, 2*pi, 0.1)
 ys = sin(xs)
-ys = ys + RA.normal(0, 0.1, shape=ys.shape)
+ys = ys + RA.normal(0, 0.1, size=ys.shape[0])
 
 mp = Panel(2,1)
 p = Plot()

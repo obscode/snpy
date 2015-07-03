@@ -1,15 +1,13 @@
-## Automatically adapted for numpy.oldnumeric Feb 04, 2009 by ipython
-
 '''Fit 1D and 2D polynomials of order k to a set of data points.  Actually, they're
 McLaren series in 1 and 2 variables.
 
 Written by Chris Burns
 Obfuscated by Dan Kelson.
 '''
-from numpy.oldnumeric  import *
-from numpy.oldnumeric.linear_algebra import singular_value_decomposition
+from numpy  import *
+from numpy.linalg import svd
 
-def divz(x, y=1, repl=0.0,out=Float32, tol=0):
+def divz(x, y=1, repl=0.0,out=float32, tol=0):
    if len(shape(y)) or len(shape(x)):
       if len(shape(y)):  bad = less_equal(absolute(y), tol)
       else:  band = ones(x.shape)*(abs(y)<=tol)
@@ -24,7 +22,7 @@ def divz(x, y=1, repl=0.0,out=Float32, tol=0):
       else:  return(x/y)
 
 def fitsvd(A, b):
-   decomp = singular_value_decomposition(A)
+   decomp = svd(A, full_matrices=False)
    sol1 = transpose(decomp[2])
    sol2 = divz(1.0,decomp[1], tol=1e-10)
    sol3 = dot(transpose(decomp[0]),b)

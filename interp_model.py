@@ -6,7 +6,7 @@ template-fitting with splines.'''
 import os
 from snpy import kcorr
 from snpy.filters import fset
-from numpy.oldnumeric import *
+from numpy import *
 from scipy import stats
 import scipy.interpolate
 from scipy.optimize import brentq

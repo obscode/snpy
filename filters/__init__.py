@@ -21,7 +21,7 @@ This module also supplies a dictionary called filters with some common filters
 and zero-points built in.'''
 
 import os,sys,types
-import numpy.oldnumeric as num
+import numpy as num
 import scipy.integrate
 import scipy.interpolate
 from glob import glob
@@ -225,11 +225,11 @@ class filter(spectrum):
       x_min = num.minimum.reduce(self.wave)
       x_max = num.maximum.reduce(self.wave)
       try:
-         i_min = num.nonzero(num.greater(swave - x_min, 0))[0]
+         i_min = num.nonzero(num.greater(swave - x_min, 0))[0][0]
       except:
          i_min = 0
       try:
-         i_max = num.nonzero(num.greater(swave - x_max, 0))[0]
+         i_max = num.nonzero(num.greater(swave - x_max, 0))[0][0]
       except:
          i_max = len(swave)-1
    
@@ -335,7 +335,8 @@ class filter(spectrum):
       global standards
 
       if wave is None:
-         wave,flux = standards['Vega']['VegaB'].wave, standards['Vega']['VegaB'].resp
+         wave,flux = standards['Vega']['VegaB'].wave,\
+                     standards['Vega']['VegaB'].resp
       flux0 = self.response(wave, flux, z, photons=1)
       if flux0 <= 0:
          return(nan)

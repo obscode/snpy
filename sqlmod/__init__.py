@@ -17,8 +17,10 @@ class sqlbase:
    user = "username"       # user name on SQL server
    passwd = None           # password for username
    port = 3306             # SQL server port on hostname
-   db = "database"         # database containing SN info
    readonly = 0            # Can we read only?
+
+   PHOTO_DB = "database"    # Database containing photometry
+   SPEC_DB = None          # Database containing spectroscopy
 
    SN_TABLE = "SNe"        # SQL Table of supernova attributes
    SN_ID = "name"          # Unique SN ID field in SN_TABLE
@@ -56,7 +58,7 @@ class sqlbase:
       self.connected=0
 
       # Allow for environment variable override
-      for att in ['user','passwd','db','host','port']:
+      for att in ['user','passwd','photo_db','spec_db','host','port']:
          key = 'SQL_' + att.upper()
          if key in os.environ:
             self.__dict__[att] = os.environ[key]
@@ -80,8 +82,16 @@ class sqlbase:
          passwd = self.passwd
       if not self.connected:
          try:
-            self.con = sql.connect(host=self.host, user=self.user, passwd=passwd,
-                  db=self.db, port=self.port)
+            self.con = sql.connect(host=self.host,user=self.user, passwd=passwd,
+                  db=self.PHOTO_DB, port=self.port)
+            if self.SPEC_DB is not None:
+               if self.SPEC_DB != self.PHOTO_DB:
+                  self.con2 = sql.connect(host=self.host, user=self.user, 
+                        passwd=passwd, db=SPEC_DB)
+               else:
+                  self.con2 = self.con
+            else:
+               self.con2 = None
          except:
             raise
          else:
@@ -89,6 +99,10 @@ class sqlbase:
             if self.passwd is None:  self.passwd = passwd
             
          self.c = self.con.cursor()
+         if self.con2 is not None:
+            self.c2 = self.con2.cursor()
+         else:
+            self.c2 = self.c
          self.connected = 1
          self.name = name
          # Collect info about the SN_TABLE and PHOTO_TABLE:
@@ -149,6 +163,8 @@ class sqlbase:
    def close(self):
       '''Close connection to the database.'''
       self.con.close()
+      if self.con2 is not None and self.con2 != self.con:
+         self.con2.close()
       self.connected = 0
 
    def sql_field(self, attr):
@@ -311,19 +327,19 @@ class sqlbase:
       slct2 = '''SELECT %s,%s from %s where %s=%%s and %s=%%s''' % \
             (self.SPEC_LAMB,self.SPEC_FLUX, self.SPEC_TABLE,self.SPEC_NAME,
              self.SPEC_INDEX)
-      N = self.c.execute(slct1, (self.name))
+      N = self.c2.execute(slct1, (self.name))
       if N == 0:
          raise ValueError, "No spectroscopy for %s found" % \
                   (self.name)
-      list = self.c.fetchall()
+      list = self.c2.fetchall()
 
       JDs = []
       waves = []
       fluxes = []
       for jd,file in list:
          JDs.append(jd)
-         self.c.execute(slct2, (self.name, file))
-         data = self.c.fetchall()
+         self.c2.execute(slct2, (self.name, file))
+         data = self.c2.fetchall()
          waves.append(numpy.array([datum[0] for datum in data]))
          fluxes.append(numpy.array([datum[1] for datum in data]))
       return(numpy.array(JDs),waves,fluxes)
@@ -407,9 +423,9 @@ class sql_highz(sqlbase):
    host = "kepler.obs.carnegiescience.edu"
    user = "CSP"
    passwd = None
-   db = "SN"
    port = 3306
 
+   PHOTO_DB = "SN"
    SPEC_TABLE = "SPECTRA"
    SPEC_INFO = "SP_INFO"
 
@@ -421,7 +437,7 @@ class sql_lowz(sqlbase):
    host = "csp2.lco.cl"
    user = "cburns"
    passwd = None
-   db = "Phot"
+   PHOTO_DB = "Phot"
    port = 3306
    readonly = 1
 
@@ -447,7 +463,7 @@ class sql_local(sqlbase):
    host = "kepler.obs.carnegiescience.edu"
    user = "CSP"
    passwd = None
-   db = "CSP"
+   PHOTO_DB = "CSP"
    port = 3306
    readonly = 1
 
@@ -473,7 +489,7 @@ class sql_csp2(sqlbase):
    host = "csp2.lco.cl"
    user = "cburns"
    passwd = None
-   db = "Phot"
+   PHOTO_DB = "Phot"
    port = 3306
    readonly = 1
 

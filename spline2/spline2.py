@@ -1,5 +1,3 @@
-## Automatically adapted for numpy.oldnumeric Feb 04, 2009 by ipython
-
 ''' Spline2.py: wrapper for B. Thijsse et al.'s hyper-spline routines.
 
 Yet another spline interpolation routine.  The problem:  given a set of
@@ -30,7 +28,7 @@ For more details, see:
  *  http://structureandchange.3me.tudelft.nl/
 '''
 import spline2c
-import numpy.oldnumeric as num
+import numpy as num
 
 acffuncs = ['exp','gauss','linear','sinc']
 

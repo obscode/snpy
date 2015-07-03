@@ -209,6 +209,11 @@ class model:
       for band in bands:
          if debug: print">>> calling model member function"
          mod,err,mask = self.__call__(band, self.parent.data[band].MJD)
+         if not sometrue(mask):
+            msg = "All weights for filter %s are zero." % band
+            msg += " The fitter is in a part of parameter space where the model"
+            msg += " is not valid or there is no useful data."
+            raise RuntimeError, msg
          if self.model_in_mags:
             f = power(10, -0.4*(mod - self.parent.data[band].filter.zp))
             #ef = sqrt(power(err*mod/1.0857,2) + \
@@ -229,9 +234,6 @@ class model:
             sum_w += sum(diagonal(W))
             resids_list.append(dot(W, f - self.parent.data[band].flux))
 
-      if sum_w == 0:
-         raise RuntimeError, "All weights are zero:  fitter is in a part of parameter" +\
-                " space where the model is not valid or there is no useful data."
       res = concatenate(resids_list)
 
       # now apply any priors:  chi2 = chi2 + 2*ln(p) -N/2log(2pi)-sum(log(sigi))
@@ -326,7 +328,8 @@ class EBV_model(model):
          #cal = self.args.get('cal',6)
          cal = self.calibration
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
-               self.Rv_host[cal], self.parent.Rv_gal, self.parent.k_version)
+               self.Rv_host[cal], self.parent.Rv_gal, self.parent.k_version,
+               redlaw=self.parent.redlaw)
       
    def guess(self, param):
       s = self.parent
@@ -364,8 +367,9 @@ class EBV_model(model):
       # Figure out the reddening law
       if self.do_Robs:
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, t, self.EBVhost,
-               self.parent.EBVgal, self.Rv_host[self.calibration], self.parent.Rv_gal,
-               self.parent.k_version)
+               self.parent.EBVgal, self.Rv_host[self.calibration], 
+               self.parent.Rv_gal, self.parent.k_version, 
+               redlaw=self.parent.redlaw)
          temp = temp + self.Robs[band]*(self.EBVhost + self.parent.EBVgal)
       else:
          # Apply Robs*EBVgal:
@@ -392,7 +396,8 @@ class EBV_model(model):
          if not deredden:
             if self.do_Robs:
                Robs = kcorr.R_obs(band, self.parent.z, x0, self.EBVhost, 
-                     self.parent.EBVgal, self.Rv_host[self.calibration], self.parent.Rv_gal, 'H3')
+                     self.parent.EBVgal, self.Rv_host[self.calibration], 
+                     self.parent.Rv_gal, 'H3', redlaw=self.parent.redlaw)
                mmax = mmax + Robs*(self.EBVhost + self.parent.EBVgal)
             else:
                # Apply Robs*EBVgal:
@@ -404,12 +409,14 @@ class EBV_model(model):
                else:
                   EBV = max(self.parent.EBVgal, 0.01)
                   R = kcorr.R_obs(band, self.parent.z, 0, 0, EBV,
-                                  self.Rv_host[self.calibration], self.parent.Rv_gal,
-                                  self.parent.k_version)
+                                  self.Rv_host[self.calibration], 
+                                  self.parent.Rv_gal,
+                                  self.parent.k_version,
+                                  redlaw=self.parent.redlaw)
                EBV = max(self.EBVhost, 0.01)
                Robs = kcorr.R_obs(band, self.parent.z, 0, EBV,
                      0, self.Rv_host[self.calibration], self.parent.Rv_gal,
-                     self.parent.k_version)
+                     self.parent.k_version, redlaw=self.parent.redlaw)
                mmax = mmax + Robs*self.EBVhost + R*self.parent.EBVgal
          Mmaxs.append(mmax)
          eMmaxs.append(self.errors['DM'])
@@ -450,8 +457,9 @@ class EBV_model(model):
          weights.append(sum(where(mask, power(err,-2), 0)))
          ddm15 = self.dm15 - 1.1
          Robs = kcorr.R_obs(band, self.parent.z, 0, self.EBVhost,
-               self.parent.EBVgal, self.Rv_host[calibration], self.parent.Rv_gal,
-               self.parent.k_version)
+               self.parent.EBVgal, self.Rv_host[calibration], 
+               self.parent.Rv_gal, self.parent.k_version, 
+               redlaw=self.parent.redlaw)
          dRobs = Robs*self.dRv_host[calibration]/self.Rv_host[calibration]
          syst_DM.append(power(ddm15*self.db[calibration],2)+\
                         power(ddm15*self.dcolor_slopes[rb],2)+\
@@ -550,7 +558,7 @@ class EBV_model2(model):
       for band in self._fbands:
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
                self.Rv_host[self.calibration], self.parent.Rv_gal, 
-               self.parent.k_version)
+               self.parent.k_version, redlaw=self.parent.redlaw)
       
    def guess(self, param):
       s = self.parent
@@ -589,8 +597,9 @@ class EBV_model2(model):
       # Figure out the reddening law
       if self.do_Robs:
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, t, self.EBVhost,
-               self.parent.EBVgal, self.Rv_host[self.calibration], self.parent.Rv_gal,
-               self.parent.k_version)
+               self.parent.EBVgal, self.Rv_host[self.calibration], 
+               self.parent.Rv_gal, self.parent.k_version,
+               redlaw=self.parent.redlaw)
          temp = temp + self.Robs[band]*(self.EBVhost + self.parent.EBVgal)
       else:
          # Apply Robs*EBVgal:
@@ -617,7 +626,8 @@ class EBV_model2(model):
          if not deredden:
             if self.do_Robs:
                Robs = kcorr.R_obs(band, self.parent.z, x0, self.EBVhost, 
-                     self.parent.EBVgal, self.Rv_host[self.calibration], self.parent.Rv_gal, 'H3')
+                     self.parent.EBVgal, self.Rv_host[self.calibration], 
+                     self.parent.Rv_gal, 'H3', redlaw=self.parent.redlaw)
                mmax = mmax + Robs*(self.EBVhost + self.parent.EBVgal)
             else:
                # Apply Robs*EBVgal:
@@ -629,12 +639,13 @@ class EBV_model2(model):
                else:
                   EBV = max(self.parent.EBVgal, 0.01)
                   R = kcorr.R_obs(band, self.parent.z, 0, 0, EBV,
-                                  self.Rv_host[self.calibration], self.parent.Rv_gal,
-                                  self.parent.k_version)
+                                  self.Rv_host[self.calibration], 
+                                  self.parent.Rv_gal, self.parent.k_version,
+                                  redlaw=self.parent.redlaw)
                EBV = max(self.EBVhost, 0.01)
                Robs = kcorr.R_obs(band, self.parent.z, 0, EBV,
                      0, self.Rv_host[self.calibration], self.parent.Rv_gal,
-                     self.parent.k_version)
+                     self.parent.k_version, redlaw=self.parent.redlaw)
                mmax = mmax + Robs*self.EBVhost + R*self.parent.EBVgal
          Mmaxs.append(mmax)
          eMmaxs.append(self.errors['DM'])
@@ -673,7 +684,8 @@ class EBV_model2(model):
             dst = self.dm15 - 1.1
          Robs = kcorr.R_obs(band, self.parent.z, 0, self.EBVhost,
                self.parent.EBVgal, self.Rv_host[calibration], 
-               self.parent.Rv_gal, self.parent.k_version)
+               self.parent.Rv_gal, self.parent.k_version,
+               redlaw=self.parent.redlaw)
          dRobs = Robs*self.eRv_host[calibration]/self.Rv_host[calibration]
          syst_DM.append(power(dst*self.eb[calibration][rb],2)+\
                         power(self.EBVhost*dRobs, 2)+\
@@ -831,7 +843,7 @@ class max_model(model):
             else:
                R = kcorr.R_obs(band, self.parent.z, int(floor(x0)), 0.0, 
                      self.parent.EBVgal, self.parent.Rv_gal, 
-                     version=self.parent.k_version)
+                     version=self.parent.k_version, redlaw=self.parent.redlaw)
 
             mmax = mmax + R*self.parent.EBVgal
          Mmaxs.append(mmax)
@@ -1007,7 +1019,7 @@ class max_model2(model):
             else:
                R = kcorr.R_obs(band, self.parent.z, int(floor(x0)), 0.0, 
                      self.parent.EBVgal, self.parent.Rv_gal, 
-                     version=self.parent.k_version)
+                     version=self.parent.k_version, redlaw=self.parent.redlaw)
 
             mmax = mmax + R*self.parent.EBVgal
          Mmaxs.append(mmax)
@@ -1177,7 +1189,8 @@ class Rv_model(model):
                else:
                   Rmw = self.parent.Robs[band]
             Rhost = kcorr.R_obs(rband, 0, x0, self.EBVhost, 
-                     self.parent.EBVgal, self.Rv_host, self.parent.Rv_gal, 'H3')
+                     self.parent.EBVgal, self.Rv_host, self.parent.Rv_gal, 'H3',
+                     redlaw=self.parent.redlaw)
             mmax = mmax + Rhost*self.EBVhost + Rmw*self.parent.EBVgal
          Mmaxs.append(mmax)
          eMmaxs.append(self.errors['Bmax'])
@@ -1223,19 +1236,28 @@ class color_model(model):
       - Rv (host galaxy reddening law)
    '''
 
-   def __init__(self, parent, stype='st'):
+   def __init__(self, parent, stype='st', normfilter='B'):
 
       if stype == 'dm15':
          raise AttributeError, "This model only supports st parameter"
       model.__init__(self, parent)
       self.rbs = ['u','B','V','g','r','i','Y','J','H']
-      self.parameters = {'Bmax':None, 'st':None, 'EBVhost':None, 
+      self.normfilter = normfilter
+      self.parameters = {'st':None, 'EBVhost':None, 
             'Rv':None, 'Tmax':None}
+      self.parameters[self.normfilter+'max'] = None
       self.nparameters = {'a':None, 'b':None, 'c':None}
       self.enparameters = {'a':None, 'b':None, 'c':None}
-      self.errors = {'Bmax':0, 'st':0, 'EBVhost':0, 'Tmax':0, 'Rv':0}
+      self.errors = {'st':0, 'EBVhost':0, 'Tmax':0, 'Rv':0}
+      self.errors[self.normfilter+'max'] = 0
       self.template = ubertemp.stemplate()
 
+   def __setstate__(self, d):
+      # Needed to update older pickles. Cruft cruft cruft
+      if 'normfilter' not in d:
+         d['normfilter'] = 'B'
+         d['ncolor'] = -1
+      self.__dict__.update(d)
 
    def setup(self):
       # check to see if we have more than one filter when solving for EBV
@@ -1243,18 +1265,18 @@ class color_model(model):
          if len(self._fbands) < 2:
             raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
 
-      # Make sure that at least one filter has 'B' as restband
-      Bf = []
+      # Make sure that at least one filter has restband for norm_filter
+      nf = []
       for f in self.parent.data:
-         if self.parent.restbands[f] == 'B': Bf.append(f)
-      if len(Bf) == 0:
+         if self.parent.restbands[f] == self.normfilter: nf.append(f)
+      if len(nf) == 0:
          raise RuntimeError, "Error, to use color-model, you must have a B rest-frame observation"
-      self.Bf = Bf
+      self.nf = nf
 
-      #self.calibration = self.args.get('calibration','BmX_Uniform_u_all')
       cfile = os.path.join(base,"color_priors.pickle")
       if not os.path.isfile(cfile):
-         raise ValueError, "Calibration file not found: %s" % (self.calibration+".pickle")
+         raise ValueError, "Calibration file not found: %s" % \
+               (self.calibration+".pickle")
       self.redlaw = self.args.get('redlaw', 'ccm')
       self.rvprior = self.args.get('rvprior', 'uniform')
       f = open(cfile)
@@ -1267,10 +1289,13 @@ class color_model(model):
 
       d = cdata[self.redlaw][self.rvprior]
       self.colors = d['colors']
-      self.ref_band = self.colors[0][0]
+      #self.ref_band = self.colors[0][0]
       self.Xfilters = [color[1] for color in self.colors]
+      if self.normfilter == 'B':
+         self.ncolor = -1
+      else:
+         self.ncolor = self.Xfilters.index(self.normfilter)
       self.Nf = len(self.Xfilters)
-      Nf = len(self.Xfilters)
       self.nparameters['a'] = d['mean'][0:self.Nf]
       self.nparameters['b'] = d['mean'][self.Nf:self.Nf*2]
       self.nparameters['c'] = d['mean'][2*self.Nf:self.Nf*3]
@@ -1304,8 +1329,8 @@ class color_model(model):
             Tmaxs.append(s.data[f].MJD[argmin(s.data[f].mag)])
          return median(Tmaxs)
 
-      if param == 'Bmax':
-         return median([s.data[f].mag.min() for f in self.Bf])
+      if param == self.normfilter+'max':
+         return median([s.data[f].mag.min() for f in self.nf])
 
       if param == 'st':
          # choose just the average dm15:
@@ -1351,15 +1376,17 @@ class color_model(model):
       # Milky-Way reddening:
       #mwRB = redlaw.R_lambda('B', 3.1, self.parent.EBVgal, redlaw=self.redlaw)
 
-      temp = temp + self.Bmax # + mwRB*self.parent.EBVgal
+      temp = temp + self.parameters[self.normfilter+'max']
       a = self.nparameters['a']
       b = self.nparameters['b']
       c = self.nparameters['c']
       # Colors and reddening differential:
+      if self.ncolor >= 0:
+         temp = temp + a[self.ncolor] + b[self.ncolor]*(self.st - 1) + \
+               c[self.ncolor]*(self.st - 1)**2
       if rband != 'B':
          cid = self.Xfilters.index(rband)
          temp = temp - a[cid] - b[cid]*(self.st-1) - c[cid]*(self.st -1)**2
-         #etemp = sqrt(power(etemp,2) + self.evar[cid])
       # Host reddening
       #RB = redlaw.R_lambda('B', self.Rv, self.EBVhost)
       RX = redlaw.R_lambda(rband, self.Rv, self.EBVhost, redlaw=self.redlaw)
@@ -1395,7 +1422,8 @@ class color_model(model):
                else:
                   Rmw = self.parent.Robs[band]
             Rhost = kcorr.R_obs(rband, 0, x0, self.EBVhost, 
-                     self.parent.EBVgal, self.Rv_host, self.parent.Rv_gal, 'H3')
+                     self.parent.EBVgal, self.Rv_host, self.parent.Rv_gal, 'H3',
+                     redlaw=self.parent.redlaw)
             mmax = mmax + Rhost*self.EBVhost + Rmw*self.parent.EBVgal
          Mmaxs.append(mmax)
          eMmaxs.append(self.errors['Bmax'])

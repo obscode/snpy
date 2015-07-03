@@ -1,12 +1,10 @@
-## Automatically adapted for numpy.oldnumeric Feb 04, 2009 by ipython
-
 '''This module provides some helper functions for fitting a spline to Supernova
 data.'''
 
 from scipy.interpolate import splrep
 from scipy.interpolate import splev
 from scipy.integrate import quad
-import numpy.oldnumeric as num
+import numpy as num
 import sys,os,string
 from snpy import spline2
 #import fit_lightcurves as lc
@@ -25,9 +23,9 @@ def make_spline(t, m, e_m, knots=None, k=1, s=None, fitflux=0, zpt=0,
    # first, we make sure that t is monotonically increasing with no repeated
    # elements
    sids = num.argsort(t)
-   tt = num.take(t, sids)
-   mm = num.take(m, sids)
-   ee_m = num.take(e_m, sids)
+   tt = t[sids]      #num.take(t, sids)
+   mm = m[sids]      # num.take(m, sids)
+   ee_m = e_m[sids]  #num.take(e_m, sids)
 
    if tmin is None:
       tmin = t.min()
@@ -35,11 +33,11 @@ def make_spline(t, m, e_m, knots=None, k=1, s=None, fitflux=0, zpt=0,
       tmax = t.max()
 
    # here's some Numeric magic.  first, find where we have repeating x-values
-   Nmatrix = num.equal(tt[:,num.NewAxis], tt[num.NewAxis,:])
-   #val_matrix = mm[:,num.NewAxis]*num.ones((len(mm),len(mm)))
-   #e_matrix = ee_m[:,num.NewAxis]*num.ones((len(mm),len(mm)))
-   val_matrix = mm[:,num.NewAxis]*Nmatrix
-   e_matrix = ee_m[:,num.NewAxis]*Nmatrix
+   Nmatrix = num.equal(tt[:,num.newaxis], tt[num.newaxis,:])
+   #val_matrix = mm[:,num.newaxis]*num.ones((len(mm),len(mm)))
+   #e_matrix = ee_m[:,num.newaxis]*num.ones((len(mm),len(mm)))
+   val_matrix = mm[:,num.newaxis]*Nmatrix
+   e_matrix = ee_m[:,num.newaxis]*Nmatrix
 
    average = sum(val_matrix)/sum(Nmatrix)
    e_average = sum(e_matrix)/sum(Nmatrix)
@@ -116,11 +114,11 @@ def make_spline2(t, m, e_m, k=3, fitflux=0, zpt=0, tmin=-10, tmax=100,
    ee_m = num.take(e_m, sids)
 
    # here's some Numeric magic.  first, find where we have repeating x-values
-   Nmatrix = num.equal(tt[:,num.NewAxis], tt[num.NewAxis,:])
-   #val_matrix = mm[:,num.NewAxis]*num.ones((len(mm),len(mm)))
-   #e_matrix = ee_m[:,num.NewAxis]*num.ones((len(mm),len(mm)))
-   val_matrix = mm[:,num.NewAxis]*Nmatrix
-   e_matrix = ee_m[:,num.NewAxis]*Nmatrix
+   Nmatrix = num.equal(tt[:,num.newaxis], tt[num.newaxis,:])
+   #val_matrix = mm[:,num.newaxis]*num.ones((len(mm),len(mm)))
+   #e_matrix = ee_m[:,num.newaxis]*num.ones((len(mm),len(mm)))
+   val_matrix = mm[:,num.newaxis]*Nmatrix
+   e_matrix = ee_m[:,num.newaxis]*Nmatrix
 
    average = sum(val_matrix)/sum(Nmatrix)
    e_average = sum(e_matrix)/sum(Nmatrix)
@@ -128,16 +126,16 @@ def make_spline2(t, m, e_m, k=3, fitflux=0, zpt=0, tmin=-10, tmax=100,
    # at this point, average is the original data, but with repeating data points
    # replaced with their average.  Now, we just pick out the unique x's and
    # the first of any repeating points:
-   gids = num.concatenate([[1], num.greater(tt[1:] - tt[:-1], 0.)])
-   tt = num.compress(gids, tt)
-   mm = num.compress(gids, average)
-   ee_m = num.compress(gids, e_average)
+   gids = num.concatenate([[True], num.greater(tt[1:] - tt[:-1], 0.)])
+   tt = tt[gids]           #num.compress(gids, tt)
+   mm = average[gids]      # num.compress(gids, average)
+   ee_m = e_average[gids]  #num.compress(gids, e_average)
 
    # Now get rid of any data that's outside [tmin,tmax]
    gids = num.less_equal(tt, tmax)*num.greater_equal(tt, tmin)
-   tt = num.compress(gids,tt)
-   mm = num.compress(gids,mm)
-   ee_m = num.compress(gids,ee_m)
+   tt = tt[gids]             #num.compress(gids,tt)
+   mm = mm[gids]             # num.compress(gids,mm)
+   ee_m = ee_m[gids]         #num.compress(gids,ee_m)
    ee_m = num.where(num.less(ee_m, 0.001), 0.001, ee_m)
 
    # Now convert to flux if requested:
@@ -185,7 +183,7 @@ def fit_spline(t, m, e_m, knots=None, k=1, s=None, fitflux=0, zpt=0, tmin=-10, t
    tck,fp,ier,msg = make_spline(t, m, e_m, knots, k, s, fitflux, zpt, tmin, tmax,task)
 
    # Now do the interpolation
-   evt = num.arange(t[0],t[-1],1, typecode=num.Float64)
+   evt = num.arange(t[0],t[-1],1, typecode=num.float64)
    evm = splev(evt, tck)
 
    if fitflux:
@@ -203,7 +201,7 @@ def interp_spline(t, m, e_m, eval_t, knots=None, k=1, s=None, fitflux=0, zpt=0,
 
    # Now, we scan t and eval_t and find where they are less than tol.  In these
    #  cases, we take the average of any matching times
-   delta = num.absolute(t[num.NewAxis,:] - eval_t[:,num.NewAxis])
+   delta = num.absolute(t[num.newaxis,:] - eval_t[:,num.newaxis])
    cond = num.less(delta, tol)
    values = num.array([m]*len(eval_t))*cond
    N = num.sum(cond, axis=1)
@@ -222,7 +220,7 @@ def find_extr(tck, numpoints=1000):
    f = lambda x:  splev(x, tck, 1)
    derivs = f(xs)
    gt0 = num.greater(derivs, 0)
-   inds = num.nonzero(gt0[1:] - gt0[:-1])
+   inds = num.nonzero(gt0[1:] - gt0[:-1])[0]
    if len(inds) == 0:
       return (None,None,None)
    ret = []

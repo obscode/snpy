@@ -39,7 +39,7 @@ in a file tck.pickle is available.  If so, then use this instead of calling
 gloes.
 '''
 import sys,os,string
-import numpy.oldnumeric as num
+import numpy as num
 import dm15temp2c as dm15tempc
 import pickle
 from scipy.interpolate import bisplev
@@ -159,7 +159,7 @@ class template:
          dm15tempc.dm15temp(filter_numbers[band], self.dm15, evt, evd, eevd, 
                self.normalize, sigx0, xscale, maxsigmax, sigy0)
       else:
-         if not isinstance(evt, num.ArrayType):
+         if not isinstance(evt, num.ndarray):
             evd = num.array([bisplev(evt, self.dm15, btck[band])])
             eevd = num.array([bisplev(evt, self.dm15, btck["e_"+band])])
             if btck2 is not None and use_gp:

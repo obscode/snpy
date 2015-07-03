@@ -18,7 +18,7 @@ sampled data.  The basic idea is simple:
 
 For a 2D surface, you use an elliptical Gaussian window function and fit a
 2D polynomial.'''
-from numpy.oldnumeric import *
+from numpy import *
 from numpy import isinf,divide
 import sys
 from fit_poly import fit2Dpoly
@@ -68,7 +68,6 @@ def smooth(x, y, weight, xeval, sigma=None, N=None):
          else:
             raise RuntimeError, "Error:  N too large for this many points"
       sigmas = 10*array(FWHMs)
-      print sigmas
 
    # now weight these distances with a Gaussian
    arg = -0.5*power(dists, 2)/power(sigmas[:,NewAxis],2)

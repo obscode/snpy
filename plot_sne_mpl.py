@@ -228,8 +228,10 @@ class ButtonClick:
       return self.id
 
    def disconnect(self):
-      if self.id is None:  return
-      self.figure.canvas.mpl_disconnect(self.id)
+      if self.id is not None:
+         self.figure.canvas.mpl_disconnect(self.id)
+      if self.id2 is not None:
+         self.figure.canvas.mpl_disconnect(self.id2)
 
    def buttonpress(self, event):
       if event.inaxes is None:  return
@@ -713,8 +715,13 @@ def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None,
       p.savefig(outfile)
    return p
 
-def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None):
+def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
    # clear out any previous bindings...  gotta be a better way to do this...
+   if pyplot.fignum_exists(111):
+      for lc in self.parent.data.values():
+         mp = getattr(lc, 'mp', None)
+         if mp is not None:
+            mp.bc.disconnect()
    if flux: 
       flipaxis = 0
    else:
@@ -767,8 +774,8 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None):
       p._x = None
 
    # Order of preference:  plot the model, else plot the spline, else
-   #  plot nothing
-   if self.band in self.parent.model._fbands:
+   #  plot nothing. If both and use_model is True, use the model
+   if self.band in self.parent.model._fbands and use_model:
       t = arange(-10,70,1.0) + Tmax
       m,em,mask = self.parent.model(self.band, t)
       m_m,m_em,m_mask = self.parent.model(self.band, self.MJD)
@@ -860,14 +867,14 @@ def replot_lc(self):
    if fig is not self.mp.fig:
       return
 
-   if self.interp is None:
-      p = self.mp.axes[0]
-      # Only need to deal with possible mask
-      if p._x:  p._x.remove()
-      if not alltrue(self.mask):
-         xx,yy = p.lines[0].get_data()
-         p._x, = p.plot(xx[-self.mask], yy[-self.mask], 'o', color='red')
-         self.mp.fig.canvas.draw()
+   if self.interp is None or getattr(self, '_t', None) is None:
+      for p in self.mp.axes:
+         # Only need to deal with possible mask
+         if p._x:  p._x.remove()
+         if not alltrue(self.mask):
+            xx,yy = p.lines[0].get_data()
+            p._x, = p.plot(xx[-self.mask], yy[-self.mask], 'o', color='red')
+            self.mp.fig.canvas.draw()
       return
 
    self.interp.mask = self.mask

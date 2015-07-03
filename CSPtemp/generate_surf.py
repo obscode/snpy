@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from snpy import CSPtemp
 import os,sys
-from numpy.oldnumeric import *
+from numpy import *
 #from scipy.interpolate import bisplrep
 #from scipy.interpolate import bisplev
 #from pygplot import *

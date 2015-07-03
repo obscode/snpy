@@ -346,6 +346,36 @@ messages = ['Bad input parameters','chi-square less than ftol',
 def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None, 
       normfilter=None, z=0, verbose=0, anchorwidth=100,
       method='tspline', xtol=1e-6, ftol=1e-6, gtol=1e-6, **margs):
+   '''Given an input spectrum, multiply by a smooth function (aka mangle)
+   such that the synthetic colors match observed colors.
+
+   Args:
+      wave (float array):  Input wavelengths in Angstroms
+      flux (float array):  Input fluxes in arbitrary units
+      bands (list of str): list of observed filters
+      mags (float array): Observed magnitudes
+      m_mask (bool array): mask array indicating valid magnitudes.
+      fixed_filters (str or None):  If not None, append fake filters on the
+                                    red and/or blue end of the spectrum, keeping
+                                    their mangled flux fixed. Specify 
+                                    'red', 'blue', or 'both'.
+      normfilter (str): If specified, the resulting mangled spectrum is 
+                        normalized such that the flux through normfilter is
+                        the same as the input spectrum.
+
+      z (float):  redshift
+      verbose (bool): output extra info.
+      anchorwidth (float): width of the "fixed filters" at either end of
+                           the SED in Angstroms.
+      method (str): specify the method (function form) with which to mangle
+                    the spectrum. 'tspline' for tension spline or 'ccm' for
+                    the CCM reddening law.
+      xtol,ftol,gtol (float):  used to define the tolorance for the 
+                    goodness of fit. See ``scipy.optimize.leastsq`` for
+                    meaning of these parameters.
+      margs (dict): All additional arguments to function are sent to 
+                    the :class:`mangle_spectrum.Mangler` class.
+      '''
    m = mangler(wave, flux, method, z=z, verbose=verbose, 
          normfilter=normfilter, **margs)
    if len(num.shape(mags)) == 1:

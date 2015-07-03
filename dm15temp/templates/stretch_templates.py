@@ -1,10 +1,8 @@
-## Automatically adapted for numpy.oldnumeric Feb 04, 2009 by ipython
-
 #!/usr/bin/env python
 
 from fit_lightcurves import *
 from pygplot import *
-import numpy.oldnumeric as num
+import numpy as num
 
 f = open('stretch.dat','w')
 

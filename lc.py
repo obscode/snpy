@@ -1,7 +1,6 @@
 from numpy import *
 from filters import fset
 import numpy.random as RA
-from utils import stats
 from utils import fit1dcurve
 from utils import InteractiveFit
 import plotmod
@@ -15,21 +14,9 @@ else:
 class lc:
    '''This class contains the data representing a lightcurve.  This means 
    the time (in MJD), magnitudes, uncertainties, fluxes, etc.  It is meant 
-   to be contained by the super class, to make for somewhat more convenient 
-   access to the data.  The member data and functions are as follows:
-      - self.parent         The parent super class
-      - self.band           Which band does the data represent
-      - self.MJD            The time data in Modified Julian Day (JD - 2400000.5)
-      - self.t              (self.MJD - parent.Tmax)  Quick way to get epoch
-      - self.mag            magnitudes
-      - self.e_mag          uncertainties therein
-      - self.covar          full error matrix, if known (otherwise, diagonal based on
-                            self.e_mag
-      - self.flux           flux-based brightnesses
-      - self.e_flux         uncertainties therein
-      - self.mask           boolean array, used to mask out bad/
-                            inappropriate values
-      - self.filter         reference to the filter instance'''
+   to be contained by the :class:`snpy.sn` class, to make for somewhat more 
+   convenient access to the data.
+   '''
 
    def __init__(self, parent, band, MJD, mag, e_mag, restband=None, K=None, SNR=None):
       self.parent = parent     # pointer to the SN containing class
@@ -368,32 +355,30 @@ class lc:
       else:
          self.dm15 = self.e_dm15 = -1
 
-      if sometrue(Tgids*dgids):
+      if sum(Tgids*dgids) > 3:
          self.cov_Tmax_dm15 = \
                sum(compress(Tgids*dgids, (Tmaxs-Tmaxs[0])*(dm15s-dm15s[0])))/\
                (sum(Tgids*dgids) - 1)
       
-      if sometrue(Tgids*Mgids):
+      if sum(Tgids*Mgids) > 3:
          self.cov_Tmax_Mmax = \
                sum(compress(Tgids*Mgids, (Tmaxs-Tmaxs[0])*(Mmaxs-Mmaxs[0])))/\
                (sum(Tgids*Mgids) - 1)
-      if sometrue(Mgids*dgids):
+      if sum(Mgids*dgids) > 3:
          self.cov_Mmax_dm15 = \
                sum(compress(Mgids*dgids, (Mmaxs-Mmaxs[0])*(dm15s-dm15s[0])))/\
                (sum(Mgids*dgids) - 1)
       return
 
-   def plot(self, epoch=1, flux=0, gloes=True, symbol=4, outfile=None):
+   def plot(self, epoch=1, flux=0, gloes=True, symbol=4, outfile=None,
+         use_model=True):
       '''Plot this light-curve.  If epoch=1, plot times relative to self.Tmax.
       If flux=1, plot in flux units.  If [gloes], use GLoEs to smooth 
       the data and produce a model.  You can specify the symbol to plot with 'symbol'.
       If you provide [outfile], the graph will be saved to [outfile]'''
-      # first, do some cleanup if we're using matplotlib:
-      try:
-         self.mp.bc.disconnect()
-      except:
-         pass
-      return plotmod.plot_lc(self, epoch, flux, symbol, outfile=outfile)
+
+      return plotmod.plot_lc(self, epoch, flux, symbol, outfile=outfile,
+            use_model=use_model)
 
    def replot(self):
       '''Replot a figure, if it exists and belongs to this instance.'''

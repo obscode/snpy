@@ -1,31 +1,12 @@
 #!/usr/bin/env python
 '''
+A module for computing k-corrections. This code has been assembled from many
+sources, mostly from IRAF scripts written by Mark Phillips and IDL code 
+written by Mark Sullivan.
 
-A module for computing k-corrections.  This module contains the following 
-functions:
-
-   get_SED(day, version):    Retrieve the SED of a SNIa.  The version can
-                           refer to : 'H':  Hsiao (published)
-                                      'H3': Hsiao (unpublished with NIR)
-                                      'N':  Nugent
-                                      '91bg': Nugent's SN1991bg template
-   redden:  Use CCM+ODonnel to redden an SED.  Optionally redden by both a
-            local(z=0) reddening law and high-z reddening law
-   K:  compute the k-correction for a single spectrum and filter combo
-   kcorr: compute the k-correction (without mangling) for a list of
-          epochs
-   kcorr_mangle:  compute the k-corrections (with mangling) for a list of
-          epochs
-   kcorr_mangle2:  comptute the k-corrections (with mangling) for a list of
-          spectra.
-
-Original comments from Mark's IRAF code:
- T_NEWXKCORR -- Calculate cross-band K Correction from a 1-d spectrum.
- This version converts the spectrum to photons before multiplying by the filter trans.
-  
-   Program written by MMP
-     Re-written in python by CRB
-  Added reddening correction for galactic and host extinctions'''
+Most of the heavy lifting w.r.t. integration of filters over the SED has
+been moved to the :mod:`snpy.filter` module.
+'''
 
 import os,sys,string,re
 #import pygplot
@@ -114,8 +95,24 @@ else:
          head['CRPIX1'] + 1)*head['CDELT1']
 
 def get_SED(day, version='H3'):
-   '''Retrieve the SED for a SN on day 'day' (where day=0 corresponds to Bmax). 
-   If version = 'H', use Eric Hsiao's version.  Otherwise, use Peter Nugent's.'''
+   '''Retrieve the SED for a SN for a particular epoch.
+   
+   Args:
+      day (int): The integer day w.r.t. time of B-maximum
+      version (str): The version of SED sequence to use:
+
+         * 'H': Old Hsiao Ia SED (Hsiao, private communication)
+         * 'H3': Hsiao+2007 Ia SED
+         * 'N': Nugent+2002 Ia SED
+         * '91bg': a SN1991bg Ia SED (Peter Nugent)
+
+   Returns:
+      2-tuple: (wave,flux):
+
+      * wave (array):  Wavelength in Angstroms
+      * flux (array):  arbitrarily normalized flux
+   '''
+
    if version in ['H','H3','N']:
       if day < -19 or day > 70:  return (None,None)
       if version == 'H':
@@ -133,11 +130,25 @@ def get_SED(day, version='H3'):
 def redden(wave, flux, ebv_gal, ebv_host, z, R_gal=3.1, R_host=3.1,
       redlaw='ccm', strict_ccm=False):
    '''Artificially redden the spectral template to simulate dust reddening, a la
-   Cardelli et al.  Unless over-ridden, the standard reddening coefficients is 
-   assumed (Rv=3.1) for both the Milky Way and host.  You can choose which
-   redening law (CCM or Fitzpatrick) by specifying redlaw='ccm' or
-   redlaw='fm', respectively.'''
+   Cardelli et al.
    
+   Args:
+      wave (float array): Input wavelength in Angstroms
+      flux (float array): arbitrarily scaled SED flux
+      ebv_gal (float): color excess to be applied in rest-frame (due to MW)
+      ebv_host (floag): color excess to be applied at host redshift
+      z (float): redshift of the host extinction
+      R_gal (float): Ratio of total to selective absoption in V for restframe
+                     component of extinction.
+      R_host (float): Ratio of total to selective absorption in V for host
+                      frame extinction.
+      redlaw (str): Form of the dust extinction curve. Possible values are
+                    'ccm', 'f99', or 'fm07'. See :mod:`snpy.utils.deredden`.
+   
+   Returns:
+      float array: reddened flux.
+   '''
+
    #First we redden due to galactic extinction:
    newflux = 1.0*flux
    # ebv_host is in the frame of the SN
@@ -152,10 +163,25 @@ def redden(wave, flux, ebv_gal, ebv_host, z, R_gal=3.1, R_host=3.1,
    return(newflux)
 
 def K(wave, spec, f1, f2, z, photons=1):
-   '''compute single K-correction based on spectrum defined by [wave] and 
-   [spec].  [f1] is the filter instance of the rest-frame filter.  [f2] is a 
-   filter instance of the observer-frame filter.  So f1 should be either be 
-   the same as f2 (for low-z) or bluer than f2.'''
+   '''compute single K-correction based on a single spectrum and set of 
+   observed and rest-frame filters.
+   
+   Args:
+      wave (float array): input wavelength in Angstroms
+      flux (float array): arbitrarily scaled flux
+      f1 (filter instance): Rest-frame filter.
+      f2 (filter instance): Observed filter. This could be the same as f1 or
+                            a redder filter for cross-band K-correction
+      z (float): redshift
+      photons (bool): If True, fluxes are computed in units of photons rather
+                      than energy (see Nugent+2002)
+   
+   Returns:
+      2-tuple: (K,flag)
+
+      * K: K-correction
+      * flag: 1 -> success, 0->failed
+   '''
 
    # The zero-points
    zpt1 = f1.zp
@@ -178,9 +204,35 @@ def K(wave, spec, f1, f2, z, photons=1):
 
 def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1, 
       R_host=3.1, version="H3", photons=1):
-   '''Find the cross-band k-correction for rest band [filter1] to observed
-   band [filter2] at redshift [z].  In other words, [filter1] should be bluer 
-   than [filter2] if [z] is a at red-shift.'''
+   '''Find the cross-band k-correction for a series of type Ia SED from
+   SNooPy's catalog. These can be thought of as "empirical" K-corrections.
+   
+   Args:
+      days (float array): epochs (t-T(Bmax)) to compute
+      filter1 (str):  rest-frame filter
+      filter2 (str):  observed filter. This can be the same as filter1,
+                      or another, redder, filter for cross-band K-corrections
+      z (float): redshift
+      ebv_gal (float): restframe (foreground) color excess to be applied to
+                       SED before computing K-corrections
+      ebv_host (float): host-galaxy color excess to be applied to SED before
+                       computing K-correction
+      R_gal (float): Ratio of selective to total absorption at V for restframe
+                     extinction.
+      R_host (float): Ratio of selective to total absorption at V for host
+                     extinction.
+      version (str): Which SED sequence to use. See :func:`.get_SED`
+      photons (bool): If True, compute fluxes in units of photons rather
+                      than energy. Default is true and should be used unless
+                      filter definition is in energy units.
+
+   Returns
+      2-tuple:  (K,mask)
+
+      * K (float array): K-corrections
+      * mask (bool array): True where K-corrections are valid.
+                     
+   '''
 
    if filter1 not in filters.fset:
       raise AttributeError, "filter %s not defined in filters module" % filter1
@@ -214,17 +266,40 @@ def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1,
 
 def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z, 
       colorfilts=None, full_output=0, **mopts): 
-   '''Find the (cross-band) k-correction for each filter in [restfilts] to
-   observed corresponding filter in [fitls] at redshift [z], using the provided
-   [colorfilts] (or [filts] if [colorfilts] is not defined) and magnitudes
-   [mags] to mangle the SED provided in [waves],[spectra].  The SED must be in
-   the REST frame.  The array [mags] and [mask] should have dimensions
-   (len([spectra]),len( [colorfilts])) so that mags[i,j] coorespond to the
-   magnitude for spectra[i] in filter filts[j].  The mask is used to determine
-   which magnitudes are good and which are bad (for whatever reason).  This
-   version is good if you have your own spectra to mangle instead of the Nugent
-   or Hsiao templates.'''
+   '''Compute (cross-)band K-corrections with "mangling" using provided
+   spectral SEDs. The SEDs are first multiplied by a smooth spline such that
+   the synthetic colors match the observed colors.
 
+   Args:
+      waves (list of float arrays):  Input wavelengths in Angstroms
+      spectra (list of float arrays):  Input fluxes in arbitrary units
+      filts (list of str): list of observed filters
+      mags (2d float array): Observed magnitude array indexed by
+                             [spectrum index,filter index]
+      m_mask (2d bool array): mask array indicating valid magnitudes. Indexed
+                              by [spectrum index,filter index]
+      restfilts (list of str): Rest-frame filters corresponing to filts.
+      z (float):  redshift
+      colorfilts (list of str): (optional) Sub set of filters to use in 
+                              mangling colors (filters that have very similar
+                              effective wavelengths can make for unstable
+                              splines).
+      full_output (bool):  If True, output more information than just the
+                          K-corrections and mask.
+      mopts (dict): All additional arguments to function are sent to 
+                    :func:`snpy.mangle_spectrum.mangle_spectrum2`.
+   
+   Returns:
+      tuple:
+
+         * if not full_output: 2-tuple (K,mask):
+            * K (flaot array):  K-corrections for filts
+            * mask (bool array): mask of valid K-corrections
+         * if full_output: 5-tuple (K,mask,anchors,factors,funcs)
+            * anchors (float array): wavelengths of anchor points
+            * factors (float array): factors corresponding to anchors
+            * funcs (float array): mangling function evaluated at anchors
+   '''
    if colorfilts is None:  colorfilts = filts
    for filter1 in filts + restfilts + colorfilts:
       if filter1 not in filters.fset:
@@ -296,25 +371,43 @@ def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z,
 
 def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H', 
       colorfilts=None, full_output=0, mepoch=False, **mopts):
-   '''Find the (cross-band) k-correction for each filter in [restfilts] to
-   observed corresponding filter in [filts] at redshift [z], using the provided
-   [colorfilts] (or [filts] if [colorfilts] is not defined) and magnitudes to
-   mangle the SED.  The array [mags] and [mask] should have dimensions
-   (len(days),len( colorfilts)) so that mags[i,j] correspond to the magnitude
-   on day days[i] in filter filts[j].  The mask is used to determine which
-   magnitudes are good and which are bad (for whatever reason).  Use this
-   version if your data needs to be masked in any way.  If [full_output]=True,
-   returm a list of [waves,factors] of
+   '''Compute (cross-)band K-corrections with "mangling" using built-in library
+   of spectral SEDs. The SEDs are first multiplied by a smooth spline such that
+   the synthetic colors match the observed colors.
 
-   Output: 
-      kcorrs,mask      array of k-corrections and associated masks
+   Args:
+      days (float array): epochs (t-Tmax(B)) at which to compute K-corrections
+      filts (list of str): list of observed filters
+      mags (2d float array): Observed magnitude array indexed by
+                             [spectrum index,filter index]
+      m_mask (2d bool array): mask array indicating valid magnitudes. Indexed
+                              by [spectrum index,filter index]
+      restfilts (list of str): Rest-frame filters corresponing to filts.
+      z (float):  redshift
+      version (str): Specify which spectral sequence to use. See
+                     :func:`.get_SED`.
+      colorfilts (list of str): (optional) Sub set of filters to use in 
+                              mangling colors (filters that have very similar
+                              effective wavelengths can make for unstable
+                              splines).
+      full_output (bool):  If True, output more information than just the
+                          K-corrections and mask.
+      mepoch (bool): If True, a single mangling function is solved for
+                     all epochs. EXPERIMENTAL.
+      mopts (dict): All additional arguments to function are sent to 
+                    :func:`snpy.mangle_spectrum.mangle_spectrum2`.
+   
+   Returns:
+      tuple:
 
-      if full_output=1: 
-      kcorrs,mask,Rts,m_opts   Rts are the observed reddening
-         coefficients computed from the mangled SED.  m_opts is a list of
-         dictionaries that can be used to re compute the mangled spectrum.  For
-         example: apply_mangle(wave,spec,**m_opts[2]) will give back the mangled
-         spectrum for day days[2].  '''
+         * if not full_output: 2-tuple (K,mask):
+            * K (flaot array):  K-corrections for filts
+            * mask (bool array): mask of valid K-corrections
+         * if full_output: 5-tuple (K,mask,anchors,factors,funcs)
+            * anchors (float array): wavelengths of anchor points
+            * factors (float array): factors corresponding to anchors
+            * funcs (float array): mangling function evaluated at anchors
+   '''
 
    if 'method' in mopts:
       method = mopts['method']
@@ -464,14 +557,33 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
       return(kcorrs, mask, Rts, m_opts)
 
 def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal, 
-      Rv_host=3.1, Rv_gal=3.1, version='H'):
-   '''Compute the observed value of R based on a fiducial value of Rv for 
-   both Galactic and host extinction and the SED of a supernova.  filter[1-3]
-   are used in the sense that absorption in band filter1 is:
-      A(filter1) = R(filter1,filter2,filter3)*E(filter2-filter3)
+      Rv_host=3.1, Rv_gal=3.1, version='H', redlaw='f99', strict_ccm=False):
+   '''Compute the observed value of the selective-to-total extinction, R,
+   by applying an extinction curve to a set of library Ia spectral SEDs and
+   computing synthetic photometry:
+   .. math::
+      A(\lambda_1) = R\ E(\lambda_2-\lambda_3)
+
    where
-      E(filter2-filter3) = (filter2-filter3) - (filter2-filter3)_0,
-   ie, the color excess for filters filter2 and filter3.'''
+
+   .. math::
+      E(\lambda_2-\lambda_3) = (m_{\lambda_2} - m_{\lambda_3}) - 
+                              (m_{\lambda_2} - m_{\lambda_3})_o 
+
+   ie, the color excess for filters \lambda_2 and \lambda_3.
+   
+   Args:
+       filter1,filter2,filter3 (str): the 3 filters defining R
+       z (float): redshift of host compoenent of extinction
+       days (int array): epochs at which to comptue R (t-Tmax(B))
+       EBVhost (float): host component of extinction to apply
+       EBVgal (float): Milky-way (foreground) component of extinction to apply
+       Rv_host (float): R_V for host component
+       Rv_gal (float): R_V for MW component
+       version (str): Version of Ia SED library. See :func:`.get_SED`.
+       redlaw (str): Which reddening law to use. See :mod:`snpy.utils.deredden`
+       strict_ccm (bool): If True and using CCM reddening law, do not apply
+                          the corrections due to O'Donnel.'''
    try:
       N = len(days)
       outarr = 1
@@ -485,7 +597,8 @@ def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal,
       if spec_wav is None:
          Rs.append(99.9)
       # Redden the spectrum based on Cardelli et al. and assumed EBVgal + EBVhost
-      red_f = redden(spec_wav, spec_f, EBVgal, EBVhost, z, Rv_gal, Rv_host)
+      red_f = redden(spec_wav, spec_f, EBVgal, EBVhost, z, Rv_gal, Rv_host,
+            redlaw=redlaw, strict_ccm=strict_ccm)
       for filter in [filter1,filter2,filter3]:
          if filter not in filters.fset:
             raise AttributeError, "filter %s not defined in filters module" % filter
@@ -540,7 +653,8 @@ def A_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1,
    else:
       return(As[0])
 
-def R_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1, version='H'):
+def R_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1, 
+      version='H', redlaw='f99', strict_ccm=False):
    '''Compute the 'true' value of R based on a fiducial value of Rv for both Galactic and
    host extinction and the SED of a supernova.  The filter is such that:
       A(filter) = R(filter)*E(B-V).'''
@@ -560,7 +674,8 @@ def R_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1, version='H'
          Rs.append(99.9)
          continue
       # rEDDEN the spectrum based on Cardelli et al. and assumed EBVgal + EBVhost
-      red_f = redden(spec_wav, spec_f, EBVgal, EBVhost, z, Rv_gal, Rv_host)
+      red_f = redden(spec_wav, spec_f, EBVgal, EBVhost, z, Rv_gal, Rv_host,
+            redlaw=redlaw, strict_ccm=strict_ccm)
 
       if filter not in filters.fset:
          raise AttributeError, "filter %s not defined in filters module" % filter
@@ -576,7 +691,8 @@ def R_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1, version='H'
    else:
       return(Rs[0])
 
-def R_obs_spectrum(filts, wave, flux, z, EBVgal, EBVhost, Rv_gal=3.1, Rv_host=3.1):
+def R_obs_spectrum(filts, wave, flux, z, EBVgal, EBVhost, Rv_gal=3.1, 
+      Rv_host=3.1, redlaw='f99', strict_ccm=False):
    '''Compute the 'true' value of R based on a fiducial value of Rv for both Galactic and
    host extinction and the SED given by wave,flux for each filter in filters.  The filter 
    is such that: A(filter) = R(filter)*E(B-V).'''
@@ -588,7 +704,8 @@ def R_obs_spectrum(filts, wave, flux, z, EBVgal, EBVhost, Rv_gal=3.1, Rv_host=3.
       outarr = 1
 
    # redden the spectrum based on EBVhost and EBVgal:
-   red_f = redden(wave, flux, EBVgal, EBVhost, z=z, R_gal=Rv_gal, R_host=Rv_host)
+   red_f = redden(wave, flux, EBVgal, EBVhost, z=z, R_gal=Rv_gal, 
+         R_host=Rv_host, redlaw=redlaw, strict_ccm=strict_ccm)
 
    # Compute absoption in each filter:
    for filter in filts:
