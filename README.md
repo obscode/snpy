@@ -1,17 +1,5 @@
-SNpy:  A python package for analysing TypeIa SN light-curves.
-Author:  Chris Burns (cburns@obs.carnegiescience.edu)
-
-LICENSE:
-
-   None really.  Use it as you see fit, but please give credit where it is
-   due and consider including a citation and acknowledgement where appro-
-   priate:
-
-
-   \bibitem[Burns et al.(2011)]{2011AJ....141...19B} Burns, C.~R., 
-   Stritzinger, M., Phillips, M.~M., et al.\ 2011, \aj, 141, 19 
-
 PURPOSE
+-------
 
    SNPY (or more affectionately SNooPy) is a Python package for fitting the
    light-curves of TypeIa supernovae.  It is NOT an off-the-shelf program that
@@ -21,12 +9,13 @@ PURPOSE
    The package also contains a number of stand-alone sub-packages that can be
    installed seperately.
 
-   You can find intructions for installing snpy in the INSTALL file.
+   You can find intructions for installing snpy in the INSTALL file and at
+   the following website:
 
    http://csp.obs.carnegiescience.edu/data/snpy/installing_snoopy2
    
-   Documentation can be found the the doc/ directory under the source tree.  But
-   briefly, here is what SNOOPY can do:
+   Documentation can be found the the docs/ directory under the source tree.  
+   But briefly, here is what SNOOPY can do:
    
       - Fit lightcurve templates to data.  These templates were constructed
         from the Carnegie Supernova Project's low-z data set (as outlined in

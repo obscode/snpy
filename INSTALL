@@ -10,6 +10,7 @@ to install the following:
  - ipython
  - pyfits
  - pymc (optional for GP fitting)
+ - astropy (optional for compute cosmology-based distance moduli)
 
 Once you've got that installed, simply run the usual:
 
