@@ -1,27 +1,28 @@
 What Is SNooPy?
 ===============
 
-SNooPy grew organically out of a need to fit NIR light-curves. There was no
-plan, so the design may look a bit weird in places. SNooPy is a python module
-for fitting and analyzing the photometry of supernovae, particularly type Ias.
-It is meant to be run interactively through the ``ipython`` shell, but of
-course, you can write non-interactive scripts as well.  SNooPy comes with
-a shell script that launches ipython, loads ``snpy`` modules and makes sure
-the plotting driver is correctly configured. Just run it from the shell::
+SNooPy grew organically out of a need to fit NIR light-curves of type Ia
+supernovae. There was no plan, so the design may look a bit weird in places.
+Currently, SNooPy is a python module for fitting and analyzing the photometry of
+supernovae, particularly type Ia's.  It is meant to be run interactively through
+the ``ipython`` shell, but of course, you can write non-interactive scripts as
+well.  SNooPy comes with a shell script that launches ipython, loads ``snpy``
+modules and makes sure the plotting driver is correctly configured. Just run it
+from the shell::
 
   % snpy
 
 The module, ``snpy`` has several classes and utilities. Most of the interaction
 comes from the use of the supernova class ``sn``. You instantiate a supernova
-by loading data from a file :func:`~snpy.sn.get_sn` or connecting to a 
+by loading data from a file using :func:`~snpy.sn.get_sn` or connecting to a 
 database :mod:`~snpy.sqlmod`.
 The convenience function ``get_sn`` tries to figure out which::
 
    In[1]: s = get_sn('some_file.txt')   # Load ASCII file
    In[2]: s = get_sn('SN2004ef')        # Query database
 
-The supernova is now bound to the variable ``s``. It has a whole bunch of
-global member data (``s.ra``, ``s.decl``, ``s.z``, ``s.zcmb``) that define it's 
+The supernova is now bound to the variable ``s``. It has a a lot  of
+member data (``s.ra``, ``s.decl``, ``s.z``, ``s.zcmb``) that define it's 
 position, and several member functions for getting stuff done.  Most imporantly,
 there is the ``sn.fit()`` member function that fits a model to the data::
 
