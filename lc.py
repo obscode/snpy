@@ -245,10 +245,10 @@ class lc:
       if self.interp is None:
          # Try to use a model
          if self.band not in self.parent.model._fbands: raise AttributeError, \
-               "Error.  To interpolate, you need to fit a template or model
-               first."
+               "Error.  To interpolate, you need to fit a template or model first."
          
-      times = atleast_1d(times) if epoch: times = times + self.parent.Tmax
+      times = atleast_1d(times) 
+      if epoch: times = times + self.parent.Tmax
 
       if self.interp is not None:
          evm,mask = self.interp(times)

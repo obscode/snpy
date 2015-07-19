@@ -1,6 +1,11 @@
-'''Model.py:  a class that defines a SN model to be fit by SNOOPY.
+'''Model.py:  a module that defines the SN models to be fit by SNOOPY.
 
-New:  Add an optional [decline_param] to choose between a dm15 model and stretch (st)  model'''
+A base class (Model) is defined to handle most of the heavy-lifting and boiler
+plate around scipy.optimize.leastsq. Defining a new model is done by sub-
+classing Model and overriding the member functions.
+
+New:  Add an optional [decline_param] to choose between a dm15 model and stretch
+      (st)  model'''
 import os,string
 from snpy import ubertemp
 from snpy import kcorr
@@ -23,7 +28,7 @@ base = os.path.dirname(globals()['__file__'])
 
 it_sigma = 1.0
 
-def quniform_prior(p,pmin,pmax,sigma):
+def _quniform_prior(p,pmin,pmax,sigma):
    '''A quasi-uniform prior (uniform with Gaussian tails).'''
    norm = 1.0/((pmax - pmin)+sqrt(2*pi)*sigma)
    if pmin < p < pmax:  return norm
@@ -32,10 +37,18 @@ def quniform_prior(p,pmin,pmax,sigma):
 
 
 class model:
+   '''The base class for SNooPy light-curve models. It contains the parameters
+   to be solved and its __call__ function returns the model for a filter's
+   data. It has several convenience member functions for figuring out things
+   like K-corrections and reddening coefficients.'''
 
    model_in_mags = 1
 
    def __init__(self, parent):
+      '''Setup the model.
+      Args:
+         parent (snpy.sn instance): The parent sn class.
+      '''
       self.parent = parent       # make a link to the SN object
       self.parent.model = self   # make a link to the model
       self.parameters = {}    # dictionary of parameters of the model
@@ -51,13 +64,24 @@ class model:
 
    def guess(self, param):
       '''A function that is run and picks initial guesses for
-      the parameter [param].'''
+      the parameter.
+      
+      Args:
+         param (str):  the name of the parameter.
+      Returns:
+         Value: initial guess for the parameter.'''
       raise NotImplementedError('Derived class must overide')
 
    def prior(self, param, value):
       '''An optional prior on the parameters.  To be filled in
       based on implementation.  This should return the probability
-      given the current value of param [param].'''
+      given the current value of a parameter.
+
+      Args:
+         param (str): The name of the parameter
+         value (float): The current value of the parameter.
+      Returns:
+         prior (float):  the probability of parameter.'''
       return 1.0
 
    def setup(self):
@@ -65,20 +89,20 @@ class model:
       etc)'''
       raise NotImplementedError('Derived class must overide')
 
-   def model(self, bands, **args):
-      '''A function that models the data in [parent] and returns
-      the model values and the weights.'''
-      model = {}.fromkeys(bands,None)
-      weights = {}.fromkeys(bands,None)
-
-      return model,weights
-
-   def model_lc(self, band):
-      '''For band [band], produce a model lightcurve suitable for plotting as a line.'''
-      raise NotImplementedError('Derived class must overide')
-
    def kcorr(self, band, t):
-      '''Convenience function to call back to the parent and get the k-corrections.'''
+      '''Convenience function to call back to the parent and get the 
+      k-corrections.
+      
+      Args:
+         band (str):  the name of the filter
+         t (float array): The epochs (t - T(Bmax)) of the observations
+      Returns:
+         2-tuple (K,mask)
+         
+         * K (float array): K-corrections
+         * mask (bool array): True where K-corrections are valid
+      '''
+
       # If k-corrections are there, use them
       if band in self.parent.ks_tck:   
          tck = self.parent.ks_tck[band]
@@ -98,7 +122,16 @@ class model:
       return K,mask2
 
    def MWR(self, band, t):
-      '''Determine the best R_\lambda for the foreground MW extinction.'''
+      '''Determine the best R_\lambda for the foreground MW extinction.
+      
+      Args:
+         band (str):  The name of the filter
+         t (float array): The epoch (t - T(Bmax)) of the observations.
+         
+      Returns:
+         float array: R_\lambda for the filter at times t.
+      '''
+
       if band in self.parent.Robs:
          if type(self.parent.Robs[band]) is type(()):
             R = scipy.interpolate.splev(t+self.parent.Tmax, 
@@ -122,7 +155,20 @@ class model:
       set of bands [bands].  All other arguments are passed directly to
       the model() member function as optional arguments.  After running,
       the free parameters will be set to their fit values and self.C will
-      contain the covariance matrix'''
+      contain the covariance matrix.
+      
+      Args:
+         bands (list of str): The filters to fit
+         epsfcn (float): see scipy.optmize.leastsq.
+         
+      Returns:
+         None
+         
+      Effects:
+         The member variables self.parameters and self.eparameters will
+         be set with best-fit values. self.C will be updated with the 
+         values from the covariance matrix.
+      '''
       self.args = args.copy()
       if debug:  print "model.fit() called with args = ", args
 
@@ -133,8 +179,6 @@ class model:
       self._fbands = bands
 
       # Setup the MW reddening
-
-
       self.setup()
 
       # build up the fixed variables
@@ -193,8 +237,42 @@ class model:
       return zeros((t.shape[0],t.shape[0]))
 
    def systematics(self):
-      '''compute the systematic errors associated with the model paramters.'''
-      systs = dict.fromkeys(self.paramters.keys())
+      '''compute the systematic errors associated with the model paramters.
+      
+      Args:
+         None
+      
+      Returns:
+         dict:  a dictionary of systematic errors keyed by parameter
+                name.  It therefore depends on the model being used.  Also
+                see the specific model for any extra arguments.  If None
+                is returned as a value, no systematic has been estimated
+                for it.'''
+      raise NotImplementedError('Derived class must overide')
+
+   def get_max(self, bands, restframe=0, deredden=0):
+      '''Get the maxima of the light-curves, given the current state of
+      the model.
+
+      Args:
+         bands (list of str):  list of filters to find maxima for
+         restframe (bool):  If True, apply K-corrections to maximum magnitudes
+         deredden (bool):  If True, apply all known extinction corrections
+                           to maximum magnitudes. Note: this will always
+                           correct for Milky-Way extinction, but in some
+                           models, host-galaxy extinction may be removed as
+                           well.
+
+      Returns: 
+         4-tuple:  (Tmax,Mmax,eMmax,restbands):
+
+         * Tmax (list of floats): Time of maxima for each filter
+         * Mmax (list of floats): Maximum magnitudes for each filter
+         * eMmax (list of floats): errors in maximum magnitudes
+         * restbands (list of str): The rest-bands used to fit each observed
+                                    filter
+   '''
+      raise NotImplementedError('Derived class must overide')
 
    def _wrap_model(self, pars, bands, error):
       resids_list = []
@@ -272,7 +350,7 @@ class EBV_model(model):
       - EBVhost  (host galaxy extinction)
    The model is constructed by assuming a peak B absolute magnitude  and B-X
    colors based on the current value of dm15.  The colors are from Folatelli
-   et al. (2009), as are the calibration of Bmax vs dm15.  For the latter,
+   et al. (2010), as are the calibration of Bmax vs dm15.  For the latter,
    there are 6 calibrations, based on the sample used to make the fit.  The
    default is 6 (best observed, excluding heavily extincted SNe), but you can
    choose a different calibration by setting that argument in the fit() call.
@@ -317,7 +395,6 @@ class EBV_model(model):
 
 
    def setup(self):
-      # check to see if we have more than one filter when solving for EBV
       if 'EBVhost' not in self.args:
          if len(self._fbands) < 2:
             raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
@@ -511,7 +588,7 @@ class EBV_model2(model):
       - DM   (distance modulus)
       - EBVhost  (host galaxy extinction)
    The model is constructed by assuming a peak absolute magnitudes in tall
-   the filters, as derived in Burns et al. 2010.  Calibrations were determined
+   the filters, as derived in Burns et al. 2011.  Calibrations were determined
    using MCMC modeling on all filters at once, determining M_X and b_X for
    each filter, and one value for R_V.  There are 2 calibrations, based on the 
    sample used to make the fit and the prior used on the extinction.  Default
@@ -786,9 +863,9 @@ class max_model(model):
 
    #def prior(self):
    #   if self.stype == 'dm15':
-   #      return quniform_prior(self.parameters['dm15'], 0.4, 2.5,0.01)
+   #      return _quniform_prior(self.parameters['dm15'], 0.4, 2.5,0.01)
    #   elif self.stype == 'st':
-   #      return quniform_prior(self.parameters['st'], 0.2, 1.3, 0.01)
+   #      return _quniform_prior(self.parameters['st'], 0.2, 1.3, 0.01)
 
 
    def __call__(self, band, t):
@@ -1050,7 +1127,7 @@ class Rv_model(model):
       - Rv (host galaxy reddening law)
    The model is constructed by assuming a peak observed magnitude in B, 
    value of dm15, and Tmax.  This will fit the B-lightcurve.  To fit
-   the others, we use the Burns et al. (2010) calibrations to compute
+   the others, we use the Burns et al. (2011) calibrations to compute
    B - X  intrinsic colors, add extinction consistent with the current
    value of Rv and EBVhost to get predicted maximum magnitudes.'''
 
@@ -1234,6 +1311,8 @@ class color_model(model):
       - Bmax (maximum B magnitude)
       - EBVhost  (host galaxy extinction)
       - Rv (host galaxy reddening law)
+
+   The assumed colors are take from Burns et al. (2014).
    '''
 
    def __init__(self, parent, stype='st', normfilter='B'):

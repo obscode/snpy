@@ -87,7 +87,7 @@ class dict_def:
       return self.dict.keys()
 
 class sn(object):
-   '''This class is the meat SNooPy.  Create a supernova object by 
+   '''This class is the heart of SNooPy.  Create a supernova object by 
    calling the constructor with the name of the superova as the argument.  
    e.g::
    
@@ -1419,15 +1419,17 @@ class sn(object):
       Returns:
          matplotlib.figure:  the figure instance for the plot.
       '''
-      return plotmod.plot_filters(self, bands, day, outfile=outfile,**args)
+      return plotmod.plot_filters(self, bands, day, outfile=outfile)
 
 
-   def plot_color(self, f1, f2, epoch=True, outfile=None, clear=True):
+   def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None, 
+         clear=True):
       '''Plot the color curve (color versus time) given by f1 and f2.
 
       Args:
          f1,f2 (str):  The two filters defining the color (f1-f2)
          epoch (bool):  If True, plot time relative to Tmax
+         deredden (bool): If True, remove Milky-Way foreground reddening.
          outpfile (str): Optional name for graph output to file.
 
       Returns:
