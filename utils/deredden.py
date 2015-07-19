@@ -1,3 +1,13 @@
+'''
+This modules implements several reddening laws:  extinction as a function of
+wavelength. They are the following:
+
+- ccm: Cardelli, Clayton & Mathis (1989)
+- fm:  Fitzpatrick (1999).
+- fm07_full:  The fully-parametrized Fitzpatrick and Masa (2007) function.
+- fm07: Average Fitzpatric & Masa (2007) for MW.
+- nataf: Experiemental version of CCM from David Nataf.
+'''
 from scipy.interpolate import interp1d
 
 import numpy as num
