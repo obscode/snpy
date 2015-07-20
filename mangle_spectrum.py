@@ -16,7 +16,8 @@ try:
 except:
    tspline = None
 from snpy.utils import deredden
-from snpy.utils import mpfit
+#from snpy.utils import mpfit
+from scipy import optimize
 import copy
 #from matplotlib import pyplot as plt
 
@@ -114,7 +115,7 @@ class f_tspline(function):
       return  x[0]-x[1]-dw*(x[1]-x[2])
 
    def constr2(self, x):
-      knots = self.parent.wave_waves
+      knots = self.parent.ave_waves
       dw = (knots[-1] - knots[-2]) / (knots[-2] - knots[-3] )
       nf = len(self.parent.allbands)
       return  x[-1] - x[nf-2] - dw*(x[nf-2] - x[nf-3])
@@ -127,20 +128,20 @@ class f_tspline(function):
       if self.log:
          bounds = [(0,None) for p in bs]
       else:
-         boudns = None
+         bounds = None
 
       nf = len(bs)
       knots = self.parent.ave_waves
       if bs[0] == 'blue':
          if self.gradient:
-            cons.append({'type':'eq', 'func':self.contr1})
+            cons.append({'type':'eq', 'fun':self.constr1})
          else:
-            cons.append({'type':'eq', 'func':lambda x: x[0]-x[1]})
+            cons.append({'type':'eq', 'fun':lambda x: x[0]-x[1]})
       if self.parent.allbands[-1] == 'red':
          if self.gradient:
-            cons.append({'type':'eq', 'func':self.contr2})
+            cons.append({'type':'eq', 'fun':self.constr2})
          else:
-            cons.append({'type':'eq', 'func':lambda x: x[-1]-x[-2]})
+            cons.append({'type':'eq', 'fun':lambda x: x[-1]-x[-2]})
       return(vals,bounds,cons)
 
    def set_pars(self, pars):
@@ -418,8 +419,8 @@ class mangler:
       #quiet = 1
       #result = mpfit.mpfit(self.leastsq, parinfo=pi, quiet=quiet, maxiter=200,
       #      ftol=ftol, gtol=gtol, xtol=xtol, functkw={'bands':bands,'nid':id})
-      result = optimize.minimize(sef.leastsq, vals, bounds=bounds,
-            method='SLSQP', constraints=cons)
+      result = optimize.minimize(self.leastsq, vals, bounds=bounds,
+            method='SLSQP', constraints=cons, args=(bands,id))
       #if (result.status == 5) : print \
       #  'Maximum number of iterations exceeded in mangle_spectrum'
       self.function.set_pars(result.x)
