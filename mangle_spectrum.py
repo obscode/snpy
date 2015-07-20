@@ -57,33 +57,68 @@ class f_tspline(function):
       self.verbose = verbose
       self.log = log
 
+   #def init_pars(self, nid=0):
+   #   # one parameter for each knot points
+   #   p = []
+   #   if self.log:
+   #      limited = [0,0]
+   #   else:
+   #      limited = [1,0]
+   #   pi = [{'fixed':0, 'limited':limited, 'limits':[0.0,0.0], 'step':0.001, 
+   #          'value':1.0} for i in range(len(self.parent.allbands))]
+   #   bs = self.parent.allbands
+   #   nf = len(bs)
+   #   knots = self.parent.ave_waves
+   #   if bs[0] == 'blue':
+   #      if self.gradient:
+   #         dw = (knots[0] - knots[1])/(knots[1] - knots[2])
+   #         pi[0]['tied']='p[1] + %8.4f*(p[1]-p[2])' % (dw)
+   #      else:
+   #         pi[0]['tied'] = 'p[1]'
+   #   if self.parent.allbands[-1] == 'red':
+   #      pi[-1]['value'] = pi[-2]['value']
+   #      if self.gradient:
+   #         dw = (knots[-1] - knots[-2]) / (knots[-2] - knots[-3] )
+   #         pi[-1]['tied']='p[%d] + %8.4f*(p[%d]-p[%d])' % (nf-2, dw, nf-2, nf-3)
+   #      else:
+   #         pi[-1]['tied'] = 'p[%d]' % (nf - 2)
+   #   pi[nid]['fixed'] = 1
+   #   return(pi)
+
+   def constr1(self, x):
+      knots = self.parent.ave_waves
+      dw = (knots[0] - knots[1])/(knots[1] - knots[2])
+      return  x[0]-x[1]-dw*(x[1]-x[2])
+
+   def constr2(self, x):
+      knots = self.parent.wave_waves
+      dw = (knots[-1] - knots[-2]) / (knots[-2] - knots[-3] )
+      nf = len(self.parent.allbands)
+      return  x[-1] - x[nf-2] - dw*(x[nf-2] - x[nf-3])
+
    def init_pars(self, nid=0):
       # one parameter for each knot points
-      p = []
-      if self.log:
-         limited = [0,0]
-      else:
-         limited = [1,0]
-      pi = [{'fixed':0, 'limited':limited, 'limits':[0.0,0.0], 'step':0.001, 
-             'value':1.0} for i in range(len(self.parent.allbands))]
+      cons = []
       bs = self.parent.allbands
+      vals = [1.0 for p in bs]
+      if self.log:
+         bounds = [(0,None) for p in bs]
+      else:
+         boudns = None
+
       nf = len(bs)
       knots = self.parent.ave_waves
       if bs[0] == 'blue':
          if self.gradient:
-            dw = (knots[0] - knots[1])/(knots[1] - knots[2])
-            pi[0]['tied']='p[1] + %8.4f*(p[1]-p[2])' % (dw)
+            cons.append({'type':'eq', 'func':self.contr1})
          else:
-            pi[0]['tied'] = 'p[1]'
+            cons.append({'type':'eq', 'func':lambda x: x[0]-x[1]})
       if self.parent.allbands[-1] == 'red':
-         pi[-1]['value'] = pi[-2]['value']
          if self.gradient:
-            dw = (knots[-1] - knots[-2]) / (knots[-2] - knots[-3] )
-            pi[-1]['tied']='p[%d] + %8.4f*(p[%d]-p[%d])' % (nf-2, dw, nf-2, nf-3)
+            cons.append({'type':'eq', 'func':self.contr2})
          else:
-            pi[-1]['tied'] = 'p[%d]' % (nf - 2)
-      pi[nid]['fixed'] = 1
-      return(pi)
+            cons.append({'type':'eq', 'func':lambda x: x[-1]-x[-2]})
+      return(vals,bounds,cons)
 
    def set_pars(self, pars):
       self.pars = num.asarray(pars)
@@ -122,10 +157,10 @@ class f_ccm(function):
 
    def init_pars(self, nid=0):
       # one parameter for each of scale, ebv, rv
-      pi = [{'fixed':0, 'limited':[1,0], 'limits':[0.0, 0.0], 'value':1.0, 'step':0.0001},
-            {'fixed':0, 'limited':[0,0], 'value':0.0, 'step':0.0001},
-            {'fixed':0, 'limited':[1,0], 'limits':[0.0, 0.0], 'value':3.1, 'step':0.0001}]
-      return(pi[1:])
+      bounds = [(0,None),(None,None),(0,None)]
+      cons = None
+      vals = [1.0, 0.1, 3.1]
+      return(vals,bounds,cons)
 
    def set_pars(self, pars):
       self.pars = pars
@@ -292,18 +327,20 @@ class mangler:
 
 
       # Do some initial setup
-      pi = self.function.init_pars(nid=id)
+      vals,bounds,cons = self.function.init_pars(nid=id)
 
       if self.verbose:
          quiet = 0
       else:
          quiet = 1
       #quiet = 1
-      result = mpfit.mpfit(self.leastsq, parinfo=pi, quiet=quiet, maxiter=200,
-            ftol=ftol, gtol=gtol, xtol=xtol, functkw={'bands':bands,'nid':id})
-      if (result.status == 5) : print \
-        'Maximum number of iterations exceeded in mangle_spectrum'
-      self.function.set_pars(result.params)
+      #result = mpfit.mpfit(self.leastsq, parinfo=pi, quiet=quiet, maxiter=200,
+      #      ftol=ftol, gtol=gtol, xtol=xtol, functkw={'bands':bands,'nid':id})
+      result = optimize.minimize(sef.leastsq, vals, bounds=bounds,
+            method='SLSQP', constraints=cons)
+      #if (result.status == 5) : print \
+      #  'Maximum number of iterations exceeded in mangle_spectrum'
+      self.function.set_pars(result.x)
       if self.verbose:
          print "The final colors of the SED are:"
          print self.get_colors(bands)
@@ -312,7 +349,7 @@ class mangler:
 
       return(result)
 
-   def leastsq(self, p, fjac, bands, nid):
+   def leastsq(self, p, bands, nid):
       self.function.set_pars(p)
       mflux = self.get_mflux()
       mresp = self.resp_rats*0
@@ -334,7 +371,8 @@ class mangler:
       #   ax.plot(filts[self.gids], self.resp_rats[self.gids],'.')
       #   ax.plot(filts[self.gids], mresp[self.gids],'.')
       #plt.draw()
-      return (0, num.ravel(delt))
+      #return (0, num.ravel(delt))
+      return num.sum(num.power(delt,2))
 
 messages = ['Bad input parameters','chi-square less than ftol',
       'paramters changed less than xtol',
