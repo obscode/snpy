@@ -1,3 +1,13 @@
+'''
+This modules implements several reddening laws:  extinction as a function of
+wavelength. They are the following:
+
+- ccm: Cardelli, Clayton & Mathis (1989)
+- fm:  Fitzpatrick (1999).
+- fm07_full:  The fully-parametrized Fitzpatrick and Masa (2007) function.
+- fm07: Average Fitzpatric & Masa (2007) for MW.
+- nataf: Experiemental version of CCM from David Nataf.
+'''
 from scipy.interpolate import interp1d
 
 import numpy as num
@@ -10,7 +20,17 @@ def poly(x, c):
    return ret
 
 def ccm(wave, strict_ccm=0):
-   '''Returns the Cardelli, Clayton, and Mathis (CCM) reddening curve.'''
+   '''Returns the Cardelli, Clayton, and Mathis (CCM) reddening curve.
+   
+   Args:
+      wave (float array): wavelength in Angstroms
+      strict_ccm (bool): If True, return original CCM (1989), othewise
+                         apply updates from O'Donnel (1994)
+                        
+   Returns:
+      2-tupe (a,b):
+      The coeffients such that A_\lambda/A_V = a + b/R_V
+   '''
    x = 10000./ wave                ; #Convert to inverse microns 
    a = 0.0*x
    b = 0.0*x
@@ -79,101 +99,32 @@ def ccm(wave, strict_ccm=0):
    return(a,b)
 
 def fm(wave, R_V=3.1, avglmc=False, lmc2=False):
-   # NAME:
-   #    FM_UNRED
-   # PURPOSE:
-   #    Deredden a flux vector using the Fitzpatrick (1999) parameterization
-   # EXPLANATION:
-   #    The R-dependent Galactic extinction curve is that of Fitzpatrick & Massa
-   #    (Fitzpatrick, 1999, PASP, 111, 63; astro-ph/9809387 ).    
-   #    Parameterization is valid from the IR to the far-UV (3.5 microns to 0.1
-   #    microns).    UV extinction curve is extrapolated down to 912 Angstroms.
-   #
-   # CALLING SEQUENCE:
-   #    FM_UNRED, wave, flux, ebv, [ funred, R_V = , /LMC2, /AVGLMC, ExtCurve= 
-   #                       gamma =, x0=, c1=, c2=, c3=, c4= ]
-   # INPUT:
-   #    WAVE - wavelength vector (Angstroms)
-   #    FLUX - calibrated flux vector, same number of elements as WAVE
-   #             If only 3 parameters are supplied, then this vector will
-   #             updated on output to contain the dereddened flux.
-   #    EBV  - color excess E(B-V), scalar.  If a negative EBV is supplied,
-   #             then fluxes will be reddened rather than dereddened.
-   #
-   # OUTPUT:
-   #    FUNRED - unreddened flux vector, same units and number of elements
-   #             as FLUX
-   #
-   # OPTIONAL INPUT KEYWORDS
-   #    R_V - scalar specifying the ratio of total to selective extinction
-   #             R(V) = A(V) / E(B - V).    If not specified, then R = 3.1
-   #             Extreme values of R(V) range from 2.3 to 5.3
-   #
-   #    /AVGLMC - if set, then the default fit parameters c1,c2,c3,c4,gamma,x0 
-   #           are set to the average values determined for reddening in the 
-   #           general Large Magellanic Cloud (LMC) field by Misselt et al. 
-   #          (1999, ApJ, 515, 128)
-   #    /LMC2 - if set, then the fit parameters are set to the values determined
-   #             for the LMC2 field (including 30 Dor) by Misselt et al.
-   #             Note that neither /AVGLMC or /LMC2 will alter the default value
-   #             of R_V which is poorly known for the LMC. 
-   #             
-   #   The following five input keyword parameters allow the user to customize
-   #   the adopted extinction curve.    For example, see Clayton et al. (2003,
-   #   ApJ, 588, 871) for examples of these parameters in different interstellar
-   #   environments.
-   #
-   #      x0 - Centroid of 2200 A bump in microns (default = 4.596)
-   #      gamma - Width of 2200 A bump in microns (default  =0.99)
-   #      c3 - Strength of the 2200 A bump (default = 3.23)
-   #      c4 - FUV curvature (default = 0.41)
-   #      c2 - Slope of the linear UV extinction component 
-   #           (default = -0.824 + 4.717/R)
-   #      c1 - Intercept of the linear UV extinction component 
-   #           (default = 2.030 - 3.007*c2
-   #            
-   # OPTIONAL OUTPUT KEYWORD:
-   #    ExtCurve - Returns the E(wave-V)/E(B-V) extinction curve, interpolated
-   #                 onto the input wavelength vector
-   #
-   # EXAMPLE:
-   #    Determine how a flat spectrum (in wavelength) between 1200 A and 3200 A
-   #    is altered by a reddening of E(B-V) = 0.1.   Assume an "average"
-   #    reddening for the diffuse interstellar medium (R(V) = 3.1)
-   #
-   #    IDL> w = 1200 + findgen(40)*50      ;Create a wavelength vector
-   #    IDL> f = w*0 + 1                    ;Create a "flat" flux vector
-   #    IDL> fm_unred, w, f, -0.1, fnew  ;Redden (negative E(B-V)) flux vector
-   #    IDL> plot,w,fnew                   
-   #
-   # NOTES:
-   #    (1) The following comparisons between the FM curve and that of Cardelli,
-   #        Clayton, & Mathis (1989), (see ccm_unred.pro):
-   #        (a) - In the UV, the FM and CCM curves are similar for R < 4.0, but
-   #              diverge for larger R
-   #        (b) - In the optical region, the FM more closely matches the
-   #              monochromatic extinction, especially near the R band.
-   #    (2)  Many sightlines with peculiar ultraviolet interstellar extinction 
-   #            can be represented with the FM curve, if the proper value of 
-   #            R(V) is supplied.
-   #    (3) Use the 4 parameter calling sequence if you wish to save the 
-   #            original flux vector.
-   # PROCEDURE CALLS:
-   #       CSPLINE(), POLY()
-   # REVISION HISTORY:
-   #       Written   W. Landsman        Raytheon  STX   October, 1998
-   #       Based on FMRCurve by E. Fitzpatrick (Villanova)
-   #       Added /LMC2 and /AVGLMC keywords,  W. Landsman   August 2000
-   #       Added ExtCurve keyword, J. Wm. Parker   August 2000
-   #       Assume since V5.4 use COMPLEMENT to WHERE  W. Landsman April 2006
-
-   #if not keyword_set(R_V) then R_V = 3.1
+   '''
+   Deredden a flux vector using the Fitzpatrick (1999) parameterization.
+   The R-dependent Galactic extinction curve is that of Fitzpatrick & Massa
+   (Fitzpatrick, 1999, PASP, 111, 63; astro-ph/9809387 ).    
+   Parameterization is valid from the IR to the far-UV (3.5 microns to 0.1
+   microns).    UV extinction curve is extrapolated down to 912 Angstroms.
    
+   Args:
+       wave (float array):  wavelength in Angstroms
+       R_V (float): The ratio of total to selective extionction
+       avglmc (bool): If True, the default fit parameters c1,c2,c3,c4,gamma,x0 
+              are set to the average values determined for reddening in the 
+              general Large Magellanic Cloud (LMC) field by Misselt et al. 
+              (1999, ApJ, 515, 128)
+       lmc2 (bool): if True, the fit parameters are set to the values determined
+                for the LMC2 field (including 30 Dor) by Misselt et al.
+                Note that neither /AVGLMC or /LMC2 will alter the default value
+                of R_V which is poorly known for the LMC. 
+   Returns:
+      foat array: R_\lambda = A_\lambda/E(B-V)
+
+   '''
    x = 10000./ wave.astype(num.float64)  # Convert to inverse microns 
    curve = x*0.
    
    # Set default values of c1,c2,c3,c4,gamma and x0 parameters
-   
    if lmc2:
       x0,gamma,c4,c3,c1,c1 = (4.626, 1.05, 0.42, 1.92, 1.31, -2.16)
    elif avglmc:
@@ -225,18 +176,29 @@ def fm(wave, R_V=3.1, avglmc=False, lmc2=False):
                      num.concatenate([ysplopir,yspluv]), s=0)
       curve[iopir] = spl(x[iopir])
    
-   # Now apply extinction correction to input flux vector
-   
    return curve
-   #if N_params() EQ 3 then flux = flux * 10.^(0.4*curve) else $
-   #   funred = flux * 10.^(0.4*curve)       ;Derive unreddened flux
-   #
-   #ExtCurve = Curve - R_V
 
 def fm07_full(wave, x0, gamma, c1,c2,c3,c4,c5,o1,o2,o3,R,iscale,ipower=1.84):
-   '''The fully-parametrized Fitzpatrick & Massa reddening curve. Wave
-   is expected to be in Angstroms. Returns E(\lambda-V)/E(B-V), which
-   is R_\lambda - Rv'''
+   '''The fully-parametrized Fitzpatrick & Massa reddening curve.
+   
+   Args:
+       wave (float array):  wavelength in Angstroms
+       x0 (float): centroid of 2200 A bump (microns)
+       gamma (float): width of 2200 bump (microns)
+       c1 (float): Intercept of linear UV extinction
+       c2 (float): Slope of linear UV extinction
+       c3 (float): Strength of 2200 A bump
+       c4 (float): UV curvature
+       c5 (float): Onset of UV curvatrue (microns)
+       o1,o2,o3 (float): optical spline points
+       R (float): A_V/E(B_V)
+       iscale: NIR scale
+       ipower: power-law index for NIR.
+
+   Returns:
+      foat array: E(V-\lambda)/E(B-V)
+
+   '''
    x = 10000./wave.astype(num.float64) # Convert ot inverse microns
    curve = x*0.
    xcutuv = 10000.0/2700.0
@@ -281,7 +243,15 @@ def fm07(wave, R_V=3.1):
    '''Average reddening law from Fitzpatrick & Massa (2007). This includes
    a variation with R(V) and uses the correlation between R(V) and
    k_NIR to make a one-parameter curve (keeping all other curve parameters
-   fixed. Caveats abound.  Read the paper!'''
+   fixed. Caveats abound.  Read the paper!
+   
+   Args:
+      wave (float array): wavelength in Angstroms
+      R_V (float): ratio of total-to-selective absorption.
+      
+   Returns:
+      R_V (float array): A_V/E(B-V)
+   '''
    # Set default values of fixed constants
    x0,gamma,c1,c2,c3,c4,c5 = (4.592,0.922,-0.175, 0.807, 2.991, 0.319, 6.097)
    O1,O2,O3 = (2.055,1.322,0.000)
@@ -292,7 +262,17 @@ def fm07(wave, R_V=3.1):
    return ElEv+R_V
 
 def nataf(wave, R_V=3.1, strict_ccm=False):
-   '''CCM modified by David Nataf, private communication.'''
+   '''CCM modified by David Nataf, private communication.
+
+   Args:
+      wave (float array): wavelength in Angstroms
+      strict_ccm (bool): If True, return original CCM (1989), othewise
+                         apply updates from O'Donnel (1994)
+                        
+   Returns:
+      2-tupe (a,b):
+      The coeffients such that A_\lambda/A_V = a + b/R_V
+   '''
    x = 10000./ wave                ; #Convert to inverse microns 
    a = 0.0*x
    b = 0.0*x
@@ -380,11 +360,30 @@ def unred_fm07(wave, flux, ebv, R_V=3.1, z=0):
 def unred(wave, flux, ebv, R_V = 3.1, z=0, redlaw='ccm', strict_ccm=0):
    '''
    de-redden (or redden, if you set ebv < 0) a spectrum using color
-   excess E(B-V) of [ebv] and [R_V].  Optionally, you can redshift the
-   spectrum by [z]. You can choose between the Cardelli, Clayton and Mathis
-   (redlaw='ccm') or the Fitzpatrick and Massa (1999) law (redlaw='fm'). If
+   excess E(B-V).  Optionally, you can redshift the spectrum. You can
+   choose between the Cardelli, Clayton and Mathis, (redlaw='ccm'),
+   Fitzpatrick (1999) law (redlaw='fm'), . If
    using ccm, you can either use the default CCM modified by O'Donnel (1994)
    or use the script CCM by specifying strict_ccm=True.
+
+   Args:
+      wave (float array): wavelenths in Angstroms
+      flux (float array): flux in arbitrary units
+      ebv (float): color excess E(B-V)
+      R_V (float): ratio of total-to-selective absorption
+      z (float): redshift the spectrum by this amount before applying
+                 reddening law.
+      redlaw (str): Choice of particular reddening law. Currently we have:
+                   'ccm':  Cardelli, Clayton & Mathis (1989) + O'Donnel (1994)
+                   'fm' or 'f99': Fitzpatrick (1999)
+                   'fm07': Fitzpatrick & Masa (2007)
+      srict_ccm (bool):  If True and redlaw='ccm', ignore changes by
+                        O'Donnel (1994)
+
+   Returns:
+      3-tuple:  (uflux, a, b)
+                uflux: un-reddened flux
+                a,b:  The equivalent of the CCM a and b parameters.
    '''
 
    if z > 0:
@@ -422,8 +421,8 @@ def unred(wave, flux, ebv, R_V = 3.1, z=0, redlaw='ccm', strict_ccm=0):
 
 
 def R_z(wave, z, R_V = 3.1, strict_ccm=0):
-   '''Compute host reddening law for effective observed wavelength wave, at redshift
-   z, assuming R_V.'''
+   '''Compute host reddening law for effective observed wavelength wave, 
+   at redshift z, assuming R_V.'''
    wave = wave/(1+z)
    a,b = ccm(wave, strict_ccm)
    R = R_V*a + b

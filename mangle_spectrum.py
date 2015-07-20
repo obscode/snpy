@@ -1,6 +1,9 @@
 '''
 Color-matching:  modifying a spectrum by multiplication of a smooth function
-in order to reproduce the observed photometry.'''
+in order to reproduce the observed photometry. A mangler class is used to
+do all the heavy lifting of fitting a smooth function. A base class called 
+function is provided and should be sub-classed to implement new smoothing 
+functions.  So far, there's tension splines and CCM.'''
 
 import types
 import numpy as num
@@ -26,6 +29,11 @@ class function:
    function as well as a wrapper that is suitable for using with mpfit.'''
 
    def __init__(self, parent):
+      '''
+      Args:
+         parent (Mangler instance): the mangler that will implement this
+                                    function.
+      '''
       self.parent = parent
 
    def setup(self):
@@ -44,9 +52,24 @@ class function:
       pass
 
 class f_tspline(function):
+   '''Tension spline mangler. Tension splines are controlled by a tension
+   parameter. The higher the tension, the less curvature the spline can
+   have. This is good for keeping the spline from "wigglig" too much.'''
 
    def __init__(self, parent, tension=None, gradient=False, slopes=None, 
          verbose=False, log=False):
+      '''
+         Args:
+            parent (instance): Mangler that will fit the function.
+            tension (float): A tension parameter
+            gradient (bool): If true, constrain the gradients at either end
+                             using the anchors
+            slopes (2-tuple): The end slopes can be kept fixed using this
+                              argument (e.g., set to (0,0) to flatten out
+                              the spline at both ends
+            verbose (bool): debug info
+            log (bool):  Not implemented yet.
+      '''
       function.__init__(self,parent)
       self.knots = None
       self.factors = None
@@ -150,8 +173,19 @@ class f_tspline(function):
       return(res)
 
 class f_ccm(function):
+   '''The Cardelli, Clayton, and Mathis (1989) reddening law as a smooth
+   fucntion. This would be what dust does to a spectrum, so is a good
+   guess, but has much less freedom than tension splines.'''
 
    def __init__(self, parent, tension=None, gradient=False, slopes=None, verbose=False):
+      '''
+         Args:
+            parent (instance): Mangler instance that will handle the function
+            tension (bool):  not used
+            gradient (bool):  not used
+            slopes (bool):  not used
+            verbose (bool):  extra info
+      '''
       self.pars = [0.0, 3.1]
       self.verbose = verbose
 
@@ -181,6 +215,21 @@ class mangler:
    the colors specified.'''
 
    def __init__(self, wave, flux, method, normfilter=None, z=0, **margs):
+      '''
+         Args:
+            wave (float array): input wavelength in Angstroms. Can be a
+                                list for multiple spectra
+            flux (float array): associated fluxes in arbitrary units
+            method (str): The method used (should be a key of
+                             mangle_functions:  'tspline' or 'ccm'
+            normfilter (str): the mangled function will be normalized
+                              to the observed flux through this filter.
+                              Defaut is to take the filter with the
+                              most valid observations
+            z (float): The redshift of the object. The spectrum is redshifted
+                       by this amount before doing the mangling.
+            **margs (dict): All other argumements are sent to the mangling
+                      function's __init__().'''
 
       self.wave = num.asarray(wave)
       self.flux = num.asarray(flux)
@@ -200,7 +249,13 @@ class mangler:
    def get_colors(self, bands):
       '''Given a set of filters, determine the colors of the mangled
       spectrum for the current set of function parameters.  You'll get
-      N-1 colors for N bands and each color will be bands[i+1]-bands[i]'''
+      N-1 colors for N bands and each color will be bands[i+1]-bands[i]
+      
+      Args:
+         bands (list of str): The list of filters to construct colors from
+         
+      Returns
+         2d array: colors'''
       mflux = self.function(self.wave)*self.flux
       cs = self.resp_rats*0
       for i in range(cs.shape[0]):
@@ -219,7 +274,20 @@ class mangler:
 
    def create_anchor_filters(self, bands, anchorwidth):
       '''Given a set of filters in bands, create two fake filters at
-      either end to serve as anchor filters.'''
+      either end to serve as anchor filters.
+      
+      Args:
+         bands (list of str): The list of filters to construct colors from
+         anchorwidth (float): distance from reddest and bluest filter
+                              in Angstroms.
+      
+      Returns:
+         None
+
+      Effects:
+         fset is updated to include two new filters: 'red_anchor' and
+         'blue_anchor'
+      '''
       mean_wave = num.array([fset[b].ave_wave for b in bands])
       red = bands[num.argmax(mean_wave)]
       blue = bands[num.argmin(mean_wave)]
@@ -262,7 +330,21 @@ class mangler:
    def solve(self, bands, colors, fixed_filters=None, 
          anchorwidth=100, xtol=1e-10, ftol=1e-4, gtol=1e-10):
       '''Solve for the mangling function that will produce the observed colors
-      in the filters defined by bands.'''
+      in the filters defined by bands.
+      
+      Args:
+         bands (list of str): The list of filters to construct colors from
+         colors (float array): the colors to match. If 1d, the N-1 colors
+                               should correspond to bands[i-1]-bands[i],
+                               if 2d, the first index should reflect spectrum
+                               number.
+         fixed_filters (2-tuple or None): The filters whose control points
+                              should remain fixed. If None, two fake filters
+                              will be created.
+         anchorwidth (float): If making fake filters, they will be spaced
+                              this many Angstroms from the bluest and reddest
+                              filters (default 100).
+         xtol, ftol, gtol (float): see scipy.optimize.leastsq.'''
 
       # going to try to do multiple-epoch colors simultaneously with one
       #  mangle function.  colors[i,j] = color for epoch i, color j
