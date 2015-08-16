@@ -562,13 +562,19 @@ def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal,
    by applying an extinction curve to a set of library Ia spectral SEDs and
    computing synthetic photometry:
    .. math::
-      A(\lambda_1) = R\ E(\lambda_2-\lambda_3)
+
+   \[
+   A(\lambda_1) = R\ E(\lambda_2-\lambda_3)
+   \]
 
    where
 
    .. math::
-      E(\lambda_2-\lambda_3) = (m_{\lambda_2} - m_{\lambda_3}) - 
+
+   \[
+   E(\lambda_2-\lambda_3) = (m_{\lambda_2} - m_{\lambda_3}) - 
                               (m_{\lambda_2} - m_{\lambda_3})_o 
+   \]
 
    ie, the color excess for filters \lambda_2 and \lambda_3.
    
@@ -657,7 +663,9 @@ def R_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1,
       version='H', redlaw='f99', strict_ccm=False):
    '''Compute the 'true' value of R based on a fiducial value of Rv for both Galactic and
    host extinction and the SED of a supernova.  The filter is such that:
-      A(filter) = R(filter)*E(B-V).'''
+
+      A(filter) = R(filter)*E(B-V).
+   '''
    try:
       N = len(days)
       outarr = 1

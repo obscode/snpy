@@ -230,7 +230,7 @@ class lc:
          t_tol (float):  If a data point is less than t_tol away from requested
                          time, the data will be returned. Use -1 to always
                          interpolate.
-         epoch (bool): If True, :attrib:`.parent.Tmax` is added to times
+         epoch (bool): If True, ``lc.parent.Tmax`` is added to times
          
       Returns:
          2-tuple:  (mag,mask)

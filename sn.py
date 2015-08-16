@@ -1551,6 +1551,9 @@ class sn(object):
                            (normalized to zero). Default: False
          mask (bool):  If True, omit plotting masked data.
          label_bad (bool):  If True, label the masked data with red x's?
+         Nxticks (int): maximum number of x-axis tick marks (default: MPL auto)
+         JDoffset (bool): If true, compute a JD offset and put it in the x-axis
+                          label (useful if x-labels are crowded) default: False
          flux (bool): If True, plot in flux units
          epoch (bool): If True, plot time relative to Tmax
          outfile (str):  optional file name to save the plot

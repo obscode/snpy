@@ -29,7 +29,7 @@ def ccm(wave, strict_ccm=0):
                         
    Returns:
       2-tupe (a,b):
-      The coeffients such that A_\lambda/A_V = a + b/R_V
+      The coeffients such that :math:`A_\lambda/A_V = a + b/R_V`
    '''
    x = 10000./ wave                ; #Convert to inverse microns 
    a = 0.0*x
@@ -115,10 +115,8 @@ def fm(wave, R_V=3.1, avglmc=False, lmc2=False):
               (1999, ApJ, 515, 128)
        lmc2 (bool): if True, the fit parameters are set to the values determined
                 for the LMC2 field (including 30 Dor) by Misselt et al.
-                Note that neither /AVGLMC or /LMC2 will alter the default value
-                of R_V which is poorly known for the LMC. 
    Returns:
-      foat array: R_\lambda = A_\lambda/E(B-V)
+      foat array: :math:`R_\lambda = A_\lambda/E(B-V)`
 
    '''
    x = 10000./ wave.astype(num.float64)  # Convert to inverse microns 
@@ -271,7 +269,7 @@ def nataf(wave, R_V=3.1, strict_ccm=False):
                         
    Returns:
       2-tupe (a,b):
-      The coeffients such that A_\lambda/A_V = a + b/R_V
+      The coeffients such that :math:`A_\lambda/A_V = a + b/R_V`
    '''
    x = 10000./ wave                ; #Convert to inverse microns 
    a = 0.0*x

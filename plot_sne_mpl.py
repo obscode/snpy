@@ -403,13 +403,12 @@ def plot_filters(self, bands=None, day=0, fill=0, outfile=None):
    return p
 
 
-def plot_SN_panel(obj, ax, filt, delt, symbol, color, **kwargs):
+def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
    '''plot a single SN photometry panel'''
    label = filt
    ax.mylabels = []
    single = kwargs.get('single', False)
    flux = kwargs.get('flux', False)
-   epoch = kwargs.get('epoch', False)
    msize = kwargs.get('msize', 6)
    linewidth=kwargs.get('linewidth', 1)
    SNR = kwargs.get('SNR_flag', None)
@@ -435,18 +434,15 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, **kwargs):
          y = obj.data[filt].flux*power(10, -0.4*(delt))
          ey = obj.data[filt].e_flux
 
-   if obj.Tmax is None:  
-      Tmax = 0
-   else:
-      Tmax = obj.Tmax
-   ax.errorbar(x-Tmax*epoch, y, yerr=ey, barsabove=True, capsize=0,
+
+   ax.errorbar(x-Toff, y, yerr=ey, barsabove=True, capsize=0,
          elinewidth=1, fmt=symbol, ms=msize, 
          mfc=color, label=filt+'+'+'%.1f' % delt, linestyle='None',
            ecolor='black')
    if kwargs.get('label_bad', False):
       gids = equal(obj.data[filt].mask, 0)
       if sometrue(gids):
-         x = obj.data[filt].MJD[gids] - Tmax*epoch
+         x = obj.data[filt].MJD[gids] - Toff
          if not flux:
             y = obj.data[filt].mag[gids] + delt
          else:
@@ -457,7 +453,7 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, **kwargs):
       for i in range(2): 
          gids = less(obj.data[filt].SNR, SNR[i])
          if sometrue(gids):
-            x = obj.data[filt].MJD[gids] - Tmax*epoch
+            x = obj.data[filt].MJD[gids] - Toff
             if not flux:
                y = obj.data[filt].mag[gids] + delt
             else:
@@ -475,12 +471,12 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, **kwargs):
       else:
          zp = fset[filt].zp
          y = power(10, -0.4*(mag - zp + delt))
-      ax.plot(compress(gids,t-obj.Tmax*epoch), compress(gids,y), 
+      ax.plot(compress(gids,t-Toff), compress(gids,y), 
             color='k', linewidth=linewidth)
-      l = ax.plot(compress(gids,t-obj.Tmax*epoch), compress(gids,y+err), 
+      l = ax.plot(compress(gids,t-Toff), compress(gids,y+err), 
             '--',color='k', linewidth=linewidth)
       l[0].autoscale=False
-      l = ax.plot(compress(gids,t-obj.Tmax*epoch), compress(gids,y-err), 
+      l = ax.plot(compress(gids,t-Toff), compress(gids,y-err), 
             '--',color='k', linewidth=linewidth)
       l[0].autoscale=False
    elif obj.data[filt].interp is not None:
@@ -492,7 +488,7 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, **kwargs):
       else:
          zp = fset[filt].zp
          y = power(10, -0.4*(mag - zp + delt))
-      ax.plot(t[gids] - obj.Tmax*epoch, y[gids], color='k',
+      ax.plot(t[gids] - Toff, y[gids], color='k',
             linewidth=linewidth)
 
    if single and kwargs.get('legend', True):
@@ -516,6 +512,9 @@ def plot_sn(self, **kwargs):
       - legend:  do we plot the legend?
       - mask:  Omit plotting masked out data?
       - label_bad:  label the masked data with red x's?
+      - Nxticks:  maximum number of x-axis tick marks.
+      - JDoffset: If true, compute a JD offset and put it in the x-axis label
+                  (useful if x-labels are crowded)
       - SNR_flag: If a tuple, SNR levels to flag in the plot
       - overplot: specify another SN object to plot along with this one.
                   restbands will be used to match filters if there isn't
@@ -531,6 +530,22 @@ def plot_sn(self, **kwargs):
    offset = kwargs.get('offset', False)
    flux = kwargs.get('flux', False)
    oobj = kwargs.pop('overplot', None)
+   Nxticks = kwargs.pop('Nxticks', None)
+   epoch = kwargs.get('epoch', False)
+   JDoff = kwargs.get('JDoffset', False)
+
+   Toff = 0
+   if epoch:
+      if self.Tmax is None:  
+         Tmax = 0
+      else:
+         Tmax = self.Tmax
+      Toff = Tmax
+   elif JDoff:
+      Toff = int(min(concatenate([l.MJD for l in self.data.values()]))/10.0)
+      Toff = Toff*10
+   else:
+      Toff = 0
 
    # See  what filters we're going to use:
    if self.filter_order is not None:
@@ -582,6 +597,8 @@ def plot_sn(self, **kwargs):
    p.title(title)
    if kwargs.get('epoch', False):
       p.xlabel('Days after B maximum')
+   elif kwargs.get('JDoffset', False):
+      p.xlabel('Date - %d' % Toff)
    else:
       p.xlabel('Date')
    p.ylabel(ylabel)
@@ -590,11 +607,13 @@ def plot_sn(self, **kwargs):
          if not ax.yaxis_inverted():  ax.invert_yaxis()
       if xrange is not None:
          ax.set_autoscalex_on(False)
-         ax.set_xlim(xrange)
+         ax.set_xlim((xrange[0]-Toff,xrange[1]-Toff))
       if yrange is not None:
          #print yrange
          ax.set_autoscaley_on(False)
          ax.set_ylim(yrange)
+      if Nxticks is not None:
+         ax.xaxis.set_major_locator(MaxNLocator(Nxticks))
 
    offsets = self.lc_offsets()
 
@@ -611,7 +630,8 @@ def plot_sn(self, **kwargs):
          ax.lc = self.data[filt]
       else:
          ax = p.axes[0]
-      plot_SN_panel(self, ax, filt, delt, symbols[filt], colors[filt], **kwargs)
+      plot_SN_panel(self, ax, filt, delt, symbols[filt], colors[filt], Toff,
+            **kwargs)
 
    if oobj is not None:
       if single:
@@ -644,7 +664,8 @@ def plot_sn(self, **kwargs):
             i = -1
 
          if i < 0:  continue
-         plot_SN_panel(oobj, p.axes[i], bands[i], rel_off, 's', 'r', **kwargs)
+         plot_SN_panel(oobj, p.axes[i], bands[i], rel_off, 's', 'r', Toff,
+               **kwargs)
    
    #p.draw()
    p.set_limits(dox=(xrange is None), doy=(yrange is None), all_equal=1)
