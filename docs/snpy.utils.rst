@@ -76,14 +76,6 @@ snpy.utils.fit_spline module
     :undoc-members:
     :show-inheritance:
 
-snpy.utils.mpfit module
------------------------
-
-.. automodule:: snpy.utils.mpfit
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 snpy.utils.radec2gal module
 ---------------------------
 

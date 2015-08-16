@@ -6,6 +6,13 @@
 Welcome to SNooPy's documentation!
 ==================================
 
+This online version of the documentation is still a work in progress. The
+original documentation (PDF, tutorial, etc) is still available at:
+http://csp.obs.carnegiescience.edu/data/snpy/documentation
+
+Installation instructions can be found here:
+http://csp.obs.carnegiescience.edu/data/snpy/installing_snoopy2
+
 Contents:
 
 .. toctree::

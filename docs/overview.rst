@@ -12,11 +12,11 @@ from the shell::
 
   % snpy
 
-The module, ``snpy`` has several classes and utilities. Most of the interaction
-comes from the use of the supernova class ``sn``. You instantiate a supernova
+The module, :mod:`~snpy` has several classes and utilities. Most of the interaction
+comes from the use of the supernova class :class:`~snpy.sn.sn`. You instantiate a supernova
 by loading data from a file using :func:`~snpy.sn.get_sn` or connecting to a 
 database :mod:`~snpy.sqlmod`.
-The convenience function ``get_sn`` tries to figure out which::
+The convenience function :func:`~snpy.sn.get_sn` tries to figure out which::
 
    In[1]: s = get_sn('some_file.txt')   # Load ASCII file
    In[2]: s = get_sn('SN2004ef')        # Query database
@@ -24,7 +24,8 @@ The convenience function ``get_sn`` tries to figure out which::
 The supernova is now bound to the variable ``s``. It has a a lot  of
 member data (``s.ra``, ``s.decl``, ``s.z``, ``s.zcmb``) that define it's 
 position, and several member functions for getting stuff done.  Most imporantly,
-there is the ``sn.fit()`` member function that fits a model to the data::
+there is the :meth:`~snpy.sn.sn.fit` member function that fits a model to the 
+data::
 
    In[3]: s.fit(['B','V'])
 
@@ -62,12 +63,13 @@ fitter in a different part of parameter space::
    dm15 =  1.34793759392 +/- 0.0114967483058
 
 It's good to save all this work you've done so you can access it later. Use the
-save function, which uses python's ``pickle`` module to serialize the ``sn``
+save function, which uses python's ``pickle`` module to serialize the 
+:class:`~snpy.sn.sn`
 instance and write it to a file.::
 
    In[12]: s.save('SN2004ef_maxmodel.snpy')
 
-You can load it back in later to using the ``get_sn`` function::
+You can load it back in later to using the :func:`~snpy.get_sn` function::
 
    In[1]: s = get_sn('SN2004ef_maxmodel.snpy')
 
@@ -75,16 +77,16 @@ Light-Curves
 ------------
 
 Each filter has its own light-curve. Each light-curve's data is stored in
-another class called ``lc``. The ``lc`` class has member variables that hold
+another class called :class:`~snpy.lc.lc`. It has member variables that hold
 the photometric data:  ``MJD``, ``mag``, ``e_mag``, ``flux``, and ``e_flux``.
-The ``lc`` instances are stored as a dictionary member variable
-of the parent ``sn`` class called ``sn.data``::
+The :class:`~snpy.lc.lc` instances are stored as a dictionary member variable
+of the parent :class:`~snpy.sn.sn` class called ``sn.data``::
 
    In[8]: print s.data
    {'B': <snpy.lc.lc instance at 0x11346e1b8>, 'g': <snpy.lc.lc instance at 0x11346e200>, 'i': <snpy.lc.lc instance at 0x11346e248>, 'H': <snpy.lc.lc instance at 0x11346e290>, 'K': <snpy.lc.lc instance at 0x11346e2d8>, 'J': <snpy.lc.lc instance at 0x11346e320>, 'r': <snpy.lc.lc instance at 0x11346e368>, 'u': <snpy.lc.lc instance at 0x11346e3b0>, 'V': <snpy.lc.lc instance at 0x11346e3f8>, 'Y': <snpy.lc.lc instance at 0x11346e440>}
 
 You can also refer to each filter by name as a member variable of the parent
-``sn`` class::
+:class:`~snpy.sn.sn` class::
 
    In[9]: print "B-band data covers MJD=", s.B.MJD.min(), "to MJD=", s.B.MJD.max()
    B-band data covers MJD= 53255.17803 to MJD= 53329.09918
@@ -101,9 +103,9 @@ spline to the light-curve and derive some useful quantities::
    In[12]: print "B peaks at",s.B.Tmax," and has dm15=",s.B.dm15
    B peaks at 53263.6826124  and has dm15= 1.41942033475
 
-Actually, ``spline_fit`` is a bit of a misnomer, as you can fit with many
-different kinds of interpolators (spline, polynomial, Guassian process, etc).
-See (....).
+Actually, :meth:`~snpy.sn.sn.spline_fit` is a bit of a misnomer, as you can 
+fit with many different kinds of interpolators (spline, polynomial, Guassian 
+process, etc).  See (....).
 
 Other Useful Bits
 -----------------
@@ -119,14 +121,15 @@ cosmology)::
    Hubble distance 35.4486366281
 
 SNooPy has several spectral energy distrubutions for type Ia SNe built in.
-You can access them through the ``kcorr`` sub-module (that's where they are 
-used most heavily). This will retrieve the [Hsiao+xxx]_ SED at maximum::
+You can access them through the :mod:`snpy.kcorr` sub-module (that's where 
+they are used most heavily). This will retrieve the [Hsiao+xxx]_ SED at 
+maximum::
 
    wave,flux = kcorr.get_SED(day=0, version='H3')
 
 SNooPy also has a module for dealing with the photometric properties of 
-filters called ``filters``. Each ``lc`` instance has an instance of the
-filter it represents::
+filters called :mod:`~snpy.filters`. Each :class:`~snpy.lc.lc` instance has an 
+instance of the :class:`~snpy.filters.filter` filter it represents::
 
   In[16]: print s.B.filter
   B:  TAM scanned B filter for Swope at LCO + CTIO extinction
@@ -134,11 +137,13 @@ filter it represents::
   In[17]: print "The Hsiao SED template as B=",s.B.filter.synth_mag(wave,flux),"at maximum"
   he Hsiao SED template as B= 0.0211822721773 at maximum
 
-The ``sn.spline_fit()`` function is actually a wrapper around a useful
-unified interface to interpolating 1-D data: ``snpy.utils.fit1dcurve``.
-After calling the ``sn.spline_fit()`` function, an instance of the
-``fit1dcurve.oneDcurve`` class is available as a member variable of the
-``lc`` instace. It can be used to further analyze the data::
+The :meth:`~snpy.sn.sn.spline_fit` function is actually a wrapper around a
+useful unified interface to interpolating 1-D data:
+:mod:`~snpy.utils.fit1dcurve`.  After calling the 
+:meth:`~snpy.sn.sn.spline_fit` function, an instance of the
+:class:`~snpy.utils.fit1dcurve.oneDcurve` class is available as a member 
+variable of the :class:`~snpy.lc.lc` instace. It can be used to further 
+analyze the data::
 
    In[18]: s.B.spline_fit(method='spline2')
 
@@ -173,11 +178,11 @@ some examples (output is not shown to save space)::
    In [3] help(sn.plot)
    In [4] help(lc)
 
-Line 1 gets help about the entire ``sn`` class, which will list
+Line 1 gets help about the entire :class:`~snpy.sn.sn` class, which will list
 all the functions defined therein, including internal ones that are
 not meant to be used by end users (but of course are available to
 be hacked, but may lack good documentation). Lines 2 and 3 get more
 specific help on individual member functions. Line 4 gets help on
-the ``lc`` (light-curve) class. You can ask for help on any python
+the :class:`~snpy.lc.lc` (light-curve) class. You can ask for help on any python
 object (including variables).
 

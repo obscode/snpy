@@ -15,7 +15,10 @@ between the two by using the ``choose_model()`` member function
 of the ``sn`` class :ref:`sub-Other-Useful-functions`.
 As of SNooPy version 2, you can fit the ``EBV_model2`` and ``max_model``
 using either :math:`\Delta m_{15}` or a new stretch-like parameter :math:`s_{BV}` which
-is introduced in the CSP's most recent analysis paper [Burns2014]_.
+is introduced in the CSP's most recent analysis paper [Burns2014]_. The choice
+between the two is made when your select the model using 
+:meth:`~snpy.sn.sn.choose_model` and specify the ``stype`` optional
+argument to be ``'dm15'`` or ``'st'``.
 
 With the advent of increased complexity of the models and the need
 for adding priors to parameters, a new experimental version of the

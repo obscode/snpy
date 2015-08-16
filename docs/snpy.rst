@@ -1,5 +1,5 @@
-snpy package
-============
+snpy package API
+================
 
 Module contents
 ---------------
@@ -15,6 +15,7 @@ Subpackages
    :maxdepth: 1
 
    snpy.utils
+   snpy.filters
    snpy.CSPtemp
    snpy.dm15temp
 

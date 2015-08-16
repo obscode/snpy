@@ -25,25 +25,26 @@ We compare the observed data in :math:`N` filters to the following model:
    :nowrap:
 
    \begin{eqnarray*}
-      m_{X}\left(t-t_{max}\right) & = & T_{Y}\left(\left(t^{\prime}-t_{max}\right)/(1+z),\Delta m_{15}\right)+M_{Y}\left(\Delta m_{15}\right)+\mu+R_{X}E\left(B-V\right)_{gal}+\\
-                                  &   & R_{Y}E\left(B-V\right)_{host}+K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z),E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)
+      m_{X}\left(t\right) & = & T_{Y}\left(t^{\prime},\Delta m_{15}\right)+M_{Y}\left(\Delta m_{15}\right)+\mu+R_{X}E\left(B-V\right)_{gal}+\\
+                                  &   & R_{Y}E\left(B-V\right)_{host}+K_{X,Y}
    \end{eqnarray*}
 
-where :math:`m_{X}` is the observed magnitude in band :math:`X`, :math:`t_{max}`
-is the time of B maximum, :math:`\Delta m_{15}` is the decline rate parameter
-\citep{1993ApJ...413L.105P}, :math:`M_{Y}` is the absolute magnitude in
-filter :math:`Y` in the rest-frame of the supernova, :math:`E(B-V)_{gal}` and
-:math:`E(B-V)_{host}` are the reddening due to galactic foreground and
-host galaxy, respectively, :math:`R_{X}` and :math:`R_{Y}` are the total-to-selective
-absorptions for filters :math:`X` and :math:`Y`, respectively, :math:`K_{XY}` is
-the cross-band k-correction from rest-frame :math:`X` to observed
-filter :math:`Y`. Note that the k-corrections depend on the epoch and *can*
-depend on the host and galaxy extinction (as these modify the shape
-of the spectral template). In the fitting, one has the choice of the
-spectral template of [Nugent+2002]_ or [Hsiao+2007]_.
-The latter is the default. You can choose to allow the K-corrections
-to vary during the fit, keep them fixed, or not use them at all. See
-the parameters for the ``fit()`` function in section :ref:`sub-Fit`.
+where :math:`m_{X}` is the observed magnitude in band :math:`X`, :math:`t`
+is the observed time relative to B maximum, :math:`t^\prime` is the
+de-redshifted time relative to B maximum, :math:`\Delta m_{15}` is the decline
+rate parameter [Phillips1999]_, :math:`M_{Y}` is the absolute
+magnitude in filter :math:`Y` in the rest-frame of the supernova,
+:math:`E(B-V)_{gal}` and :math:`E(B-V)_{host}` are the reddening due to
+galactic foreground and host galaxy, respectively, :math:`R_{X}` and
+:math:`R_{Y}` are the total-to-selective absorptions for filters :math:`X` and
+:math:`Y`, respectively, :math:`K_{XY}` is the cross-band k-correction from
+rest-frame :math:`X` to observed filter :math:`Y`. Note that the k-corrections
+depend on the epoch and *can* depend on the host and galaxy extinction (as
+these modify the shape of the spectral template). In the fitting, one has the
+choice of the spectral template of [Nugent+2002]_ or [Hsiao+2007]_.  The latter
+is the default. You can choose to allow the K-corrections to vary during the
+fit, keep them fixed, or not use them at all. See the parameters for the
+``fit()`` function in section :ref:`sub-Fit`.
 
 The template :math:`T\left(t,\Delta m_{15}\right)` can be generated from
 the code of  \citet{2006ApJ...647..501P} or \citet{Burns2011}. In
@@ -85,10 +86,9 @@ templates as ``EBV_model``, but instead fits the following model:
 .. math::
    :nowrap:
 
-   \begin{eqnarray*}
-      m_{X}\left(t-t_{max}\right) & = & T_{Y}\left(\left(t^{\prime}-t_{max}\right)/(1+z),\Delta m_{15}\right)+m_{Y}+R_{X}E\left(B-V\right)_{gal}+\\
-                                  &   & K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z),E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)
-   \end{eqnarray*}
+   \[
+   m_{X}\left(t\right) = T_{Y}\left(t^\prime,\Delta m_{15}\right)+m_{Y}+R_{X}E\left(B-V\right)_{gal}+K_{X,Y}
+   \]
 
 where :math:`m_{Y}`, the peak magnitude in filter :math:`Y` is now a parameter.
 Of course, depending on the number of filters you fit, you will have
@@ -110,7 +110,8 @@ one gives the overall best-fit. After each fit, the member variable
 use this to discriminate between different solutions.
 
 
-.. _sub-color_model
+.. _sub-color_model:
+
 color_model
 -----------
 
@@ -123,8 +124,8 @@ is:
    :nowrap:
 
    \begin{eqnarray*}
-      m_{X}\left(t-t_{max}\right) & = & T_{Y}\left(\left(t^{\prime}-t_{max}\right)/(1+z),\Delta m_{15}\right)+B_{max}+(X-B)\left(s_{BV}\right)+R_{X}E\left(B-V\right)_{gal}+R_{Y}\left(R_{V}\right)E\left(B-V\right)_{host}\\
-                                  &   & K_{X,Y}\left(z,\left(t^{\prime}-t_{max}\right)/(1+z),E\left(B-V\right)_{host},E\left(B-V\right)_{gal}\right)
+      m_{X}\left(t\right) & = & T_{Y}\left(t^{\prime},\Delta m_{15}\right)+B_{max}+(X-B)\left(s_{BV}\right)+R_{X}E\left(B-V\right)_{gal}+R_{Y}\left(R_{V}\right)E\left(B-V\right)_{host} + \\
+                                  &   & K_{X,Y}
    \end{eqnarray*}
 
 where :math:`B_{max}` is the de-reddened and K-corrected :math:`B` maximum (treated
@@ -152,24 +153,20 @@ specified on parameters. In this case, use the keyword argument ``rvprior='mix'`
 for the Gaussian mixture model, or ``rvprior='bin'`` for the
 binned prior. See section :ref:`sub-Fit-MCMC` for more details.
 
-.. [Phillips 1999] Phillips, M.M., AJ, 118, 1766 (1999)
-   `http://adsabs.harvard.edu/abs/1999AJ....118.1766P`
-.. [Prieto+2006] Prieto et al., ApJ, 647, 501 (2006)
-   `http://adsabs.harvard.edu/abs/2006ApJ...647..501P`
+.. [Phillips1999] Phillips, M.M., AJ, 118, 1766 (1999)
+   http://adsabs.harvard.edu/abs/1999AJ....118.1766P
 .. [Nugent+2002] Nugent et al., PASP, 114, 803 (2002). 
-   `http://adsabs.harvard.edu/abs/2002PASP..114..803N`
+   http://adsabs.harvard.edu/abs/2002PASP..114..803N
 .. [Hsiao+2007] Hsiao et al., ApJ, 663, 1187 (2007).
-   `http://adsabs.harvard.edu/abs/2007ApJ...663.1187H`
+   http://adsabs.harvard.edu/abs/2007ApJ...663.1187H
 .. [Stritzinger+2005] Stritzinger et al., PASP, 117, 810 (2005)
-   `http://adsabs.harvard.edu/abs/2005PASP..117..810S`
+   http://adsabs.harvard.edu/abs/2005PASP..117..810S
 .. [Contreras+2010] Contreras et al., AJ, 139, 519 (2010).
-   `http://adsabs.harvard.edu/abs/2010AJ....139..519C`
-.. [Folatelli+2010] Folatelli et al., AJ, 139, 120 (2010).
-   `http://adsabs.harvard.edu/abs/2010AJ....139..120F`
+   http://adsabs.harvard.edu/abs/2010AJ....139..519C
 .. [Burns+2011] Burns et al., AJ, 141, 19B (2011).
-   `http://adsabs.harvard.edu/abs/2011AJ....141...19B`
+   http://adsabs.harvard.edu/abs/2011AJ....141...19B
 .. [Burns+2014] Burns et al., ApJ, 789, 32B (2014).
-   `http://adsabs.harvard.edu/abs/2014ApJ...789...32B`
+   http://adsabs.harvard.edu/abs/2014ApJ...789...32B
 
 .. [#f1] The 's' subscript refers to 'standard', which is to say the Bessel
    filters from [Stritzinger+2005]_
