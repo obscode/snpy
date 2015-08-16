@@ -44,7 +44,7 @@ if not os.path.isdir(snpy_src):
 
 os.chdir(snpy_src)
 if os.path.isdir('.svn'):
-   print "Trying to update from repository..."
+   print "Trying to update from SVN repository..."
    p = subprocess.Popen(['svn','update','--accept','theirs-full'],
          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
    p.wait()
@@ -75,6 +75,42 @@ if os.path.isdir('.svn'):
       of.close()
       sys.exit(1)
    print "Success!  SNooPy is now up to date"
+elif os.path.isdir('.git'):
+   print "Trying to update from GIT repository..."
+   p = subprocess.Popen(['git','pull'],
+         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+   p.wait()
+   if p.returncode != 0:
+      print "GIT pull command failed.  Here's what we got:"
+      print p.stdout.readlines()
+      print p.stderr.readlines()
+      sys.exit(1)
+   print "Success!"
+   #line = p.stdout.readlines()[-1]
+   #res = re.search(r'revision ([0-9]+)\.', line)
+   #if not res:
+   #   print "Looking for reversion number from SVN, but got:"
+   #   print line
+   #   print "Please let Chris know (cburns@obs.carnegiescience.edu)"
+   #   sys.exit(1)
+   #rev = res.group(1)
+   #of = open('version.py','w')
+   #print >> of, "__version__ = '2.0-%s'" % (rev)
+   #of.close()
+
+   of = open('SNooPy.build.log','w')
+   print "Building updated SNooPy source code..."
+   p = subprocess.Popen([os.path.join(sys.prefix, 'bin','python'),'setup.py',
+      'install'], stdout=of, stderr=subprocess.STDOUT)
+   p.wait()
+   if p.returncode != 0:
+      print "Failed to build the updated SNooPy source code!"
+      print "Check the output SNooPy.build.log file to see what went wrong"
+      of.close()
+      sys.exit(1)
+   print "Success!  SNooPy is now up to date"
+
+
 else:
    # find the correct pip command to update....
    print "Sorry, the SNooPy source does not appear to be an SVN working"
