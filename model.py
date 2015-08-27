@@ -122,14 +122,14 @@ class model:
       return K,mask2
 
    def MWR(self, band, t):
-      '''Determine the best R_\lambda for the foreground MW extinction.
+      '''Determine the best :math:`R_\lambda` for the foreground MW extinction.
       
       Args:
          band (str):  The name of the filter
          t (float array): The epoch (t - T(Bmax)) of the observations.
          
       Returns:
-         float array: R_\lambda for the filter at times t.
+         float array: :math:`R_\lambda` for the filter at times t.
       '''
 
       if band in self.parent.Robs:
@@ -344,10 +344,12 @@ class model:
 class EBV_model(model):
    '''This model fits any number of lightcurves with CSP uBVgriYJHK templates
    or Prieto BsVsRsIs templates.  The parameters you can fit:
-      - dm15 (decline rate)
-      - Tmax (time of peak B maximum)
-      - DM   (distance modulus)
-      - EBVhost  (host galaxy extinction)
+
+   - dm15 (decline rate)
+   - Tmax (time of peak B maximum)
+   - DM   (distance modulus)
+   - EBVhost  (host galaxy extinction)
+
    The model is constructed by assuming a peak B absolute magnitude  and B-X
    colors based on the current value of dm15.  The colors are from Folatelli
    et al. (2010), as are the calibration of Bmax vs dm15.  For the latter,
@@ -583,10 +585,12 @@ def read_table(file):
 class EBV_model2(model):
    '''This model fits any number of lightcurves with CSP uBVgriYJHK templates
    or Prieto BsVsRsIs templates.  The parameters you can fit:
-      - dm15 or st (decline rate or stretch)
-      - Tmax (time of peak B maximum)
-      - DM   (distance modulus)
-      - EBVhost  (host galaxy extinction)
+
+   - dm15 or st (decline rate or stretch)
+   - Tmax (time of peak B maximum)
+   - DM   (distance modulus)
+   - EBVhost  (host galaxy extinction)
+
    The model is constructed by assuming a peak absolute magnitudes in tall
    the filters, as derived in Burns et al. 2011.  Calibrations were determined
    using MCMC modeling on all filters at once, determining M_X and b_X for
@@ -614,7 +618,7 @@ class EBV_model2(model):
          self.template = ubertemp.stemplate()
       self.stype = stype
       
-      if stype == 'st':
+      if stype in ['st']:
          self.a,self.ea,self.b,self.eb,self.c,self.ec,self.Rv_host, self.eRv_host,self.sigSN = read_table(os.path.join(base,'st_calibration2.dat'))
       else:
          self.a,self.ea,self.b,self.eb,self.c,self.ec,self.Rv_host, self.eRv_host,self.sigSN = read_table(os.path.join(base,'dm15_calibration2.dat'))
@@ -735,7 +739,7 @@ class EBV_model2(model):
       fit (1-6) in Folatelli et al. (2009), table 9'''
       if band not in self.a[calibration]:
          raise ValueError, "Error, filter %s cannot be fit with this calibration"
-      if self.stype == 'st':
+      if self.stype in ['st']:
          delta = self.st - 1.0
       else:
          delta = self.dm15 - 1.1
@@ -755,7 +759,7 @@ class EBV_model2(model):
          # make a call to get the weights
          mod,err,mask = self.__call__(band, self.parent.data[band].MJD)
          weights.append(sum(where(mask, power(err,-2), 0)))
-         if self.stype == 'st':
+         if self.stype in ['st']:
             dst = self.st - 1.0
          else:
             dst = self.dm15 - 1.1
@@ -1120,11 +1124,13 @@ class max_model2(model):
 class Rv_model(model):
    '''This model fits any number of lightcurves with CSP uBVgriYJHK templates
    or Prieto BsVsRsIs templates.  The parameters you can fit:
-      - dm15 (decline rate)
-      - Tmax (time of peak B maximum)
-      - Bmax (maximum B magnitude)
-      - EBVhost  (host galaxy extinction)
-      - Rv (host galaxy reddening law)
+
+   - dm15 (decline rate)
+   - Tmax (time of peak B maximum)
+   - Bmax (maximum B magnitude)
+   - EBVhost  (host galaxy extinction)
+   - Rv (host galaxy reddening law)
+
    The model is constructed by assuming a peak observed magnitude in B, 
    value of dm15, and Tmax.  This will fit the B-lightcurve.  To fit
    the others, we use the Burns et al. (2011) calibrations to compute
@@ -1306,11 +1312,12 @@ class color_model(model):
    must be one of the restbands) and N-1 colors constructed from an intrinsic
    color-st/dm15 relation and extinction computed from E(B-V) and Rv. The
    parameters are:
-      - st (decline rate)
-      - Tmax (time of peak B maximum)
-      - Bmax (maximum B magnitude)
-      - EBVhost  (host galaxy extinction)
-      - Rv (host galaxy reddening law)
+
+   - st (decline rate)
+   - Tmax (time of peak B maximum)
+   - Bmax (maximum B magnitude)
+   - EBVhost  (host galaxy extinction)
+   - Rv (host galaxy reddening law)
 
    The assumed colors are take from Burns et al. (2014).
    '''

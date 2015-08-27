@@ -8,13 +8,14 @@ Requires:  Numeric,
 
 A routine for generating a smooth 1D or 2D interpolation based on irregularly
 sampled data.  The basic idea is simple:
-   - You've got a bunch of data (x, y +/- dy)
-   - consider a point where you want to interpolat (x0)
-   - generate a normalized Gaussian window function W(x0,sigma) centered at 
-     x0 with a certain width sigma.
-   - weight the data like    W(x0,sigma)/dy
-   - Fit a polynomial at x0 and use that to interpolated the value y0.
-   - Repeat for each point x0.
+
+- You've got a bunch of data (x, y +/- dy)
+- consider a point where you want to interpolat (x0)
+- generate a normalized Gaussian window function W(x0,sigma) centered at 
+  x0 with a certain width sigma.
+- weight the data like    W(x0,sigma)/dy
+- Fit a polynomial at x0 and use that to interpolated the value y0.
+- Repeat for each point x0.
 
 For a 2D surface, you use an elliptical Gaussian window function and fit a
 2D polynomial.'''

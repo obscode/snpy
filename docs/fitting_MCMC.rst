@@ -19,9 +19,9 @@ the fit. Such cases might be:
 Doing the Fit
 -------------
 
-Begin fitting in the usual way using the :meth:`~snpy.sn.sn..fit`
-:ref:`sub-Doing-the-Fit` function. This will provide a good starting point for
-the MCMC chains. Next, use :meth:`~snpy.sn.sn.fitMCMC` to start the MCMC simulation. The
+Begin fitting in the usual way using the :meth:`~snpy.sn.sn..fit` function (see
+:ref:`sub-Doing-the-Fit`). This will provide a good starting point for the MCMC
+chains. Next, use :meth:`~snpy.sn.sn.fitMCMC` to start the MCMC simulation. The
 calling sequence is much the same as :meth:`~snpy.sn.sn..fit`, with some extra
 arguments to control the MCMC sampling and the ability to assign priors to the
 model parameters.
@@ -44,13 +44,13 @@ parameter fixed using :meth:`~snpy.sn.sn..fit`.  There are three ways to do so:
      Example: ``"E,0.7"``.
    * ``U,lower,upper``: Uniform distribution between ``lower`` and ``upper``.
      Example: ``"U,0,10"``.
-2. A floating-point scalar can specified to keep the parameter fixed at
+2. A floating-point scalar can be specified to keep the parameter fixed at
    the given value.
 3. A python function that takes a single argument (the value of the parameter)
    and returns the log-probability.
 
 Some models also have built-in priors at work. At the moment, the
-``color_model`` :ref:`sub-color-model` has these kinds of priors, which are
+``color_model`` :ref:`sub-color_model` has these kinds of priors, which are
 used on the reddening law ``Rv_host``. There are currently three priors that
 can be used: ``uniform``, ``mix``, and ``bin``. These correspond to a uniform,
 Gaussian mixture model, and Normal distribution binned by color. They are
@@ -59,7 +59,7 @@ chosen by specifying the ``rvprior`` argument to ``fitMCMC()``.
 Examples
 --------
 First, we load in some data, choose the :class:`~snpy.model.color_model`
-and fit with not constraints.
+and fit with not constraints::
 
    In [1]: s = get_sn('SN2006ax.txt')
    In [3]: s.choose_model('color_model', stype='st')
@@ -102,7 +102,7 @@ is insensitive to :math:`R_V`. We can proceed by fixing :math:`R_V`::
 Keeping :math:`R_V` fixed has allowed us to fit the rest of the parameters
 (note the small value for ``EBVhost``. But if we want to be realistic and allow
 for some uncertainty in the value of :math:`R_V`, we can use the
-:meth:`~snpy.sn.sn.fitMCMC` method:
+:meth:`~snpy.sn.sn.fitMCMC` method::
 
    In [6]: s.fitMCMC(bands=['u','B','V','g','r','i','Y','J','H'], R_V="N,2.3,0.9")
 

@@ -1,8 +1,14 @@
+*.log
+.*.swp
+.DS_Store
 /*.pyc
 /*.pylc
 CSPtemp/*.pyc
 /build
+*/build/
+*/_build/
 dm15temp/*.pyc
+SwiftTemp/*.pyc
 filters/*.pyc
 lib/*.pyc
 lib/*.swp

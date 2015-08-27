@@ -1,4 +1,4 @@
-'''tHis module provices two classes:  spectrum and filter (filter is a sub-class of
+'''This module provices two classes:  spectrum and filter (filter is a sub-class of
 spectrum.  These classes are designed to make certain tasks more convenient, especially
 for filters.  Aside from being containers of the spectrum/filter data, they provide the
 following funcionality:

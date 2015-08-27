@@ -561,22 +561,19 @@ def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal,
    '''Compute the observed value of the selective-to-total extinction, R,
    by applying an extinction curve to a set of library Ia spectral SEDs and
    computing synthetic photometry:
+
    .. math::
 
-   \[
-   A(\lambda_1) = R\ E(\lambda_2-\lambda_3)
-   \]
+      A(\lambda_1) = R\ E(\lambda_2-\lambda_3)
 
    where
 
    .. math::
 
-   \[
-   E(\lambda_2-\lambda_3) = (m_{\lambda_2} - m_{\lambda_3}) - 
-                              (m_{\lambda_2} - m_{\lambda_3})_o 
-   \]
+      E(\lambda_2-\lambda_3) = (m_{\lambda_2} - m_{\lambda_3}) - 
+                                 (m_{\lambda_2} - m_{\lambda_3})_o 
 
-   ie, the color excess for filters \lambda_2 and \lambda_3.
+   ie, the color excess for filters :math:`\lambda_2` and :math:`\lambda_3`.
    
    Args:
        filter1,filter2,filter3 (str): the 3 filters defining R

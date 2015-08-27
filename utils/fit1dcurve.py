@@ -1,6 +1,7 @@
 '''This module provices an abstract class whose purpose is fitting a 1D curve
-using several different methods, but ultimately provide estimates of the 
-interpolated points, derivatives, and locations of maxima/minima.'''
+using several different methods (polynomial, splines, Gaussian processes),
+but providing a consistent API for evalutation and computing derivatives,
+extrama, etc.'''
 
 import numpy as num
 from snpy.utils import fit_spline
@@ -32,8 +33,18 @@ except:
 functions = {}
 
 def regularize(x, y, ey):
-   '''Given (x,y,dy) pairs of points, make sure the data is strictly
-   monatonic with respect to x and elimitate repeated values.'''
+   '''Given x,y,dy data,  make sure the data is strictly
+   monatonic with respect to x and elimitate repeated values.
+   
+   Args:
+      x (float array): input independent variable
+      y (float array): input dependent variable
+      ey (float array): input error in dependent variable
+      
+   Returns:
+      3-tuple: (x,y,ey)
+         output values of x,y,ey, where duplicate x are averaged and
+         x is strictly monotonically increasing.'''
    # x-values need to be strictly ascending.
    if x.shape[0] < 2:
       return x,y,ey
@@ -60,10 +71,22 @@ def regularize(x, y, ey):
    return x,y,ey
 
 class oneDcurve:
+   '''Base class for 1D interpolators. Each subclass inherits the basic
+   structure defined below, but is responstible for implementing the
+   different methods.'''
 
    num_real_keep = 100
 
-   def __init__(self, x, y, ey, mask=None):
+   def __init__(self, x, y, ey, mask=None, **args):
+      '''Instantiate a new interpolator.
+
+      Args:
+         x (float array):  independent variable
+         y (float array):  dependent variable
+         ey (float array): error in dependent variable
+         mask (bool array):  True where data is good, False to omit from fit
+         args (optional args): extra arguments are handled by each subclass
+      '''
 
       x = num.atleast_1d(x)
       y = num.atleast_1d(y)
@@ -152,20 +175,50 @@ class oneDcurve:
    
 
    def maskpoint(self, x, y):
-      '''Mask the point closest to (x,y).'''
+      '''Mask the point closest to (x,y).
+      
+      Args:
+         x (float):  (x,y) point to mask out
+         y (float):  (x,y) point to mask out
+      
+      Returns:
+         None
+         
+      Effects:
+         self.mask is updated
+      '''
       id = num.argmin(num.power(self.x-x,2) + num.power(self.y-y,2))
       self.mask[id] = False
       self.setup = False
 
    def maskid(self, i):
+      '''Mask the point based on index.
+      
+      Args:
+         i (int): index of point to mask.
+      
+      Returns:
+         None
+         
+      Effects:
+         self.mask is updated
+      '''
       self.mask[id] = False
       self.setup = False
 
    def maskresids(self, absclip=None, sigclip=None):
-      '''Mask data outside a range of residuals.  If [absclip]
-      is specified, any residual > [absclip] is masked.  If
-      [sigclip] is specified, any residual more than [sigclip]
-      times the estimated standard deviation is masked.'''
+      '''Mask data outside a range of residuals.  
+      
+      Args:
+         absclip (float):  mask out data with residuals > absclip
+         sigclip (float):  mask out data with residuals > sigclip*sigma
+
+      Returns:
+         None
+
+      Effects:
+         self.mask is updated
+      '''
       absdev = num.aboslute(self.residuals())
       if absclip is not None:
          self.mask *= num.greater(absdev, absclip)
@@ -176,10 +229,29 @@ class oneDcurve:
          self.setup = False
 
    def __call__(self, x):
+      '''Return the interpolation at point(s) x.
+
+      Args:
+         x (float array or scalar):  Location at which to compute interpolant
+
+      Returns:
+         2-tuple:  (y, mask)
+
+         - y (float array or scalar): interpolant. type matches input x
+         - mask (float array or scalar): False indicates extrapolation
+      '''
       raise NotImplementedError('Derived class must overide')
 
    def error(self, x, N=50):
-      '''Estimate the error at the point [x].'''
+      '''Estimate the error in the interpolant at the point x.
+      
+      Args:
+         x (float array or scalar): location at which to compute error
+         N (int):  If bootstrap is required, number of iterations.
+         
+      Returns:
+         float array or scalar:  the error (type matches input x)
+      '''
       scalar = (len(num.shape(x)) == 0)
       x = num.atleast_1d(x)
       
@@ -200,20 +272,30 @@ class oneDcurve:
          return err
 
    def draw(self):
+      '''Generate a Monte Carlo realization of the data. Interpolator
+      will now give values based on this realization.'''
       raise NotImplementedError('Derived class must overide')
    
    def reset_mean(self):
+      '''Reset to the original data after using draw()'''
       raise NotImplementedError('Derived class must overide')
 
    def residuals(self, mask=True):
-      '''returns an array of residuals.'''
+      '''Compute the residuals (data - model) for current parameters.
+      
+      Args:
+         mask (bool):  If True, omit masked values from residuals
+         
+      Returns:
+         float array: residuals
+      '''
       if mask:
          return self.y - self.__call__(self.x)[0]
       else:
          return self.ydata - self.__call__(self.xdata)[0]
 
    def rms(self):
-      '''Returns RMS of residuals.'''
+      '''Returns RMS of residuals for current parameters.'''
       return num.sqrt(num.mean(num.power(self.residuals(),2)))
 
    def chisquare(self):
@@ -221,30 +303,69 @@ class oneDcurve:
       return num.sum(num.power(self.residuals(),2)*num.power(self.var,-1))
 
    def rchisquare(self):
+      '''Returns the reduced chi-square statistic for current parameters.'''
       raise NotImplementedError('Derived class must overide')
 
    def DW(self):
-      '''Returns the Durvin-Watson statistic.'''
+      '''Returns the Durvin-Watson statistic for current parameters.'''
       r = self.residuals()
       return num.sum(num.power(r[1:] - r[:-1],2))/num.sum(num.power(r,2))
 
    def deriv(self, x, n=1):
-      '''Returns the nth derivative of the function at x.'''
+      '''Returns the nth derivative of the function at x.
+      
+      Args:
+         x (float array or scalar): location at which to compute derivative
+         n (int):  order of the derivative to compute
+         
+      Returns:
+         float array or scalar: derivative at x (type matches input x)
+      '''
       raise NotImplementedError('Derived class must overide')
 
-   def find_extrema(self):
-      '''Find the position and values of the maxima/minima.'''
+   def find_extrema(self, xmin=None, xmax=None):
+      '''Find the position and values of the maxima/minima.
+      
+      Args:
+         xmin (float):  only consider extrema on interval (xmin,xmax)
+         xmax (float):  only consider extrema on interval (xmin,xmax)
+
+      Returns:
+         3-tuple:  (roots,vals,curvs)
+
+         - roots (float array or None): locations where derivative is zero
+           or None if no extrma on interval
+         - vals (float array or None): interpolant at roots
+         - curvs (float array or None): sign of curvature at roots. -1 if
+           concave down (maximum), +1 if concave up (minimum)
+      '''
       raise NotImplementedError('Derived class must overide')
 
    def intercept(self, y):
-      '''Find the value of x for which the interpolator goes through [y]'''
+      '''Find the value of x for which the interpolator goes through y
+      
+      Args:
+         y (float): value of y for which we wish to know x
+         
+      Returns:
+         float array or None:  value(s) of x at y or None if function does
+                               not cross y on domain
+      '''
       raise NotImplementedError('Derived class must overide')
 
    def domain(self):
-      '''Return the valid domain for this model'''
+      '''Return the valid domain for this model
+      
+      Returns:
+         2-tuple:  (xmin, xmax):  the domain of the function.
+      '''
 
    def interact(self):
-      '''If we have the InteractiveFit module, spawn an interactive fitter.'''
+      '''If we have the InteractiveFit module, spawn an interactive fitter.
+      
+      Returns:
+         InteractiveFit.InteractiveFit instance or None
+      '''
       if InteractiveFit is not None:
          return InteractiveFit.InteractiveFit(self)
       else:

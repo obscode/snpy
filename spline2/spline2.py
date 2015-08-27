@@ -4,22 +4,23 @@ Yet another spline interpolation routine.  The problem:  given a set of
 experimental data with noise, find the spline with the optimal number of
 knots.
 
-Solution :  They use the usual kind of routines to determine least-squares
-            splines from a given set of knot points.  The problem REALLY
-            boils down to:  how many knots do you use?  There are two 
-            extremes:  put a knot point on each data point to get an
-            interpolating spline (which sucks for experimental data with
-            noise).  The other extreme is to have the minimal set of knots
-            to define a polynomial of order k (e.g., a cubic).  This also
-            sucks.  Somewhere between the two extremes is a number of
-            knots that optimally recovers the information in the data and
-            smooths out the noise.
+Solution: 
+    They use the usual kind of routines to determine least-squares
+    splines from a given set of knot points.  The problem REALLY
+    boils down to:  how many knots do you use?  There are two 
+    extremes:  put a knot point on each data point to get an
+    interpolating spline (which sucks for experimental data with
+    noise).  The other extreme is to have the minimal set of knots
+    to define a polynomial of order k (e.g., a cubic).  This also
+    sucks.  Somewhere between the two extremes is a number of
+    knots that optimally recovers the information in the data and
+    smooths out the noise.
 
-            spline2 starts with a large number of knots (interpolating
-            spline) and iteratively removes knots until a figure of merit
-            reaches some prescribed value.  In this case, this figure of
-            merit is the Durbin-Watson statistic, which measures the auto-
-            correlation between the residuals of the spline fit.
+    spline2 starts with a large number of knots (interpolating
+    spline) and iteratively removes knots until a figure of merit
+    reaches some prescribed value.  In this case, this figure of
+    merit is the Durbin-Watson statistic, which measures the auto-
+    correlation between the residuals of the spline fit.
 
 For more details, see:
  *  Barend J. Thijsse et al., "A Practical Algorithm for Least-Squares 
@@ -36,46 +37,55 @@ def spline2(x, y, w=None, sigma=None, rsigma=None, xrange=None, degree=3,
       acfsearch=0, acffunc='exp', ksi=None, n=None, 
       allownonopt=1, lopt=None, rejlev=0.05, xlog=0, 
       interactive=0, verbose=0, full_output=0):
-   '''Solve for the optimal spline given a set of (x,y) data.  The optional
-      arguments are as follows:
-      w:        specify weights (1/sigma) for each data point
-      sigma:    specify an absolute sigma for all data points:  
-                w[i] = 1/sigma
-                this will then force a regular chi-square fit instead of DW
-      rsigma:   specify a relative sigma for all data ponts:  
-                w[i] = 1/(y*rsigma)
-      xrange:   Only use data in interval [xrange[0], xrange[1]]
-      degree:   degree of the spline (default:  3 for cubic spline)
-      acfsearch: perform an automated search for autocorrelation.
-      acffunc:  Use acffunc as the autocorrelation function.  can be one of
-                'exp','gauss','linear', or 'sinc'.  Default:  'exp'
-      ksi:      Use a specific autocorrelation length equal to ksi
-      n:        Only search for autocorrelation on index interval n
-      allownonopt:  Allow splines with non-optimized breakpoints (default 1)
-      lopt:     Force knot optimization to start with lpot knots.
-      rejlev:   Use rejection level on statistical tests of rejlev 
-                (default 0.05)
-      xlog:     Take the log10(x) before spline fitting.
-      verbose:  Lots of output to stdout.
-      interactive:  Allows the user to choose the optimal spline manually.
-      full_output:  along with tck, return the following statistics:
-                    rms, dws (Durbin-Watson statistic), lfin (final number
-                    of knot points), ksi (computed auto-correlation length),
-                    acffit (indicator of how well the assumed auto-
-                    correlation function represents the data),
+   '''Solve for the optimal spline given a set of (x,y) data.  
+
+      Args:
+         w (float array): specify weights (1/sigma) for each data point
+         sigma (float): specify an absolute sigma for all data points:  
+                   w[i] = 1/sigma
+                   this will then force a regular chi-square fit instead of DW
+         rsigma (float): specify a relative sigma for all data ponts:  
+                   w[i] = 1/(y*rsigma)
+         xrange (2-tuple): Only use data in interval (xrange[0], xrange[1])
+         degree (int): degree of the spline (default:  3 for cubic spline)
+         acfsearch (bool): perform an automated search for autocorrelation.
+         acffunc (str):  Use acffunc as the autocorrelation function.  
+                   can be one of 'exp','gauss','linear', or 'sinc'.  Default:
+                   'exp'
+         ksi (float): Use a specific autocorrelation length equal to ksi
+         n (int):  Only search for autocorrelation on index interval n
+         allownonopt (bool):  Allow splines with non-optimized breakpoints 
+                   (default True)
+         lopt (int): Force knot optimization to start with lpot knots.
+         rejlev (float): Use rejection level on statistical tests of rejlev 
+                   (default 0.05)
+         xlog (bool): Take the log10(x) before spline fitting. Default: False
+         verbose (bool):  Lots of output to stdout. Default: False
+         interactive (bool):  Allows the user to choose the optimal spline 
+                      manually.
+         full_output (bool):  along with tck, return the following statistics:
+                       rms, dws (Durbin-Watson statistic), lfin (final number
+                       of knot points), ksi (computed auto-correlation length),
+                       acffit (indicator of how well the assumed auto-
+                       correlation function represents the data),
  
-      Returns:  (t, c, k)   if full_output=0
-                ((t,c,k), rms, dws, lfin, ksi, acffit)  if full_output=1
-      t:        array of lfin+1 knot points
-      c:        array of lfin+k-1 spline coefficients
-      k:        order of the spline (note:  order = degree+1, so this is 4 
-                for a cubic spline!)
-      The tuple (t,c,k) can be input to routines such as evalsp().
-      rms:      dispersion of the fitted spline
-      dws:      Durbin-Watson statistic
-      lfin:     final number of knot points
-      ksi:      computed auto-correlation length
-      acffit:   how well the correlations agree with assumed funcion.'''
+      Returns:
+        (tuple):  (t, c, k)   if full_output=0 ((t,c,k), rms, dws, lfin, ksi, 
+        acffit)  if full_output=1
+
+        - t: array of lfin+1 knot points
+        - c: array of lfin+k-1 spline coefficients
+        - k: order of the spline (note:  order = degree+1, so this is 4 
+             for a cubic spline!)
+
+        The tuple (t,c,k) can be input to routines such as evalsp().
+
+        - rms: dispersion of the fitted spline
+        - dws: Durbin-Watson statistic
+        - lfin: final number of knot points
+        - ksi: computed auto-correlation length
+        - acffit: how well the correlations agree with assumed funcion.
+   '''
 
    x = num.asarray(x).astype(num.float64)
    y = num.asarray(y).astype(num.float64)
@@ -145,10 +155,17 @@ def spline2(x, y, w=None, sigma=None, rsigma=None, xrange=None, degree=3,
       return(result[0:3])
 
 def evalsp(x, tck, deriv=0):
-   '''Evaluate a spline computed by spline2.  The spline is evaluated at the
-   points x.  tck is a tuple of (knots, coefficents, k) that are returned 
-   as the first output of spline2.  If deriv > 0, compute the deriv-th 
-   derivative of the spline instead.'''
+   '''Evaluate a spline computed by spline2.  
+   
+   Args:
+      x (float array or scalar): The spline is evaluated at the points x.  
+      tck (3-tuple):  a tuple of (knots, coefficents, k) that are returned 
+                      as the first output of spline2.  
+      deriv (int): if  > 0, compute the deriv-th derivative of the spline 
+      
+   Returns: 
+      float array: evaluated interpolant or derivative thereof.
+   '''
    if len(num.shape(x)) == 0:
       x = num.array([x]).astype(num.float64)
    else:
@@ -164,13 +181,23 @@ def evalsp(x, tck, deriv=0):
    return(result)
 
 def eval_extrema(tck):
-   '''Attempts to find the extrema of the spline (where S'(x)==0).  tck is a 
-   tuple of (knots, coefficients, k) that are returned as the first output 
-   of spline2.  Returns a 3-tuple:  (xextr, yextr, signs)  where xextr are 
-   the x-positions of the extrema, yextr are S(extr), and signs provice the 
-   sign of the 2nd derivative S''(extr):  signs[i] < 0 --> maximum, 
-   signs[i] > 0 --> minimum, signs[i] close to 0 --> inflection point (see 
-   eval_inflect).'''
+   '''Attempts to find the extrema of the spline (where S'(x)==0). 
+   
+   Args:
+      tck (3-tuple): tuple of (knots, coefficients, k) that are returned as 
+                     the first output of spline2.  
+                     
+   Returns:
+      3-tuple:  (xextr, yextr, signs)  where 
+      
+      - xextr are the x-positions of the extrema, 
+      - yextr are S(extr), and 
+      - signs provice the sign of the 2nd derivative S''(extr):  
+      
+         - signs[i] < 0 --> maximum, 
+         - signs[i] > 0 --> minimum, 
+         - signs[i] close to 0 --> inflection point
+   '''
    t = tck[0]
    c = tck[1]
    l = len(t) - 1
@@ -184,10 +211,18 @@ def eval_extrema(tck):
 
 def eval_inflect(tck):
    '''Attempts to find the inflection points of the spline (where S''(x)==0).
-   tck is a tptuple of (knots, coefficients, k) that are returned as the 
-   first output of spline2.  Returns a 3-tuple:  (xinflect, yinflect, 
-   dyinflect) where xinflect are the x-positions of the inflection points, 
-   yminflect are S(xinflect), and dyinflect are S'(xinflect).'''
+
+   Args:
+      tck (3-tuple):  tuple of (knots, coefficients, k) that are returned as 
+                       the first output of spline2.  
+                       
+   Returns:
+      3-tuple:  (xinflect, yinflect, dyinflect) where 
+      
+      - xinflect are the x-positions of the inflection points, 
+      - yminflect are S(xinflect), and 
+      - dyinflect are S'(xinflect).
+   '''
 
    t = tck[0]
    c = tck[1]
@@ -200,7 +235,17 @@ def eval_inflect(tck):
    return(result)
 
 def eval_integ(x0, x1, tck):
-   '''Evaluates the integral from x0 to x1 of the spline defined by tck.'''
+   '''Evaluates the integral from x0 to x1 of the spline defined by tck.
+   
+   Args:
+      x0 (float):  lower limit of integration
+      x1 (float):  upper limit of integration
+      tck (3-tuple): tuple of (knots, coefficients, k) that are returned as 
+                     the first output of spline2.  
+
+   Returns:
+      float:  the integration.
+   '''
    t = tck[0]
    c = tck[1]
    l = len(t) - 1
@@ -213,7 +258,16 @@ def eval_integ(x0, x1, tck):
 
 def eval_x(value, tck):
    '''Attempts to find the roots of the equation S(x) = value for the spline
-   defined by tck.  Returns roots, an array of roots of the equation.'''
+   defined by tck.  
+   
+   Args:
+      value (float):  value to solve the root for
+      tck (3-tuple): tuple of (knots, coefficients, k) that are returned as 
+                     the first output of spline2.  
+
+   Returns:
+      float array: roots of the equation.
+   '''
    t = tck[0]
    c = tck[1]
    l = len(t) - 1

@@ -18,6 +18,7 @@ Subpackages
    snpy.filters
    snpy.CSPtemp
    snpy.dm15temp
+   snpy.spline2
 
 Submodules
 ----------
