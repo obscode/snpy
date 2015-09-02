@@ -221,6 +221,20 @@ class sn(object):
       #if name == 'Rv_host'
       self.__dict__[name] = value
 
+   def __eq__(self, other):
+      '''Check if the data in this instance is equal to the data in another.
+      Only checks raw data (light-curves).'''
+      res = set(self.data.keys()) == set(other.data.keys())
+      if not res:
+         return False
+      for f in self.data.keys():
+         res = res and (self.data[f] == other.data[f])
+      return res
+
+   def __ne__(self, other):
+      return not self.__eq__(other)
+      
+
    def choose_model(self, name, stype='dm15', **kwargs):
       '''A convenience function for selecting a model from the model module.
       [name] is the model to use.  The model will be used when self.fit() is 

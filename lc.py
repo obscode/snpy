@@ -70,6 +70,17 @@ class lc:
 
       self.mp = None     # reference to multiplot or PanelPlot
 
+   def __eq__(self, other):
+      '''Check to see if another lc instance is equal to this one.'''
+      if self.MJD.shape != other.MJD.shape:
+         return False
+      return alltrue(less(absolute(self.MJD-other.MJD),1e-5)) \
+             and alltrue(less(absolute(self.magnitude-other.magnitude),1e-5)) \
+             and alltrue(less(absolute(self.e_mag-other.e_mag),1e-5))
+
+   def __ne__(self, other):
+      return not self.__eq__(other)
+
    def get_t(self):
       '''Get the epoch of observations relative to parent.Tmax. This can also
       be accessed through the :attr:`.t` attribute.'''
