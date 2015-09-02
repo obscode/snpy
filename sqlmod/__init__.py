@@ -69,7 +69,7 @@ class sqlbase:
       dict = self.__dict__.copy()
       if 'con' in dict:  del dict['con']
       if 'c' in dict:  del dict['c']
-      if 'c2' in dict:  del dict['c']
+      if 'c2' in dict:  del dict['c2']
       dict['connected'] = 0
       return dict
 
