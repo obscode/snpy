@@ -163,6 +163,7 @@ class sqlbase:
 
    def close(self):
       '''Close connection to the database.'''
+      if not self.connected: return
       self.con.close()
       if self.con2 is not None and self.con2 != self.con:
          self.con2.close()
