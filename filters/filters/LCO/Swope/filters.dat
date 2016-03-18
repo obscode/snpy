@@ -1,4 +1,6 @@
-B   Bmax_WLcorr_atm.txt        VegaB=0.03   TAM scanned B filter for Swope at LCO + CTIO extinction
+B   B_texas_WLcorr_atm_new.txt        VegaB=0.03   TAM scanned B filter for Swope at LCO + CTIO extinction
+#B   Bmax_WLcorr_atm.txt        VegaB=0.03   TAM scanned B filter for Swope at LCO + CTIO extinction
+#B   Btexas_ctioextinction.txt        VegaB=0.03   TAM scanned B filter for Swope at LCO + CTIO extinction
 V   VLC9844_max_WLcorr_atm.txt VegaB=0.008  TAM scanned current V filter for Swope at LCO + CTIO extinction
 V1  VLC3009_max_WLcorr_atm.txt VegaB=0.008  TAM scanned V intermediate filter for Swope at LCO + CTIO extinction
 V0  VLC3014_max_WLcorr_atm.txt VegaB=0.008  TAM scanned V broken filter for Swope at LCO + CTIO extinction
