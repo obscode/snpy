@@ -288,7 +288,7 @@ class filter(spectrum):
       numer = self.response(specwave, flux=flux, z=z, zeropad=zeropad,
             photons=0)
       if numer <= 0:
-         return(nan)
+         return(num.nan)
 
       if not isinstance(specwave, spectrum):
          denom = self.response(specwave, 2.997925e18/num.power(specwave,2), 
@@ -314,7 +314,7 @@ class filter(spectrum):
       numer = self.response(s_wave, flux=s_flux*s_wave, z=z, zeropad=zeropad)
       denom = self.response(s_wave, flux=s_flux, z=z, zeropad=zeropad)
       if numer <= 0 or denom <=0:
-         return(nan)
+         return(num.nan)
       return(numer/denom)
 
 
@@ -339,7 +339,7 @@ class filter(spectrum):
                      standards['Vega']['VegaB'].resp
       flux0 = self.response(wave, flux, z, photons=1)
       if flux0 <= 0:
-         return(nan)
+         return(num.nan)
       redf = unred(wave, flux, -EBV, Rv, z, redlaw=redlaw, 
             strict_ccm=strict_ccm)[0]
       fluxr = self.response(wave, redf, z, photons=1)
