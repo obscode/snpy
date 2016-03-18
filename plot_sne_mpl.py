@@ -10,7 +10,7 @@ import myplotlib
 from matplotlib import pyplot,rcParams
 from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator,AutoLocator
 from snpy import kcorr
 import types, string
 from snpy.filters import fset
@@ -498,6 +498,7 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
 def plot_sn(self, **kwargs):
    '''Plot out the supernova data in a nice format.  There are several 
    options:
+      - cols,rows:  Number of columns and rows for panel plot (single=False)
       - xrange,yrange:  specify the ranges to plot as lists [xmin,xmax], 
         [ymin,ymax]
       - title:  optional title
@@ -513,6 +514,7 @@ def plot_sn(self, **kwargs):
       - mask:  Omit plotting masked out data?
       - label_bad:  label the masked data with red x's?
       - Nxticks:  maximum number of x-axis tick marks.
+      - Nyticks:  maximum number of y-axis tick marks.
       - JDoffset: If true, compute a JD offset and put it in the x-axis label
                   (useful if x-labels are crowded)
       - SNR_flag: If a tuple, SNR levels to flag in the plot
@@ -531,8 +533,13 @@ def plot_sn(self, **kwargs):
    flux = kwargs.get('flux', False)
    oobj = kwargs.pop('overplot', None)
    Nxticks = kwargs.pop('Nxticks', None)
+   Nyticks = kwargs.pop('Nxticks', None)
    epoch = kwargs.get('epoch', False)
    JDoff = kwargs.get('JDoffset', False)
+   cols = kwargs.get('cols', None)
+   rows = kwargs.get('rows', None)
+   prunex = kwargs.get('prunex', None)
+   pruney = kwargs.get('pruney', None)
 
    Toff = 0
    if epoch:
@@ -542,8 +549,14 @@ def plot_sn(self, **kwargs):
          Tmax = self.Tmax
       Toff = Tmax
    elif JDoff:
-      Toff = int(min(concatenate([l.MJD for l in self.data.values()]))/10.0)
-      Toff = Toff*10
+      if JDoff is True or JDoff == 'auto':
+         Toff = int(min(concatenate([l.MJD for l in self.data.values()]))/10.0)
+         Toff = Toff*10
+      else:
+         try:
+            Toff = float(JDoff)
+         except:
+            raise ValueError, "JDOffset must be Boolean, 'auto', or number"
    else:
       Toff = 0
 
@@ -584,8 +597,13 @@ def plot_sn(self, **kwargs):
       flip = 0
       ylabel = 'relative flux'
    if not single:
-      cols = int(round(sqrt(n_plots)))
-      rows = (n_plots / cols)
+      if cols is None and rows is None:
+         cols = int(round(sqrt(n_plots)))
+         rows = (n_plots / cols)
+      elif cols is None:
+         cols = n_plots / rows
+      else:
+         rows = n_plots / cols
       if n_plots % cols:  rows += 1
       figwidth = min(8*dpi,max_width)*1.0/dpi
       figheight = min(8.*rows/cols*dpi, max_height)*1.0/dpi
@@ -598,7 +616,7 @@ def plot_sn(self, **kwargs):
    if kwargs.get('epoch', False):
       p.xlabel('Days after B maximum')
    elif kwargs.get('JDoffset', False):
-      p.xlabel('Date - %d' % Toff)
+      p.xlabel('JD - %d' % Toff)
    else:
       p.xlabel('Date')
    p.ylabel(ylabel)
@@ -613,7 +631,14 @@ def plot_sn(self, **kwargs):
          ax.set_autoscaley_on(False)
          ax.set_ylim(yrange)
       if Nxticks is not None:
-         ax.xaxis.set_major_locator(MaxNLocator(Nxticks))
+         ax.xaxis.set_major_locator(MaxNLocator(Nxticks, prune=prunex))
+      else:
+         ax.xaxis.set_major_locator(AutoLocator())
+
+      if Nyticks is not None:
+         ax.yaxis.set_major_locator(MaxNLocator(Nyticks, prune=pruney))
+      else:
+         ax.xaxis.set_major_locator(AutoLocator())
 
    offsets = self.lc_offsets()
 
@@ -623,7 +648,7 @@ def plot_sn(self, **kwargs):
       #delt = round(delt, 1)
       delt = rel_off
       if offset and single:
-        delt = delt + offsets[i]
+         delt = delt + offsets[i]
       if not single:
          ax = p.axes[i]
          # make a reference to the lightcruve we are plotting.
