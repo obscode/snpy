@@ -29,7 +29,7 @@ def fitsvd(A, b):
    if sometrue(sol3):
       solr = (sol2*sol3)
       soll = dot(sol1,solr)
-      err = sqrt(sum(power(sol1*sol2, 2)))
+      err = sqrt(sum(power(sol1*sol2, 2), axis=0))
    else:
       soll = zeros(sol3.shape)
       err = zeros(sol3.shape)
@@ -54,7 +54,7 @@ def fitpoly(x, y, w, k=1, x0=0):
 
 def poly(x, x0, soll):
    '''Compute the polynomial from the solution.'''
-   y = sum(array([1.0/fac(i)*power(x*1.0-x0, i)*soll[i] for i in range(len(soll))]))
+   y = sum(array([1.0/fac(i)*power(x*1.0-x0, i)*soll[i] for i in range(len(soll))]), axis=0)
    return(y)
 
 
