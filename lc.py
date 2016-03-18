@@ -355,7 +355,27 @@ class lc:
          self.compute_lc_params(N=Nboot)
 
    def compute_lc_params(self, N=50):
-      '''Compute dm15, Tmax, Mmax, and covariances for the light-curve.'''
+      '''Compute dm15, Tmax, Mmax, and covariances for the light-curve.
+      
+      Args:
+         N (int):  the nubmer of Monte-Carlo iterations for computing
+                   errors in parameters.
+                   
+      Returns:
+         None
+
+      Effects:
+         The foloowing LC instance's member variables are updated:
+          - Tmax:  time of primary maximum. None if such does not exist
+          - e_Tmax:  error in Tmax
+          - dm15:  The decline rate parameter, or None if not measurable
+          - e_dm15:  error in dm15
+          - Mmax:  the magnitude at maximum, or None if no maximum.
+          - e_Mmax:  the error in Mmax
+          - cov_Tmax_dm15:  covariance between Tmax and dm15
+          - cov_Mmax_dm15:  covariance between Mmax and dm15
+          - cov_Tmax_Mmax:  covariance between Tmax and Mmax
+      '''
 
       # rest-frame of the SN
       day15 = 15*(1 + self.parent.z)
@@ -459,10 +479,22 @@ class lc:
 
    def plot(self, epoch=1, flux=0, gloes=True, symbol=4, outfile=None,
          use_model=True):
-      '''Plot this light-curve.  If epoch=1, plot times relative to self.Tmax.
-      If flux=1, plot in flux units.  If [gloes], use GLoEs to smooth 
-      the data and produce a model.  You can specify the symbol to plot with 'symbol'.
-      If you provide [outfile], the graph will be saved to [outfile]'''
+      '''Plot this light-curve, including residuals if a model or interpolator
+      is defined.  
+      
+      Args:
+         epoch (Bool):  If True, plot times relative to self.Tmax
+         flux (Bool):   If True, plot in flux units rather than magnitudes
+         gloes (Bool):  If True, use GLoEs to smooth data and produce model
+         symbol (misc): Specify matplotlib symbol to use for plotting points
+         outfile (string or None):  If not None, output graph to specified file
+         use_model (Bool): If True and both model and interpolator are defined,
+                           use the model to plot residuals.
+
+      Returns:
+         PanelPlot or SimplePlot instance.
+            A reference to the plot instance created to show the data.
+      '''
 
       return plotmod.plot_lc(self, epoch, flux, symbol, outfile=outfile,
             use_model=use_model)
