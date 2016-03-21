@@ -1511,11 +1511,22 @@ def after_install(options,home_dir):
    home_dir = os.path.realpath(home_dir)
    # Test for installed software
    pip = join(home_dir, 'bin', 'pip')
+   if not os.path.isfile(pip):
+      pip = None
+      # Try to find a version in our PATH
+      for path in os.environ['PATH'].strip().split(':'):
+         pip = join(path, 'pip')
+         if os.path.isfile(pip):
+            break
+      if pip is None:
+         sys.stderr.write("Can't find pip. Please install it before running")
+         sys.stderr.write("snpy-bootstrap\n")
+         sys.exit(1)
    print 'Using pip:', pip
    # First, the absolutely necessary stuff
    print "Now going to install the manditory software..."
    man_packages = ['scipy','pymysql','pyfits','matplotlib',
-                   'ipython>=0.12']
+                   'ipython>=0.12','emcee','gnureadline']
    for package in man_packages:
       sys.stdout.write("   Installing %s..." % package)
       sys.stdout.flush()
@@ -1550,10 +1561,28 @@ def after_install(options,home_dir):
    print "Now attempting to download/install SNooPy..."
    os.chdir(home_dir)
    of = open('SNooPy.log', 'w')
-   p = subprocess.Popen(['svn','co','svn://cow.obs.carnegiescience.edu/snpy/branch/snpy2','snpy'], stdout=of, stderr=subprocess.STDOUT)
+   # First, we try to use git
+   succeed = False
+   p = subprocess.Popen(['git','clone','https://github.com/obscode/snpy.git',
+      'snpy'], stdout=of, stderr=subprocess.STDOUT)
+   p.wait()
+   if p.returncode != 0:
+      print "You do not seem to have git. I will try to use SVN instead, but"
+      print " SVN repository will be abandoned in the near future."
+   else:
+      succeed = True
+
+   if not succeed:
+      p = subprocess.Popen(['svn','co',
+         'svn://cow.obs.carnegiescience.edu/snpy/branch/snpy2','snpy'], 
+         stdout=of, stderr=subprocess.STDOUT)
    p.wait()
    if p.returncode != 0:
       print "Failed to download from SVN, reverting to static source"
+   else:
+      succeed = True
+
+   if not succeed:
       p = subprocess.Popen([pip, 'install', 'snpy', '-f', 
               'http://users.obs.carnegiescience.edu/cburns/downloads'],
               stdout=of, stderr=subprocess.STDOUT)
@@ -2039,9 +2068,26 @@ xu/Lx8M/UvCLTxW7VULHxB1PRRbrYfvWNY5S8it008jOjcleaMqVBDnUXcWULV2YK9JEQ92OfC96
 3vMWehjQNJmE5VePlZbL61nzX3S93ZcfDqznnkb9AZ3GWJU=
 """)
 
+iraf_warning = '''
+WARNING:  you have the F77 environment variable set to the IRAF script. Please
+unset this variable or, better yet, set it to your actual fortran compiler.'''
+xcode_warning = '''
+WARNING:  can't find gcc compiler. Please install the latest Xcode for your
+system. If you are running OSX 10.7 or later, you also need to start up
+Xcode, open the Preferences, click on the "Downloads" tab, select
+"Command Line Tools" and click install button.'''
 
-
-
+def check_environment():
+   '''Look for the most common problems and warn the user if detected.'''
+   if 'F77' in os.environ:
+      if os.environ.find('iraf') >= 0:
+         print iraf_warning
+         sys.exit(1)
+   if sys.platform == 'darwin':
+      # check for Xcode
+      if not os.path.isfile('/usr/bin/gcc'):
+         print xcode_warning
+         sys.exit(1)
 
 if __name__ == '__main__':
 
@@ -2055,6 +2101,8 @@ if __name__ == '__main__':
           rp = os.path.realpath(sys.prefix)
           after_install(None, rp)
           sys.exit(0)
+       else:
+          sys.exit(1)
     elif hasattr(sys, 'base_prefix'):
        print "Warning:  you are already running in a venv virtual environment."
        print "So I'm just going to install SNooPy in this venv."
@@ -2066,6 +2114,11 @@ if __name__ == '__main__':
              install_pip(os.path.join(rp, 'bin', 'python'))
           after_install(None, rp)
           sys.exit(0)
+       else:
+          sys.exit(1)
+
+    # See if we have any known gotchas
+    check_environment()
 
     main()
 
