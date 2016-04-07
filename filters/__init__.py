@@ -186,12 +186,12 @@ class filter(spectrum):
       spectrum can be defined as a spectrum instance, in which case you simply
       need to specify [specwave]  Or, you can specify a wavelength
       and flux vector, in which case, you need to specify both [specwave] (which
-      is now taken to be the wavelength vector) and the flux as [flux].  If z is 
+      is now taken to be the wavelength vector) and the flux as [flux].  If z is
       supplied, first redshift the spectrum by this amount.  If zeropad is true,
-      then the spectrum is assumed to be zero where the filter extends beyond its
-      definition, otherwise -1 is returned if the filter extends beyond the
-      spectrum's definition.  If photons=1, the integrand is multiplied by 
-      the wavelength vector and divided by c*h, i.e., the photon flux is
+      then the spectrum is assumed to be zero where the filter extends beyond
+      its definition, otherwise -1 is returned if the filter extends beyond the
+      spectrum's definition.  If photons=1, the integrand is multiplied by the
+      wavelength vector and divided by c*h, i.e., the photon flux is
       computed..'''
 
       # Handle the intput parameters
@@ -311,8 +311,10 @@ class filter(spectrum):
          s_wave = specwave.wave
          s_flux = specwave.flux
 
-      numer = self.response(s_wave, flux=s_flux*s_wave, z=z, zeropad=zeropad)
-      denom = self.response(s_wave, flux=s_flux, z=z, zeropad=zeropad)
+      numer = self.response(s_wave, flux=s_flux*s_wave, z=z, zeropad=zeropad,
+            photons=0)
+      denom = self.response(s_wave, flux=s_flux, z=z, zeropad=zeropad,
+            photons=0)
       if numer <= 0 or denom <=0:
          return(num.nan)
       return(numer/denom)
