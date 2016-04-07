@@ -319,6 +319,39 @@ class lc:
       return self.template(fitflux=fitflux, do_sigma=do_sigma, Nboot=Nboot, 
             method=method, **args)
 
+   def curve_fit(self, fitflux=0, do_sigma=1, Nboot=100, keep_boot=1, 
+         method='spline2', **args):
+      '''Make a spline template of the lightcurve.  The name is a bit misleading
+      as many interpolators are available. Once this is done, the light-curve
+      can be interpolated and properties (Tmax, Mmax, etc) can be computed.
+      
+      Args:
+         fitflux (bool):  If True, fit the flux instead of magnitudes
+         do_sigma (bool):  If True, perform MC iterations to estimate the
+                           errors in the interpolations.
+         Nboot (int):  Number of MC iterations to perform.
+         keep_boot (bool): If True, keep the MC realizations for future use
+         method (str):  The interpolation method. Use :meth:`.list_types`
+                        to find out what is available.
+         args (dict):  all other arguments are sent to the constructor of
+                       the interpolator. See :mod:`snpy.utils.fit1dcurve`
+                       for documentation on this.
+
+      Returns:
+         None
+
+      Effects:
+         Upon successful completion of the
+         routine, the following member variables will be populated: 
+         * Tmax, e_Tmax: time of maximum (and error if do_sigma=1) 
+         * Mmax, e_Mmax:   peak magnitude
+         * dm15, e_dm15:   delta-m 15
+         * model_type:     "spline" or "spline2"
+         * tck:            spline info '''
+      return self.template(fitflux=fitflux, do_sigma=do_sigma, Nboot=Nboot, 
+            method=method, **args)
+
+
    def list_types(self):
       print "the following methods are available for constructing templates:"
       fit1dcurve.list_types()
