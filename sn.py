@@ -26,6 +26,7 @@ from lc import lc           # the light-curve class
 from numpy import *       # Vectors
 import ubertemp             # a template class that contains these two
 import kcorr                # Code for generating k-corrections
+import bolometric
 import utils.IRSA_dust_getval as dust_getval
 
 from utils import fit_poly  # polynomial fitter
@@ -678,7 +679,46 @@ class sn(object):
       denom = fset[band].response(wave*(1+self.z), man_flux)
       return(wave*(1+self.z),man_flux*num/denom,flux,man_flux/flux)
    
-   def get_color(self, band1, band2, interp=1, use_model=0, model_float=0, kcorr=0):
+   #def fit_color(self, band1, band2, **args):
+   #   '''Fit a 1dcurve to the band1-band2 color. Can be an interactive fit
+   #  as well.
+
+   #  Args:
+   #     band1,band2 (str):  Filters comprising the color
+   #     interp (bool): If True, interpolate missing data in either filter
+   #     use_model (bool): If True and both a model and interpolator are
+   #                       defined for the filter, use the model to interpolate
+   #     model_float (bool): If True, then re-fit the model to each filter
+   #                         independently (so each has independent Tmax)
+   #     kcorr (bool): If True, return k-corrected color.
+   #     method (str):  Which interpolator to use. Use :meth`.list_types`
+   #                    to find out what is available.
+   #  '''
+   #  interp = args.get('interp', 1)
+   #  use_model = args.get('use_model', 0)
+   #  model_float = args.get('model_flot', 0)
+   #  kcorr = args.get('kcorr', 0)
+   #  method = args.get('method', 'spline2')
+   #  t,c,ec,mask = self.get_color(band1, band2, interp, use_model, model_float,
+   #        kcorr)
+
+   #  if self.Tmax > 0:
+   #     evt = arange(int(self.t[0]), int(self.t[-1]+1)*1.0 + self.Tmax)
+   #  else:
+   #     evt = arange(self.MJD[0], self.MJD[-1])*1.0
+
+   #  tt,cc,ecc = fit1dcurve.regularize(t, c, ec)
+   #  if getattr(self, 'cinterp', None) is None:
+   #     self.cinterp = {}
+   #  self.cinterp[(band1,band2)] = fit1dcurve.Interpolator(method,
+   #        t, c, ec, less_equal(mask,2))
+   #  if interactive:
+
+
+
+
+   def get_color(self, band1, band2, interp=1, use_model=0, model_float=0, 
+      kcorr=0):
       '''return the observed SN color of [band1] - [band2].  
       
       Args:
@@ -1055,6 +1095,7 @@ class sn(object):
          if N == 0:
             print "%s not found in database, starting from scratch..." % (name)
             self.sql.close()
+            return
          try:
             self.z = self.sql.get_SN_parameter('z')
             self.ra = self.sql.get_SN_parameter('ra')
@@ -1597,139 +1638,97 @@ class sn(object):
       '''
       return plotmod.plot_kcorrs(self, colors, symbols)
 
-   def bolometric(self, bands, lam1=None, lam2=None, refband=None, 
-         normband=None, remangle=0, extrap_red='RJ', extrap_blue=None, 
-         outfile=None, verbose=0, **mopts):
-      '''EXPERIMENTAL!
-      
+   def bolometric(self, bands, method="direct", lam1=None, lam2=None, 
+         refband=None, EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ', 
+      Tmax=None, interpolate=None, mopts={}, SED='H3', DM=None,
+      cosmo='LambdaCDM', use_stretch=False, verbose=False, outfile=None):
+      '''
       Produce a quasi-bolometric flux light-curve based on the input [bands]
       by integrating a template SED from \lambda=lam1 to \lambda=lam2.
 
       Args:
          bands (list):  list of filters to constrain the bolometric flux
-         lam1,lam2 (float):  limits of the integration.
-         refband (str or None):  The reference band. The bolometric flux will
-                                 be estimated as the cadence of refband, so 
-                                 this should have the least coverage to be
-                                 safe.
-         normband (str or None):  bolometric flux is normalized to the
-                                  photometry give by normband.
-         remangle (bool):  If True, the SED is mangled to match the observed
-                           colors.
+         method (str):  The method to use: 'direct' or 'SED'. See
+                        SNooPy documentation for how these methods differ
+         lam1,lam2 (float):  limits of the integration. This is igored for
+                             the direct method.
+         refband (str or None):  For the SED method, the band to use to
+                             normalize the SED. If you have more confidence
+                             in one particular filter (or want to avoid
+                             automatically choosing a bad one), specify this.
+                             Ignored by the direct method.
+         EBVhost (float or None): The value of E(B-V) to use for the host
+                             galaxy. If None, will look for model parameter
+                             in the supernova object.
+         Rv (float or None):  Value of R_V to use for the host galaxy. If None,
+                             will look for parameter in the supernova object.
+         redlaw (str): The reddening law to use ('ccm','fm','etc). If None,
+                             will look up in sn model.
          extrap_red (str or None):  Specify how we extrapolate to 
                                      \lambda -> lam1 'RJ' specifies 
                                      Rayleigh-Jeans. None turns off 
                                      extrapolation in the red.
-         extrap_blue (str or None):  Currently unused.
+         Tmax (float or None): Used by SED method to set the epoch of maximum.
+                               If None, will look for it as parameter in model.
+         interpolate (str or None):  if not None, missing photometry for each
+                              epoch will be interpolated. If 'spline', it will
+                              use a spline, if 'model', it will use the
+                              currently fit model.
+         mopts (dict):  You can pass any parameters for mangle_spectrum2()
+                        using this option. Only used by SED method.
+         SED (str, tuple, function): Specify the SED to use. This can be a
+                        string ("H3","H","N", or "91bg"), a (wave,flux)
+                        tuple, or a python function f(t) that, given time t,
+                        returns a (wave,flux) tuple. For the SED method, this
+                        is the SED that will be fluxed, then integrated. For
+                        the direct method, it is used to compute effective
+                        wavelenth of the filter and convert mag -> flux.
+         DM (float or None): The distance modululs. If None, it will be computed
+                        using the supernova's z_cmb and the specified cosmology
+                        (see cosmo argument below).
+         cosmo (string): The cosmology to use. See astropy.cosmology.
+         use_stretch(bool): If dm15 or stretch are defined, use this to
+                        de-stretch the SED template? Ignored by direct
+                        method.
          verbose (bool):  Be verbose?
-         mopts (dict):  any extra arguments are sent to
-                        kcorr.mangle_spectrum.mangle_spectrum2()
+         outfile (str): If not None, name of output file for bolometric
+                        luminosities.
 
       Returns:
-         3-tuple:  (time,bolflux,flag)
-                 time: array of epochs
-                 bolflux: array of bolometric fluxes
-                 flag:  mask for valid data.
+         3-tuple:  (epoch, bolo, filters_used, limits)
+                 epoch: array of epochs
+                 bolo: array of bolometric luminosities in erg/s
+                 filters_used: a list of filters used for each epoch
+                 limits:  2-type of wavelength limits for each epoch
       '''
-      for b in bands:  
-         if b not in self.data:
-            raise AttributeError, "band %s not defined in data set" % (b)
+      if method == 'direct':
+         res = bolometric.bolometric_direct(
+               self, bands, EBVhost, Rv, redlaw, extrap_red,
+               interpolate, SED, Tmax, DM, cosmo, verbose)
+         limits = [(l.min(),l.max()) for l in res['lam_effs']]
 
-      if lam1 is None:
-         lam1 = array([fset[b].waverange()[0] for b in bands]).min()
-      if lam2 is None:
-         lam2 = array([fset[b].waverange()[1] for b in bands]).max()
-      if verbose:
-         print "Integrating from %.1f to %.1f" % (lam1, lam2)
-      if refband is None:
-         # take the band with the fewest data points
-         nps = array([len(self.data[b].MJD) for b in bands])
-         id = argmin(nps)
-         refband = bands[id]
-      if verbose:  print "Using %s as the reference band" % refband
-
-      if refband not in bands:
-         raise ValueError, "refband must be one of bands"
-
-      if normband is None:
-         normband = bands[0]
-      if verbose:  print "Normalizing to flux in %s band" % normband
-
-      if 'ks_mopts' not in self.__dict__:
-         ks_mopts = {}
       else:
-         ks_mopts = self.ks_mopts
-      if not alltrue(array([b in ks_mopts for b in bands])):
-         remangle = 1
+         res = bolometric.bolometric_SED(
+               self, bands, lam1, lam2, refband, EBVhost, Rv, redlaw,
+               extrap_red, Tmax, interpolate, mopts, SED,
+               DM, cosmo, use_stretch,verbose)
+         limits = [(l.min(),l.max()) for l in res['waves']]
 
-      if remangle:
-         self.kcorr(bands, mangle=1, **mopts)
+      if outfile is not None:
+         fout = open(outfile, 'w')
+         fout.write('# Bolometric luminosity for %s\n' % (self.name))
+         fout.write('# Using %s method\n' % (method))
+         fout.write('# Luminosities in units of 1.e45 erg/s\n')
+         fout.write('# Times are in *observed* frame\n')
+         fout.write('#\n# %6s  %9s  %8s %8s %s\n' % ('t','Lbol','lam1','lamb2',
+            'filters'))
+         for i in range(len(res['epochs'])):
+            fout.write('%7.2f  %9.3e  %8.1f %8.1f %s\n' % \
+                  (res['epochs'][i], res['boloflux'][i], limits[i][0],
+                   limits[i][1], "".join(res['filters_used'][i])))
+         fout.close()
+      return (res['epochs'],res['boloflux'],res['filters_used'],limits)
 
-      MJD = []
-      bol = []
-      bol_mask = []
-      # Now we compute the bolometric lightcurve (in magnitudes)
-      #  by doing a cross-band k-correction to the box filter
-      for i in range(len(self.data[refband].t)):
-         MJD.append(self.data[refband].MJD[i])
-         if not self.ks_mask[refband][i]:
-            bol.append(0.0)
-            bol_mask.append(False)
-            continue
-         wave,mflux,flux,ratio = self.get_mangled_SED(refband, i)
-         if (wave[0] > lam1 and not extrap_blue) or \
-               (wave[-1] < lam2 and not extrap_red):
-            raise ValueError, "The template SED does not cover the requested range."
-         l1 = lam1;   l2 = lam2
-
-         # normalize to observed flux
-         mobs,mask = self.data[normband].eval(MJD[-1], t_tol=-1)
-         if not mask[0]:
-            bol.append(0.0)
-            bol_mask.append(False)
-            continue
-         fobs = power(10, -0.4*(mobs[0] - fset[normband].zp))
-         fint = fset[normband].response(wave*(1+self.z), mflux)
-         mflux = mflux*fobs/fint
-
-         # Make sure we are integrating within the SED
-         if wave[0] > lam1:  
-            l1 = wave[0]
-         if wave[-1] < lam2:
-            l2 = wave[-1]
-         i_min = argmin(absolute(wave - l1))
-         i_max = argmin(absolute(wave - l2))
-
-         # integrate the array from l1 to l2, adding (or subtracting) any
-         #   bits by interpolation.
-         flx = trapz(mflux[i_min:i_max+1], x=wave[i_min:i_max+1])
-         if wave[i_min] > l1:
-            flx += trapz(mflux[i_min-1:i_min+1], x=wave[i_min-1:i_min+1])*\
-                  (wave[i_min]-l1)/(wave[i_min]-wave[i_min-1])
-         else:
-            flx -= trapz(mflux[i_min:i_min+2], x=wave[i_min:i_min+2])*\
-                  (l1 - wave[i_min])/(wave[i_min+1]-wave[i_min])
-         if wave[i_max] > l2:
-            flx -= trapz(mflux[i_max-1:i_max+1], x=wave[i_max-1:i_max+1])*\
-                  (wave[i_max]-l2)/(wave[i_max]-wave[i_max-1])
-         else:
-            flx += trapz(mflux[i_max:i_max+2], x=wave[i_max:i_max+2])*\
-                  (l2 - wave[i_max])/(wave[i_max+1]-wave[i_max])
-
-         # Now we need to handle extrapolation
-         if lam2 > wave[-1] and extrap_red is not None:
-            if extra_red == 'RJ':
-               # Do a Rayleigh-Jeans extrapolation (~ 1/lam^4)
-               # normalize to wave[-1]
-               flx += mflux[-1]/3*lam2
-            else:
-               raise ValueError, "Unrecognized red extrapolation method"
-         if lam1 < wave[0] and extrap_blue is not None:
-            flx += extrap_blue
-
-         bol_mask.append(True)
-         bol.append(flx)
-      return(self.data[refband].t, array(bol),array(bol_mask))
 
    def closest_band(self, band, tempbands=None, lowz=0.15):
       '''Find the rest-frame filter in [tempbands] that is closest to the

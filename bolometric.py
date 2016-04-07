@@ -33,7 +33,8 @@ def log(msg):
 def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
               EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ',
               Tmax=None, interpolate=None, mopts={}, SED='H3', 
-              DM=None, cosmo='LambdaCDM', use_stretch=True, verbose=False):
+              DM=None, cosmo='LambdaCDM', use_stretch=True, 
+              extrap_SED=True, verbose=False):
 
    w,f = get_SED(0, version='H3')
    if verbose: log("Starting bolometric calculation for %s\n" % sn.name)
@@ -108,7 +109,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    if type(SED) is type(""):
       # Assume it is a spectrum by name
       if SED in ['H3','H','N','91bg']:
-         fSED = lambda x: get_SED(x, version=SED)
+         fSED = lambda x: get_SED(x, version=SED, extrapolate=True)
          if verbose: log("   Using SED template '%s'" % SED)
       elif SED in standards:
          fSED = lambda x: (standards[SED].wave,standards[SED].flux)
@@ -155,8 +156,11 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    # the times.
    res = sn.get_mag_table(bands)
    ts = (res['MJD'] - Tmax)/(1+sn.z)
-   # Restrict to valid interval of Eric's templates
-   gids = greater_equal(ts/s, -19)*less_equal(ts/s,70)
+   # Restrict to valid interval of Eric's templates if extrap_SED is False
+   if not extrap_SED:
+      gids = greater_equal(ts/s, -19)*less_equal(ts/s,70)
+   else:
+      gids = -isnan(ts/s)
    ts = ts[gids]
    mags = []
    masks = []
@@ -301,7 +305,7 @@ def bolometric_direct(sn, bands=None,
       fSED = lambda x: (Vega.wave,Vega.flux)
    elif type(SED) is type(""):
       if SED in ['H3','H','N','91bg']:
-         fSED = lambda x: get_SED(x, version=SED)
+         fSED = lambda x: get_SED(x, version=SED, extrapolate=True)
          if verbose: log("   Using SED template '%s'" % SED)
       # Assume it is a spectrum by name
       elif SED in standards:
