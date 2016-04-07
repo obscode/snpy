@@ -94,17 +94,32 @@ else:
    n91_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
          head['CRPIX1'] + 1)*head['CDELT1']
 
-def get_SED(day, version='H3'):
+def linterp(spec1, spec2, day1, day2, day):
+   if day1 == day2:
+      return spec1
+   if day > day2 or day < day1:
+      raise ValueError, "day must be in interval (day1,day2)"
+   if abs(day1-day) < 1e-9:
+      return spec1
+   if abs(day2 - day) < 1e-9:
+      return spec2
+   spec = spec1 + (spec2 - spec1)/(day2 - day1)*(day - day1)
+   return spec
+
+def get_SED(day, version='H3', interpolate=True):
    '''Retrieve the SED for a SN for a particular epoch.
    
    Args:
-      day (int): The integer day w.r.t. time of B-maximum
+      day (int or float): The integer day w.r.t. time of B-maximum
       version (str): The version of SED sequence to use:
 
          * 'H': Old Hsiao Ia SED (Hsiao, private communication)
          * 'H3': Hsiao+2007 Ia SED
          * 'N': Nugent+2002 Ia SED
          * '91bg': a SN1991bg Ia SED (Peter Nugent)
+      interpolate(bool): If and day is not an integer, interpolate
+                         the spectrum linearly. Otherwise, choose
+                         nearest spectrum.
 
    Returns:
       2-tuple: (wave,flux):
@@ -113,17 +128,26 @@ def get_SED(day, version='H3'):
       * flux (array):  arbitrarily normalized flux
    '''
 
+   if type(day) is type(1.0) and not interpolate:
+      day = round(day)
+
+   day1 = int(num.floor(day))
+   day2 = int(num.ceil(day))
    if version in ['H','H3','N']:
       if day < -19 or day > 70:  return (None,None)
       if version == 'H':
-         return (h_wav, h_sed[day+20,:])
+         return (h_wav, 
+               linterp(h_sed[day1+20,:],h_sed[day2+20,:],day1,day2,day))
       elif version == 'H3':
-         return (h3_wav, h3_sed[day+20,:])
+         return (h3_wav, 
+               linterp(h3_sed[day1+20,:],h3_sed[day2+20,:],day1,day2,day))
       elif version == 'N':
-         return (n_wav, n_sed[day+19,:])
+         return (n_wav, 
+               linterp(n_sed[day1+19,:],n_sed[day2+19,:],day1,day2,day))
    elif version == '91bg':
       if day < -13 or day > 100:  return(None,None)
-      return (n91_wav, n91_sed[day+13, :])
+      return (n91_wav, 
+            linterp(n91_sed[day1+13, :],n91_sed[day2+13,:],day1,day2,day))
    else:
       raise AttributeError, "version %s not recognized" % version
 
