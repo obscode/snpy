@@ -1,4 +1,4 @@
-#!/Users/cburns/Library/Enthought/Canopy_32bit/User/bin/python
+#!/usr/bin/env python
 
 import os,sys,re
 import subprocess
