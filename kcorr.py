@@ -106,7 +106,13 @@ def linterp(spec1, spec2, day1, day2, day):
    spec = spec1 + (spec2 - spec1)/(day2 - day1)*(day - day1)
    return spec
 
-def get_SED(day, version='H3', interpolate=True):
+SED_lims = {
+      'H':(-19,70),
+      'H3':(-19,70),
+      'N':(-19,70),
+      '91bg':(-13,100)}
+
+def get_SED(day, version='H3', interpolate=True, extrapolate=False):
    '''Retrieve the SED for a SN for a particular epoch.
    
    Args:
@@ -120,6 +126,9 @@ def get_SED(day, version='H3', interpolate=True):
       interpolate(bool): If and day is not an integer, interpolate
                          the spectrum linearly. Otherwise, choose
                          nearest spectrum.
+      extrapolate(bool): If True and the date is outside the range
+                         of defined SED, simply take the first/last
+                         SED to extend before/after range.
 
    Returns:
       2-tuple: (wave,flux):
@@ -130,22 +139,31 @@ def get_SED(day, version='H3', interpolate=True):
 
    if type(day) is type(1.0) and not interpolate:
       day = round(day)
+   
+   # Check limits
+   if day < SED_lims[version][0]:
+      if extrapolate:
+         day = SED_lims[version][0]
+      else:
+         return (None,None)
+   if day > SED_lims[version][1]:
+      if extrapolate:
+         day = SED_lims[version][1]
+      else:
+         return (None,None)
 
    day1 = int(num.floor(day))
    day2 = int(num.ceil(day))
-   if version in ['H','H3','N']:
-      if day < -19 or day > 70:  return (None,None)
-      if version == 'H':
-         return (h_wav, 
-               linterp(h_sed[day1+20,:],h_sed[day2+20,:],day1,day2,day))
-      elif version == 'H3':
-         return (h3_wav, 
-               linterp(h3_sed[day1+20,:],h3_sed[day2+20,:],day1,day2,day))
-      elif version == 'N':
-         return (n_wav, 
-               linterp(n_sed[day1+19,:],n_sed[day2+19,:],day1,day2,day))
+   if version == 'H':
+      return (h_wav, 
+            linterp(h_sed[day1+20,:],h_sed[day2+20,:],day1,day2,day))
+   elif version == 'H3':
+      return (h3_wav, 
+            linterp(h3_sed[day1+20,:],h3_sed[day2+20,:],day1,day2,day))
+   elif version == 'N':
+      return (n_wav, 
+            linterp(n_sed[day1+19,:],n_sed[day2+19,:],day1,day2,day))
    elif version == '91bg':
-      if day < -13 or day > 100:  return(None,None)
       return (n91_wav, 
             linterp(n91_sed[day1+13, :],n91_sed[day2+13,:],day1,day2,day))
    else:
