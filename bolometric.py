@@ -34,7 +34,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
               EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ',
               Tmax=None, interpolate=None, mopts={}, SED='H3', 
               DM=None, cosmo='LambdaCDM', use_stretch=True, 
-              extrap_SED=True, verbose=False):
+              extrap_SED=True, extra_output=False, verbose=False):
 
    w,f = get_SED(0, version='H3')
    if verbose: log("Starting bolometric calculation for %s\n" % sn.name)
@@ -67,8 +67,9 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    eff_waves = array([fset[b].eff_wave(w,f) for b in bands])
    sids = argsort(eff_waves)
    bands = [bands[i] for i in sids]
+   pars0 = {}
+   for b in bands:  pars0[b] = 1.0
 
-   
    # Get itegration limits in SN restframe. So if we get it from the observer
    #  frame filter limits, we need to divide by (1+z)
    if lam1 is None:
@@ -96,7 +97,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
          for b in bands:
             if getattr(sn.data[b], 'interp', None) is None:
                raise ValueError, "You asked for spline interpolation, but "\
-                     "filter %f has not interpolator defined" % b
+                     "filter %s has not interpolator defined" % b
       else:
          if verbose: log("   Using model interpolation")
          for b in bands:
@@ -199,6 +200,8 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    mfuncs = []
    fluxes = []
    waves = []
+   parss = []
+
    for i in range(len(ts)):
       t = ts[i]
       wave,flux = fSED(t/s)
@@ -208,15 +211,22 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
                              "are outside the limits of the SED (%.3f,%.3f)" %\
                              (lam1,lam2,wave.min(), wave.max())
 
+      # integration limits
+      i1 = searchsorted(wave, lam1)
+      i2 = searchsorted(wave, lam2)
       bs = [bands[j] for j in range(masks.shape[1]) if masks[i,j]]
       if len(bs) == 1:
          # No mangling possible
          mflux = flux
       else:
+         init = [pars0.get(b, 1.0) for b in bs]
          mflux,ave_wave,pars = mangle_spectrum2(wave*(1+sn.z), flux, bs, 
-               mags[i,masks[i]], normfilter=refband, **mopts)
+               mags[i,masks[i]], normfilter=refband, init=init, **mopts)
          mfuncs.append(mflux[0]/flux)
          mflux = mflux[0]
+         for k,b in enumerate(bs):
+            pars0[b] = pars[k]
+         parss.append(pars)
 
       # Now scale the spectrum to one of the observed filters
       if refband is None:
@@ -236,6 +246,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
       mag = mags[i, idx]
       mflux = mflux*power(10, 
             -0.4*(mag - filt.zp))/filt.response(wave, mflux/(1+sn.z), z=sn.z)
+      fluxes.append(mflux)
       # Note:  the quantity power()/filt.response() is actually
       # dimensionless. Therefore mflux is in erg/s/cm^2/AA
       # and *not* in photons
@@ -245,8 +256,6 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
       mflux,a,b = deredden.unred(wave,mflux,EBVhost, R_V=Rv, redlaw=redlaw)
 
       # Finally!  integrate!
-      i1 = searchsorted(wave, lam1)
-      i2 = searchsorted(wave, lam2)
       fbol = simps(mflux[i1:i2], x=wave[i1:i2], even='avg')
       if lam2 > wave.max():
          # add Rayleigh-Jeans extrapolation (~ 1/lam^4)
@@ -255,8 +264,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
       filters_used.append(bs)
       boloflux.append(fbol)
       epochs.append(ts[i])
-      fluxes.append(mflux[i1:i2])
-      waves.append(wave[i1:i2])
+      waves.append(wave)
 
    boloflux = array(boloflux)
    epochs = array(epochs)
@@ -264,13 +272,13 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    # lastly, inverse-square law
    if DM is None:
       DM = sn.get_distmod(cosmo=cosmo)
-   dlum = power(10, 0.2*(DM+5))*3.086e19
+   dlum = power(10, 0.2*(DM+5))*3.086e18
    boloflux = boloflux*4*pi*dlum**2
 
    return(dict(epochs=array(epochs), 
                boloflux=array(boloflux), 
                filters_used=filters_used,waves=waves,fluxes=fluxes,
-               mfuncs=mfuncs, mags=mags, masks=masks))
+               mfuncs=mfuncs, mags=mags, masks=masks, pars=parss))
 
 def bolometric_direct(sn, bands=None, 
               EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ',

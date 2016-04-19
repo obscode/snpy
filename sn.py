@@ -1641,7 +1641,8 @@ class sn(object):
    def bolometric(self, bands, method="direct", lam1=None, lam2=None, 
          refband=None, EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ', 
       Tmax=None, interpolate=None, mopts={}, SED='H3', DM=None,
-      cosmo='LambdaCDM', use_stretch=False, verbose=False, outfile=None):
+      cosmo='LambdaCDM', use_stretch=False, verbose=False, outfile=None,
+      extra_output=False):
       '''
       Produce a quasi-bolometric flux light-curve based on the input [bands]
       by integrating a template SED from \lambda=lam1 to \lambda=lam2.
@@ -1693,13 +1694,24 @@ class sn(object):
          verbose (bool):  Be verbose?
          outfile (str): If not None, name of output file for bolometric
                         luminosities.
+         extra_output(bool): If True, return a dictionary as extra element
+                             (see returns)
 
       Returns:
-         3-tuple:  (epoch, bolo, filters_used, limits)
+         3 or 4-tuple:  (epoch, bolo, filters_used, limits)
                  epoch: array of epochs
                  bolo: array of bolometric luminosities in erg/s
                  filters_used: a list of filters used for each epoch
                  limits:  2-type of wavelength limits for each epoch
+
+         If extra_output is True, also return a dict as 4th element
+                 containing the following keys:
+                 mflux:  the mangled flux (or inferred flux)
+                 mfuncs: the mangling functions
+                 mwave:  the wavelength vector or effective wavelenghts
+                 mags:   the magnitudes to which we mangled the SED
+                 masks:  th
+         
       '''
       if method == 'direct':
          res = bolometric.bolometric_direct(
@@ -1718,7 +1730,7 @@ class sn(object):
          fout = open(outfile, 'w')
          fout.write('# Bolometric luminosity for %s\n' % (self.name))
          fout.write('# Using %s method\n' % (method))
-         fout.write('# Luminosities in units of 1.e45 erg/s\n')
+         fout.write('# Luminosities in units of erg/s\n')
          fout.write('# Times are in *observed* frame\n')
          fout.write('#\n# %6s  %9s  %8s %8s %s\n' % ('t','Lbol','lam1','lamb2',
             'filters'))
@@ -1727,7 +1739,16 @@ class sn(object):
                   (res['epochs'][i], res['boloflux'][i], limits[i][0],
                    limits[i][1], "".join(res['filters_used'][i])))
          fout.close()
-      return (res['epochs'],res['boloflux'],res['filters_used'],limits)
+      if not extra_output:
+         return (res['epochs'],res['boloflux'],res['filters_used'],limits)
+      if method == 'direct':
+         extra = dict(mflux=res['fluxes'], mwaves=res['lam_effs'],
+            mags=res['mags'], masks=res['masks'])
+      else:
+         extra = dict(mflux=res['fluxes'], mwaves=res['waves'],
+            mags=res['mags'], masks=res['masks'],
+            mfuncs=res['mfuncs'], pars=res['pars'])
+      return (res['epochs'],res['boloflux'],res['filters_used'],limits,extra)
 
 
    def closest_band(self, band, tempbands=None, lowz=0.15):
