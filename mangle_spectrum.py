@@ -137,6 +137,93 @@ class f_tspline(function):
          res = num.where(x > self.parent.ave_waves[-1], y1, res)
       return(res)
 
+class f_spline(function):
+   '''Spline mangler. Splines are controlled by a smoothing
+   parameter. The higher the smoothing, the less curvature the spline can
+   have. This is good for keeping the spline from "wigglig" too much.'''
+
+   def __init__(self, parent, s=0, gradient=False, slopes=None, 
+         verbose=False, log=False):
+      '''
+         Args:
+            parent (instance): Mangler that will fit the function.
+            s (float): A smoothing parameter
+            gradient (bool): If true, constrain the gradients at either end
+                             using the anchors
+            slopes (2-tuple): The end slopes can be kept fixed using this
+                              argument (e.g., set to (0,0) to flatten out
+                              the spline at both ends
+            verbose (bool): debug info
+            log (bool):  Not implemented yet.
+      '''
+      function.__init__(self,parent)
+      self.knots = None
+      self.factors = None
+      self.s = s       # specify a global tension parameter
+      self.gradient = gradient     # constrain the anchors by slope?
+      self.slopes = None           # End slopes if not using gradient
+      self.pars = None
+      self.verbose = verbose
+      self.log = log
+
+   def init_pars(self, nid=0):
+      # one parameter for each knot points
+      p = []
+      if self.log:
+         limited = [0,0]
+      else:
+         limited = [1,0]
+      pi = [{'fixed':0, 'limited':limited, 'limits':[0.0,0.0], 'step':0.001, 
+             'value':1.0} for i in range(len(self.parent.allbands))]
+      bs = self.parent.allbands
+      nf = len(bs)
+      knots = self.parent.ave_waves
+      if bs[0] == 'blue':
+         if self.gradient:
+            dw = (knots[0] - knots[1])/(knots[1] - knots[2])
+            pi[0]['tied']='p[1] + %8.4f*(p[1]-p[2])' % (dw)
+         else:
+            pi[0]['tied'] = 'p[1]'
+      if self.parent.allbands[-1] == 'red':
+         pi[-1]['value'] = pi[-2]['value']
+         if self.gradient:
+            dw = (knots[-1] - knots[-2]) / (knots[-2] - knots[-3] )
+            pi[-1]['tied']='p[%d] + %8.4f*(p[%d]-p[%d])' % (nf-2, dw, nf-2, nf-3)
+         else:
+            pi[-1]['tied'] = 'p[%d]' % (nf - 2)
+      pi[nid]['fixed'] = 1
+      return(pi)
+
+   def set_pars(self, pars):
+      self.pars = num.asarray(pars)
+
+   def __call__(self, x):
+      if self.parent.ave_waves is None or self.pars is None:
+         return x*0+1.0
+      #if self.gradient:
+      xyds = scipy.interpolate.splrep(self.parent.ave_waves, self.pars, 
+              w=self.pars*0+1, s=self.s)
+      #else:
+      #   xyds = tspline.tspsi(self.parent.ave_waves, self.pars, 
+      #         tension=self.tension, slopes=self.slopes)
+
+      res = num.array([scipy.interpolate.splev(x[i], xyds) \
+            for i in range(x.shape[0])])
+
+      y0 = scipy.interpolate.splev(self.parent.ave_waves[0], xyds)
+      y1 = scipy.interpolate.splev(self.parent.ave_waves[-1], xyds)
+      if self.gradient:
+         dy0 = scipy.interpolate.splev(self.parent.ave_waves[0], xyds, der=1)
+         dy1 = scipy.interpolate.splev(self.parent.ave_waves[-1], xyds, der=1)
+         res = num.where(x < self.parent.ave_waves[0], 
+               y0 + (x-self.parent.ave_waves[0])*dy0, res)
+         res = num.where(x > self.parent.ave_waves[-1], 
+               y1 + (x - self.parent.ave_waves[-1])*dy1, res)
+      else:
+         res = num.where(x < self.parent.ave_waves[0], y0, res)
+         res = num.where(x > self.parent.ave_waves[-1], y1, res)
+      return(res)
+
 class f_ccm(function):
    '''The Cardelli, Clayton, and Mathis (1989) reddening law as a smooth
    fucntion. This would be what dust does to a spectrum, so is a good
@@ -170,7 +257,8 @@ class f_ccm(function):
       #m *= self.pars[0]
       return m
 
-mangle_functions = {'tspline':f_tspline,
+mangle_functions = {'spline':f_spline,
+                    'tspline':f_tspline,
                     'ccm':f_ccm}
 
 
@@ -293,7 +381,8 @@ class mangler:
       
 
    def solve(self, bands, colors, fixed_filters=None, 
-         anchorwidth=100, xtol=1e-10, ftol=1e-4, gtol=1e-10):
+         anchorwidth=100, xtol=1e-10, ftol=1e-4, gtol=1e-10,
+         init=None):
       '''Solve for the mangling function that will produce the observed colors
       in the filters defined by bands.
       
@@ -376,6 +465,11 @@ class mangler:
       # Do some initial setup
       pi = self.function.init_pars(nid=id)
 
+      if init is not None:
+         if len(init) == len(pi):
+            for j in range(len(init)):
+               pi[j]['value'] = init[j]
+
       if self.verbose:
          quiet = 0
       else:
@@ -427,7 +521,7 @@ messages = ['Bad input parameters','chi-square less than ftol',
 
 def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None, 
       normfilter=None, z=0, verbose=0, anchorwidth=100,
-      method='tspline', xtol=1e-6, ftol=1e-6, gtol=1e-6, **margs):
+      method='tspline', xtol=1e-6, ftol=1e-6, gtol=1e-6, init=None, **margs):
    '''Given an input spectrum, multiply by a smooth function (aka mangle)
    such that the synthetic colors match observed colors.
 
@@ -455,6 +549,7 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
       xtol,ftol,gtol (float):  used to define the tolorance for the 
                     goodness of fit. See ``scipy.optimize.leastsq`` for
                     meaning of these parameters.
+      init (list/array): initial values for the mangle parameters.
       margs (dict): All additional arguments to function are sent to 
                     the :class:`mangle_spectrum.Mangler` class.
       '''
@@ -469,7 +564,8 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
       gids = num.less(mags[:-1,:],90)*num.less(mags[1:,:],90)
       colors = num.where(gids, mags[:-1,:]-mags[1:,:], 99.9)
    res = m.solve(bands, colors, fixed_filters=fixed_filters,
-         anchorwidth=anchorwidth, xtol=xtol, ftol=ftol, gtol=gtol)
+         anchorwidth=anchorwidth, xtol=xtol, ftol=ftol, gtol=gtol,
+         init=init)
    if res.status > 4:
       print "Warning:  %s" % messages[res.status]
    elif res.status < 0:
