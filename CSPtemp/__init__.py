@@ -149,7 +149,7 @@ def breakpoly(x, xb, coefs, before=True):
    else:
       return coefs[0] + coefs[1]*(x-xb) + (x>xb)*coefs[2]*(x-xb)**2
 
-def finterp(band, t, p, param, gen):
+def finterp(band, t, p, param, gen, extrap=False):
    '''interpolate at time t and param p for param,gen combo.'''
    load_data(band,param,gen)
    if param == 'dm15':
@@ -167,9 +167,34 @@ def finterp(band, t, p, param, gen):
    # First the evaluation mtarix:
    Z = num.atleast_2d(bisplev(t, p, f))[:,0]
    eZ = num.atleast_2d(bisplev(t, p, ef))[:,0]
-   mask = num.greater(Z,0)*num.greater_equal(t,f[0][0])*num.less_equal(t,f[0][-1])
-   Z = num.where(mask, Z, 1)
-   eZ = num.where(mask, eZ, -1)
+   if not extrap:
+      mask = num.greater_equal(t,f[0][0])*num.less_equal(t,f[0][-1])
+      mask = mask*num.greater(Z, 0)
+      Z = num.where(mask, Z, 1)
+      eZ = num.where(mask, eZ, -1)
+   else:
+      t1,t2 = get_t_lim(band, param, gen)
+      mask = -num.isnan(Z)
+      # extrapolate lower with t^2 law
+      if num.sometrue(num.less(t,t1)):
+         Tp = bisplev(t1, p, f, dx=1)
+         T = bisplev(t1, p, f)
+         eT = bisplev(t, p, ef)
+         t0 = t1 - 2*T/Tp; a = T/(t1-t0)**2
+         Z = num.where(num.less(t, t1), a*num.power(t-t0,2), Z)
+         eZ = num.where(num.less(t, t1), eT, eZ)
+         mask = mask*num.greater(Z,0)*num.greater(t, t0)
+      if num.sometrue(num.greater(t, t2)):
+         # extrapolate with m = a*(t-t2)+b
+         Tp = bisplev(t2, p, f, dx=1)
+         T = bisplev(t2, p, f)
+         eT = bisplev(t2, p, ef)
+         b = -2.5*num.log10(T)
+         a = -2.5/num.log(10)/T*Tp
+         f = num.power(10, -0.4*(a*(t-t2)+b))
+         Z = num.where(num.greater(t, t2), f, Z)
+         eZ = num.where(num.greater(t, t2), eT, eZ)
+      Z = num.where(mask, Z, 1)
    if scalar:
       return Z[0],eZ[0],mask[0]
    else:
@@ -257,11 +282,12 @@ class dm15_template:
       return 0
 
    def teval(self, band, time, dm15, gen=1):
-      f,ef,mask = finterp(band, time, dm15, 'dm15', gen)
+      f,ef,mask = finterp(band, time, dm15, 'dm15', gen, extrap=extrap)
 
       return(num.where(mask,-2.5*num.log10(f),-1))
 
-   def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True):
+   def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
+         extrap=False):
       '''Evaluate the template in band [band] at epochs [times].  Optionally
       redshift by (1+[z]).  If [mag]=1, return in magnitudes, otherwise return
       in flux units.  If [sextrap]=1, extrapolate beyond the training sample
@@ -328,12 +354,15 @@ class dm15_template:
 
       # Apply any stretch
       evt = evt*s
-      evd,eevd,mask = finterp(band, evt, dm15, 'dm15', gen)
+      evd,eevd,mask = finterp(band, evt, dm15, 'dm15', gen, extrap=extrap)
+
+      if not extrap:
+         mask = mask*tmask
 
       if not mag:
-         return(evd, eevd, mask*tmask)
+         return(evd, eevd, mask)
       else:
-         return(-2.5*num.log10(evd), eevd/evd*1.0857, mask*tmask)
+         return(-2.5*num.log10(evd), eevd/evd*1.0857, mask)
 
 
 class st_template:
@@ -380,11 +409,12 @@ class st_template:
       return 0
 
    def teval(self, band, time, st, gen=1):
-      f,ef,mask = finterp(band, time, st, 'st', gen)
+      f,ef,mask = finterp(band, time, st, 'st', gen, extrap=extrap)
 
       return(num.where(mask,-2.5*num.log10(f),-1))
 
-   def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True):
+   def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
+         extrap=False):
       '''Evaluate the template in band [band] at epochs [times].  Optionally
       redshift by (1+[z]).  If [mag]=1, return in magnitudes, otherwise return
       in flux units.  If [sextrap]=1, extrapolate beyond the training sample
@@ -436,9 +466,11 @@ class st_template:
 
       # Apply any stretch
       evt = evt*s
-      evd,eevd,mask = finterp(band, evt, st, 'st', gen)
+      evd,eevd,mask = finterp(band, evt, st, 'st', gen, extrap=extrap)
+      if not extrap:
+         mask = mask*tmask
 
       if not mag:
-         return(evd, eevd, mask*tmask)
+         return(evd, eevd, mask)
       else:
-         return(-2.5*num.log10(evd), eevd/evd*1.0857, mask*tmask)
+         return(-2.5*num.log10(evd), eevd/evd*1.0857, mask)

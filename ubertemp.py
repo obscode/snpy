@@ -67,11 +67,13 @@ class template:
       self.Ct.mktemplate(**args2)
       self.St.mktemplate(**args2)
 
-   def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True):
+   def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
+         extrap=False):
       if band in ['Bs','Vs','Rs','Is']:
          return(self.Pt.eval(band[0], times, z))
       elif band in ['u','B','V','g','r','i','Y','J','H','K','J_K','H_K']:
-         return(self.Ct.eval(band, times, z, mag, sextrap, gen, toff))
+         return(self.Ct.eval(band, times, z, mag, sextrap, gen, toff,
+            extrap=extrap))
       elif band in ['UVM2','UVW1','UVW2']:
          return(self.St.eval(band, times, z, mag, sextrap, gen, toff))
       else:
@@ -109,9 +111,11 @@ class stemplate:
       self.Ct.mktemplate(**args)
       self.St.mktemplate(**args)
 
-   def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True):
+   def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
+         extrap=False):
       if band in ['u','B','V','g','r','i','Y','J','H','K','J_K','H_K']:
-         return(self.Ct.eval(band, times, z, mag, sextrap, gen, toff))
+         return(self.Ct.eval(band, times, z, mag, sextrap, gen, toff,
+            extrap=extrap))
       elif band in ['UVW1','UVW2','UVM2']:
          return(self.St.eval(band, times, z, mag, sextrap, gen, toff))
       else:
