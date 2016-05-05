@@ -453,7 +453,7 @@ def bolometric_direct(sn, bands=None,
    # lastly, inverse-square law
    if DM is None:
       DM = sn.get_distmod(cosmo=cosmo)
-   dlum = power(10, 0.2*(DM+5))*3.086e19
+   dlum = power(10, 0.2*(DM+5))*3.086e18
    boloflux = boloflux*4*pi*dlum**2
 
    return(dict(epochs=array(epochs), 
