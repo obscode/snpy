@@ -28,8 +28,10 @@ If you downloaded a static source tarball:
 # first check to see if we are in a virtualenv
 realprefix = getattr(sys, 'real_prefix', None)
 baseprefix = getattr(sys, 'base_prefix', None)
+has_conda = sys.version.lower().find('anaconda') >= 0 or\
+            sys.version.lower().find('continuum analytics') > 0 
 
-if realprefix is None and baseprefix is None:
+if realprefix is None and baseprefix is None and not has_conda:
    print fallback
    print instructions
    sys.exit(1)
