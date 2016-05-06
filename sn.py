@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-import sys,string,os,re
-from glob import glob
+import sys,string,os
 have_sql = 1
 import sqlmod
 if 'SQLSERVER' in os.environ:
@@ -32,7 +31,6 @@ import utils.IRSA_dust_getval as dust_getval
 from utils import fit_poly  # polynomial fitter
 import scipy                # Scientific python routines
 linalg = scipy.linalg       # Several linear algebra routines
-from scipy.integrate import trapz
 from scipy.interpolate import interp1d
 from utils import fit_spline # My Spline fitting routines
 from filters import fset    # filter definitions.
@@ -1925,7 +1923,7 @@ def check_version():
    import urllib2
    from distutils.version import LooseVersion
    try:
-      u = urllib2.urlopen('ftp://192.91.178.6/pub/cburns/snpy/latest', timeout=1)
+      u = urllib2.urlopen('ftp://ftp.obs.carnegiescience.edu/pub/cburns/snpy/latest', timeout=1)
    except:
       return None,None
    if not u:
