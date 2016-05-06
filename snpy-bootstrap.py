@@ -1510,6 +1510,16 @@ import os,subprocess
 def after_install(options,home_dir):
    home_dir = os.path.realpath(home_dir)
    # Test for installed software
+   if has_conda():
+      # we can use the conda package installer. Sweet!
+      conda = join(home_dir, 'bin', 'conda')
+      if not os.path.isfile(conda):
+         sys.stderr.write('You seem to be using anaconda, but conda is not\n')
+         sys.stderr.write('where I expect it. Please fix your PATH.')
+         sys.exit(1)
+      print "Using conda:", conda
+   else:
+      conda = None
    pip = join(home_dir, 'bin', 'pip')
    if not os.path.isfile(pip):
       pip = None
@@ -1526,15 +1536,29 @@ def after_install(options,home_dir):
    # First, the absolutely necessary stuff
    print "Now going to install the manditory software..."
    man_packages = ['scipy','pymysql','pyfits','matplotlib',
-                   'ipython>=0.12','emcee','gnureadline']
+                   'ipython','gnureadline']
    for package in man_packages:
       sys.stdout.write("   Installing %s..." % package)
       sys.stdout.flush()
       of = open('%s.log' % package, 'w')
-      p = subprocess.Popen([pip,'install', package], stdout=of,
-            stderr=subprocess.STDOUT)
-      p.wait()
-      of.close()
+      if has_conda():
+         # We try conda command first.
+         p = subprocess.Popen([conda,'install', '-y', package], stdout=of,
+               stderr=subprocess.STDOUT)
+         p.wait()
+         of.close()
+         if p.returncode != 0:
+            success = False
+            of = open('%s.log' % package, 'w')
+            p = subprocess.Popen([pip,'install', package], stdout=of,
+                  stderr=subprocess.STDOUT)
+            p.wait()
+            of.close()
+      else:
+         p = subprocess.Popen([pip,'install', package], stdout=of,
+               stderr=subprocess.STDOUT)
+         p.wait()
+         of.close()
       if p.returncode != 0:
          print "\nNuts! There was a problem installing required package",package
          print "Check %s.log for errors to see what went wrong" % package
@@ -1542,7 +1566,7 @@ def after_install(options,home_dir):
       sys.stdout.write("Done\n")
    # Now, the optional stuff
    print "Now going to try installing the optional software..."
-   opt_packages = ['pymc']
+   opt_packages = ['emcee','pymc','astropy']
    for package in opt_packages:
       sys.stdout.write("   Installing %s..." % package)
       sys.stdout.flush()
@@ -1560,27 +1584,46 @@ def after_install(options,home_dir):
    # Now we install SNooPy proper
    print "Now attempting to download/install SNooPy..."
    os.chdir(home_dir)
-   of = open('SNooPy.log', 'w')
-   # First, we try to use git
    succeed = False
-   p = subprocess.Popen(['git','clone','https://github.com/obscode/snpy.git',
-      'snpy'], stdout=of, stderr=subprocess.STDOUT)
-   p.wait()
-   if p.returncode != 0:
-      print "You do not seem to have git. I will try to use SVN instead, but"
-      print " SVN repository will be abandoned in the near future."
-   else:
-      succeed = True
 
-   if not succeed:
-      p = subprocess.Popen(['svn','co',
-         'svn://cow.obs.carnegiescience.edu/snpy/branch/snpy2','snpy'], 
-         stdout=of, stderr=subprocess.STDOUT)
-   p.wait()
-   if p.returncode != 0:
-      print "Failed to download from SVN, reverting to static source"
+   of = open('SNooPy.log', 'w')
+   # Check to see if snpy already exists
+   if os.path.isdir('snpy'):
+      #okay, see if a git repo
+      if os.path.isdir(os.path.join('snpy','.git')):
+         print "You already have a git clone of SNooPy, skipping download"
+         print "I suggest you run snpy-update"
+         succeed = True
+      elif os.path.isdir(os.path.join('snpy','.svn')):
+         print "You already have an SVN working copy of SNooPy, skipping "\
+               "download"
+         print "I suggest you run snpy-update"
+         succeed = True
+      else:
+         print "You already have a static source of SNooPy at the following"
+         print "location:",os.path.join(home_dir,snpy)
+         print "Suggest you remove it and run snpy-bootstrap again"
+         sys.exit(1)
    else:
-      succeed = True
+      # First, we try to use git
+      p = subprocess.Popen(['git','clone','https://github.com/obscode/snpy.git',
+         'snpy'], stdout=of, stderr=subprocess.STDOUT)
+      p.wait()
+      if p.returncode != 0:
+         print "You do not seem to have git. I will try to use SVN instead, but"
+         print " SVN repository will be abandoned in the near future."
+      else:
+         succeed = True
+ 
+      if not succeed:
+         p = subprocess.Popen(['svn','co',
+            'svn://cow.obs.carnegiescience.edu/snpy/branch/snpy2','snpy'], 
+            stdout=of, stderr=subprocess.STDOUT)
+      p.wait()
+      if p.returncode != 0:
+         print "Failed to download from SVN, reverting to static source"
+      else:
+         succeed = True
 
    if not succeed:
       p = subprocess.Popen([pip, 'install', 'snpy', '-f', 
@@ -2077,10 +2120,18 @@ system. If you are running OSX 10.7 or later, you also need to start up
 Xcode, open the Preferences, click on the "Downloads" tab, select
 "Command Line Tools" and click install button.'''
 
+def has_conda():
+   '''Check to see if user has an anaconda environment'''
+   if sys.version.lower().find('anaconda') >=0 or\
+      sys.version.lower().find('continuum analytics') >=0:
+      return True
+   return False
+
+
 def check_environment():
    '''Look for the most common problems and warn the user if detected.'''
    if 'F77' in os.environ:
-      if os.environ.find('iraf') >= 0:
+      if os.environ['F77'].find('iraf') >= 0:
          print iraf_warning
          sys.exit(1)
    if sys.platform == 'darwin':
@@ -2112,6 +2163,18 @@ if __name__ == '__main__':
           rp = os.path.realpath(sys.prefix)
           if not os.path.isfile(os.path.join(rp,'bin','pip')):
              install_pip(os.path.join(rp, 'bin', 'python'))
+          after_install(None, rp)
+          sys.exit(0)
+       else:
+          sys.exit(1)
+    elif has_conda():
+       print "Warning:  you are running within an anaconda environment"
+       print "so I'm just going to install SNooPy in this environment."
+       print "Just remember to activate it before using SNooPy in the future."
+       print "Should I proceed (Y/N)?"
+       res = raw_input()
+       if res == 'Y':
+          rp = os.path.realpath(sys.prefix)
           after_install(None, rp)
           sys.exit(0)
        else:
