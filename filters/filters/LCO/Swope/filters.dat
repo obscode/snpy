@@ -8,9 +8,9 @@ u   umax_WLcorr_atm.txt        bd17B=10.519 TAM scanned u filter for Swope at LC
 g   gmax_WLcorr_atm.txt        bd17B=9.644  TAM scanned g filter for Swope at LCO + CTIO extinction
 r   rmax_WLcorr_atm.txt        bd17B=9.351  TAM scanned r filter for Swope at LCO + CTIO extinction
 i   imax_WLcorr_tel_atm.txt    bd17B=9.250  TAM scanned i filter for Swope at LCO + CTIO extinction
-Y   Y_SWO_TAM_scan_atm.dat     VegaB=0      TAM scanned Y filter for Swope at 
-J   J_SWO_TAM_scan_atm.dat     VegaB=0      TAM scanned J filter for Swope at 
-H   H_SWO_TAM_scan_atm.dat     VegaB=0      TAM scanned H filter for Swope at 
+Y   Y_SWO_TAM_scan_atm.dat     VegaB=0      TAM scanned Y filter for Retrocam+Swope
+J   J_SWO_TAM_scan_atm.dat     VegaB=0      TAM scanned J filter for Retrocam+Swope
+H   H_SWO_TAM_scan_atm.dat     VegaB=0      TAM scanned H filter for Retrocam+Swope
 K   kfilter                    11.967       K-band for Swope at LCO
 oB  bshiftedswo.txt            13.669       shifted B filter for Swope at LCO
 oV  V_9844_resp.dat            13.7514      New V filter for Swope at LCO
