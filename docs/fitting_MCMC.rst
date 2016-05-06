@@ -1,3 +1,5 @@
+.. _sub-MCMC-fitting:
+
 MCMC Fitting
 ============
 
@@ -13,8 +15,6 @@ the fit. Such cases might be:
 * You wish to combine the SN distance estimate with another, independent,
   estimate.
 * etc.
-
-.. _sub-MCMC-fitting:
 
 Doing the Fit
 -------------

@@ -13,6 +13,8 @@ light-curves. One is the traditional :math:`\Delta m_{15}` of
 that the ``EBV_model`` will only work with :math:`\Delta m_{15}`-based
 templates.
 
+.. _sub-ebv_model:
+
 EBV_model
 ---------
 
@@ -44,7 +46,7 @@ these modify the shape of the spectral template). In the fitting, one has the
 choice of the spectral template of [Nugent+2002]_ or [Hsiao+2007]_.  The latter
 is the default. You can choose to allow the K-corrections to vary during the
 fit, keep them fixed, or not use them at all. See the parameters for the
-``fit()`` function in section :ref:`sub-Fit`.
+:meth:`~snpy.sn.sn.fit` function.
 
 The template :math:`T\left(t,\Delta m_{15}\right)` can be generated from
 the code of  \citet{2006ApJ...647..501P} or \citet{Burns2011}. In
@@ -52,7 +54,7 @@ the former case, you will be fitting to rest-frame :math:`B_{s}V_{s}R_{s}I_{s}`
 [#f1]_ while in the latter case, you can fit to :math:`uBVgriYJH` from the CSP
 data [Contreras+2010]_. You can mix and match which template
 generator you use: it is all a matter of which filter you choose for
-the ``restbands`` instance variable :ref:`sub-Doing-the-Fit`.
+the ``restbands`` instance variable (see :ref:`sub-Doing-the-Fit`).
 In all, this model fits 4 parameters: ``Tmax``, ``dm15``,
 ``EBVhost``, and ``DM``.
 
@@ -62,6 +64,8 @@ and host reddening laws (:math:`R_{X}` and :math:`R_{Y}`) as member variables
 rather than parameters to be fit
 [#f2]_. This could change in the future.
 
+
+.. _sub-ebv_model2:
 
 EBV_model2
 ----------
@@ -73,6 +77,8 @@ upcoming CSP analysis paper [Burns+2011]_ is used. When using
 the ``choose_model`` function to select this model, you can
 specify ``stype='dm15'`` or ``stype='st'`` to select the
 two different light-curve parameters.
+
+.. _sub-max_model:
 
 max_model
 ---------
@@ -151,7 +157,7 @@ routine. Instead, use the ``fitMCMC()`` routine, which fits the
 light-curves using Markov Chain Monte Carlo and allows priors to be
 specified on parameters. In this case, use the keyword argument ``rvprior='mix'``
 for the Gaussian mixture model, or ``rvprior='bin'`` for the
-binned prior. See section :ref:`sub-Fit-MCMC` for more details.
+binned prior. See section :ref:`sub-MCMC-fitting` for more details.
 
 .. [Phillips1999] Phillips, M.M., AJ, 118, 1766 (1999)
    http://adsabs.harvard.edu/abs/1999AJ....118.1766P

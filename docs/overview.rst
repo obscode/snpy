@@ -122,7 +122,7 @@ cosmology)::
 
 SNooPy has several spectral energy distrubutions for type Ia SNe built in.
 You can access them through the :mod:`snpy.kcorr` sub-module (that's where 
-they are used most heavily). This will retrieve the [Hsiao+xxx]_ SED at 
+they are used most heavily). This will retrieve the [Hsiao+2007]_ SED at 
 maximum::
 
    wave,flux = kcorr.get_SED(day=0, version='H3')

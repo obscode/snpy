@@ -2,17 +2,18 @@ Fitting Light-curves
 ====================
 
 All the light-curve fitting is done through a member function of the
-``sn`` class: ``fit().`` You basically tell ``fit()``
+:class:`~snpy.sn.sn` class: :meth:`~snpy.sn.sn.fit`.You basically tell ``fit()``
 which filters to fit (or all by default) and which parameters to hold
 constant. This function sets up some initial book-keeping, and then
-hands off the work to a ``model`` instance. The ``model``
+hands off the work to a :class:`~snpy.model.model` instance. The ``model``
 class defines the model that will be used to fit the light-curves.
 I did it this way so that adding new models (or modifying existing
-ones) would be easier. SNooPy comes with four built-in models: ``EBV_model``,
-``EBV_model2``, ``color_model``, and ``max_model``, which
+ones) would be easier. SNooPy comes with four built-in models: 
+:ref:`sub-ebv_model`, :ref:`sub-ebv_model2`, :ref:`sub-color_model`,
+and :ref:`sub-max_model`, which
 I will explain in the next sections. At any time, you can switch
-between the two by using the ``choose_model()`` member function
-of the ``sn`` class :ref:`sub-Other-Useful-functions`.
+between the two by using the :meth:`~snpy.sn.sn.choose_model()` member function
+of the ``sn`` class.
 As of SNooPy version 2, you can fit the ``EBV_model2`` and ``max_model``
 using either :math:`\Delta m_{15}` or a new stretch-like parameter :math:`s_{BV}` which
 is introduced in the CSP's most recent analysis paper [Burns2014]_. The choice
