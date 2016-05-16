@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import matplotlib
-matplotlib.use('Tkagg')
+matplotlib.use('Agg')
 from snpy import get_sn
 from snpy.utils import fit1dcurve
 from snpy.version import __version__
