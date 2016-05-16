@@ -408,7 +408,7 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
 
 import numpy
 import types
-import scipy.lib.blas
+import scipy.linalg.blas
 
 #	 Original FORTRAN documentation
 #	 **********
@@ -1478,7 +1478,7 @@ class mpfit:
 	
 	
 	def enorm(self, vec):
-		blas_enorm, = scipy.lib.blas.get_blas_funcs(['nrm2'],vec)
+		blas_enorm, = scipy.linalg.blas.get_blas_funcs(['nrm2'],(vec,))
 		ans = blas_enorm(vec)
 		return ans
 	
