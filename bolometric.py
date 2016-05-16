@@ -32,8 +32,8 @@ def log(msg):
 
 def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
               EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ',
-              Tmax=None, interpolate=None, mopts={}, SED='H3', 
-              DM=None, cosmo='LambdaCDM', use_stretch=True, 
+              Tmax=None, interpolate=None, extrapolate=False, mopts={}, 
+              SED='H3', DM=None, cosmo='LambdaCDM', use_stretch=True, 
               extrap_SED=True, extra_output=False, verbose=False):
 
    w,f = get_SED(0, version='H3')
@@ -180,7 +180,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    elif interpolate == 'model':
       # we fill in (where we can) missing data using the model
       for i,b in enumerate(bands):
-         mag,emag,mask = sn.model(b, res['MJD'][gids])
+         mag,emag,mask = sn.model(b, res['MJD'][gids], extrap=extrapolate)
          mags[i] = where(masks[i], mags[i], mag)
          masks[i] = masks[i] + mask
 
@@ -282,7 +282,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
 
 def bolometric_direct(sn, bands=None, 
               EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ',
-              interpolate=None, SED=None, Tmax=None,
+              interpolate=None, extrapolate=False, SED=None, Tmax=None,
               DM=None, cosmo='LambdaCDM', verbose=False):
 
    if verbose: log("Starting bolometric calculation for %s\n" % sn.name)
@@ -389,7 +389,7 @@ def bolometric_direct(sn, bands=None,
    elif interpolate == 'model':
       # we fill in (where we can) missing data using the model
       for i,b in enumerate(bands):
-         mag,mask = sn.model(b, res['MJD'])
+         mag,emag,mask = sn.model(b, res['MJD'], extrap=extrapolate)
          mags[i] = where(masks[i], mags[i], mag)
          masks[i] = masks[i] + mask
 

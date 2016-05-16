@@ -1638,9 +1638,9 @@ class sn(object):
 
    def bolometric(self, bands, method="direct", lam1=None, lam2=None, 
          refband=None, EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ', 
-      Tmax=None, interpolate=None, mopts={}, SED='H3', DM=None,
-      cosmo='LambdaCDM', use_stretch=False, verbose=False, outfile=None,
-      extra_output=False):
+      Tmax=None, interpolate=None, extrapolate=False, mopts={}, SED='H3', 
+      DM=None, cosmo='LambdaCDM', use_stretch=False, verbose=False, 
+      outfile=None, extra_output=False):
       '''
       Produce a quasi-bolometric flux light-curve based on the input [bands]
       by integrating a template SED from \lambda=lam1 to \lambda=lam2.
@@ -1673,6 +1673,8 @@ class sn(object):
                               epoch will be interpolated. If 'spline', it will
                               use a spline, if 'model', it will use the
                               currently fit model.
+         extrapolate (bool): If interpolating by model, you can choose to
+                        extrapolate the model beyond the data. Default: False
          mopts (dict):  You can pass any parameters for mangle_spectrum2()
                         using this option. Only used by SED method.
          SED (str, tuple, function): Specify the SED to use. This can be a
@@ -1714,13 +1716,13 @@ class sn(object):
       if method == 'direct':
          res = bolometric.bolometric_direct(
                self, bands, EBVhost, Rv, redlaw, extrap_red,
-               interpolate, SED, Tmax, DM, cosmo, verbose)
+               interpolate, extrapolate, SED, Tmax, DM, cosmo, verbose)
          limits = [(l.min(),l.max()) for l in res['lam_effs']]
 
       else:
          res = bolometric.bolometric_SED(
                self, bands, lam1, lam2, refband, EBVhost, Rv, redlaw,
-               extrap_red, Tmax, interpolate, mopts, SED,
+               extrap_red, Tmax, interpolate, extrapolate, mopts, SED,
                DM, cosmo, use_stretch,verbose)
          limits = [(l.min(),l.max()) for l in res['waves']]
 

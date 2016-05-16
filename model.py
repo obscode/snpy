@@ -430,7 +430,7 @@ class EBV_model(model):
 
       return(0.0)
 
-   def __call__(self, band, t):
+   def __call__(self, band, t, extrap=False):
       self.template.mktemplate(self.dm15)
       if len(shape(t)) == 0:
          t = array([t])
@@ -438,7 +438,8 @@ class EBV_model(model):
       rband = self.parent.restbands[band]
 
       # Now build the lc model
-      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, 
+            gen=self.gen, extrap=extrap)
       K,mask2 = self.kcorr(band, t)
       temp = temp + K
 
@@ -664,13 +665,14 @@ class EBV_model2(model):
 
       return(0.0)
 
-   def __call__(self, band, t):
+   def __call__(self, band, t, extrap=False):
       self.template.mktemplate(self.parameters[self.stype])
       t = t - self.Tmax
       rband = self.parent.restbands[band]
 
       # Now build the lc model
-      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, 
+            gen=self.gen, extrap=extrap)
       K,mask2 = self.kcorr(band, t)
       temp = temp + K
 
@@ -872,7 +874,7 @@ class max_model(model):
    #      return _quniform_prior(self.parameters['st'], 0.2, 1.3, 0.01)
 
 
-   def __call__(self, band, t):
+   def __call__(self, band, t, extrap=False):
       if debug:  print ">>>   Now in max_model"
       if debug:  print ">>>> setting shape parameter to ", self.parameters[self.stype]
       self.template.mktemplate(self.parameters[self.stype])
@@ -884,7 +886,8 @@ class max_model(model):
          print ">>>> calling template.eval with"
          print "rband = %s, t =" % (rband), t
 
-      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, 
+            gen=self.gen, extrap=extrap)
       if debug:  print ">>>>  done."
       K,mask2 = self.kcorr(band, t)
       temp = temp + K
@@ -1052,14 +1055,15 @@ class max_model2(model):
 
       return(0.0)
 
-   def __call__(self, band, t):
+   def __call__(self, band, t, extrap=False):
       self.template.mktemplate(self.parameters[self.stype])
       rband = self.parent.restbands[band]
       Tmax = self.parameters['T'+rband+'max']
       t = t - Tmax
 
       # Now build the lc model
-      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, 
+            gen=self.gen, extrap=extrap)
       # If k-corrections are there, use them
       K,mask2 = self.kcorr(band, t)
       temp = temp + K
@@ -1222,13 +1226,14 @@ class Rv_model(model):
 
       return(0.0)
 
-   def __call__(self, band, t):
+   def __call__(self, band, t, extrap=False):
       self.template.mktemplate(self.dm15)
       t = t - self.Tmax
       rband = self.parent.restbands[band]
 
       # Now build the lc model
-      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, 
+            gen=self.gen, extrap=extrap)
       K,mask2 = self.kcorr(band, t)
       temp = temp + K
 
@@ -1447,13 +1452,14 @@ class color_model(model):
       return 0.0
 
 
-   def __call__(self, band, t):
+   def __call__(self, band, t, extrap=False):
       self.template.mktemplate(self.st)
       t = t - self.Tmax
       rband = self.parent.restbands[band]
 
       # Now build the lc model
-      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, gen=self.gen)
+      temp,etemp,mask = self.template.eval(rband, t, self.parent.z, 
+            gen=self.gen, extrap=extrap)
       K,mask2 = self.kcorr(band, t)
       temp = temp + K
 
