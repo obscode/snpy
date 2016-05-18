@@ -11,14 +11,14 @@ from snpy.filters import fset
 from snpy.filters import filter
 from snpy.filters import vegaB
 import scipy.interpolate
+from scipy.optimize import minimize
+from scipy.optimize import leastsq
 try:
    import snpy.tspack as tspline
 except:
    tspline = None
 from snpy.utils import deredden
-from snpy.utils import mpfit
 import copy
-#from matplotlib import pyplot as plt
 
 filts = fset
 debug=False
@@ -56,14 +56,12 @@ class f_tspline(function):
    parameter. The higher the tension, the less curvature the spline can
    have. This is good for keeping the spline from "wigglig" too much.'''
 
-   def __init__(self, parent, tension=None, gradient=False, slopes=None, 
+   def __init__(self, parent, tension=None, slopes=None, 
          verbose=False, log=False):
       '''
          Args:
             parent (instance): Mangler that will fit the function.
             tension (float): A tension parameter
-            gradient (bool): If true, constrain the gradients at either end
-                             using the anchors
             slopes (2-tuple): The end slopes can be kept fixed using this
                               argument (e.g., set to (0,0) to flatten out
                               the spline at both ends
@@ -71,41 +69,28 @@ class f_tspline(function):
             log (bool):  Not implemented yet.
       '''
       function.__init__(self,parent)
-      self.knots = None
-      self.factors = None
       self.tension = tension       # specify a global tension parameter
-      self.gradient = gradient     # constrain the anchors by slope?
-      self.slopes = None           # End slopes if not using gradient
+      self.slopes = slopes
+      if self.slopes is not None:
+         try:
+            self.slopes = list(self.slopes)         # End slopes if not using gradient
+         except:
+            raise ValueError, "slopes must be a list type of length 2"
       self.pars = None
       self.verbose = verbose
       self.log = log
 
-   def init_pars(self, nid=0):
+   def init_pars(self, nid=0, init=None):
       # one parameter for each knot points
-      p = []
-      if self.log:
-         limited = [0,0]
-      else:
-         limited = [1,0]
-      pi = [{'fixed':0, 'limited':limited, 'limits':[0.0,0.0], 'step':0.001, 
-             'value':1.0} for i in range(len(self.parent.allbands))]
-      bs = self.parent.allbands
-      nf = len(bs)
-      knots = self.parent.ave_waves
-      if bs[0] == 'blue':
-         if self.gradient:
-            dw = (knots[0] - knots[1])/(knots[1] - knots[2])
-            pi[0]['tied']='p[1] + %8.4f*(p[1]-p[2])' % (dw)
+      np = len(self.parent.bands) - 1
+      pi = [1.0 for i in range(np)]
+      if init is not None:
+         if len(init) == len(pi):
+            pi[:] = init[:]
+         elif len(init) == len(pi)+1:
+            pi[:] = init[:-1]
          else:
-            pi[0]['tied'] = 'p[1]'
-      if self.parent.allbands[-1] == 'red':
-         pi[-1]['value'] = pi[-2]['value']
-         if self.gradient:
-            dw = (knots[-1] - knots[-2]) / (knots[-2] - knots[-3] )
-            pi[-1]['tied']='p[%d] + %8.4f*(p[%d]-p[%d])' % (nf-2, dw, nf-2, nf-3)
-         else:
-            pi[-1]['tied'] = 'p[%d]' % (nf - 2)
-      pi[nid]['fixed'] = 1
+            print "Warning: initial mangler parameters inconsistent"
       return(pi)
 
    def set_pars(self, pars):
@@ -114,27 +99,31 @@ class f_tspline(function):
    def __call__(self, x):
       if self.parent.ave_waves is None or self.pars is None:
          return x*0+1.0
-      if self.gradient:
-         xyds = tspline.tspsi(self.parent.ave_waves, self.pars, 
+      p = num.zeros((len(self.pars)+1,))
+      p[0] = 1.0
+      p[1:] = self.pars
+      if self.slopes is None:
+         xyds = tspline.tspsi(self.parent.ave_waves, p,
                tension=self.tension, curvs=[0,0])
       else:
-         xyds = tspline.tspsi(self.parent.ave_waves, self.pars, 
+         xyds = tspline.tspsi(self.parent.ave_waves, p,
                tension=self.tension, slopes=self.slopes)
 
       res = num.array([tspline.tsval1(x[i], xyds) for i in range(x.shape[0])])
 
-      y0 = tspline.tsval1(self.parent.ave_waves[0], xyds)[0]
-      y1 = tspline.tsval1(self.parent.ave_waves[-1], xyds)[0]
-      if self.gradient:
-         dy0 = tspline.tsval1(self.parent.ave_waves[0], xyds, 1)[0]
-         dy1 = tspline.tsval1(self.parent.ave_waves[-1], xyds, 1)[0]
-         res = num.where(x < self.parent.ave_waves[0], 
-               y0 + (x-self.parent.ave_waves[0])*dy0, res)
-         res = num.where(x > self.parent.ave_waves[-1], 
-               y1 + (x - self.parent.ave_waves[-1])*dy1, res)
+      y0 = tspline.tsval1(xyds[0][0], xyds)
+      y1 = tspline.tsval1(xyds[0][-1], xyds)
+      if self.slopes is not None:
+         #dy0 = tspline.tsval1(self.parent.ave_waves[0], xyds, 1)[0]
+         #dy1 = tspline.tsval1(self.parent.ave_waves[-1], xyds, 1)[0]
+         res = num.where(x < xyds[0][0], y0 + self.slopes[0]*(x-xyds[0][0]), res)
+         res = num.where(x > xyds[0][-1], y1 + self.slopes[1]*(x-xyds[0][-1]), res)
       else:
-         res = num.where(x < self.parent.ave_waves[0], y0, res)
-         res = num.where(x > self.parent.ave_waves[-1], y1, res)
+         # end slopes
+         s0 = tspline.tsval1(xyds[0][0], xyds, 1)
+         s1 = tspline.tsval1(xyds[0][-1], xyds, 1)
+         res = num.where(x < xyds[0][0], y0 + s0*(x-xyds[0][0]), res)
+         res = num.where(x > xyds[0][-1],y1 + s1*(x-xyds[0][-1]), res)
       return(res)
 
 class f_spline(function):
@@ -142,56 +131,35 @@ class f_spline(function):
    parameter. The higher the smoothing, the less curvature the spline can
    have. This is good for keeping the spline from "wigglig" too much.'''
 
-   def __init__(self, parent, s=0, gradient=False, slopes=None, 
-         verbose=False, log=False):
+   def __init__(self, parent, s=0, slopes=None, verbose=False, log=False):
       '''
          Args:
             parent (instance): Mangler that will fit the function.
             s (float): A smoothing parameter
-            gradient (bool): If true, constrain the gradients at either end
-                             using the anchors
-            slopes (2-tuple): The end slopes can be kept fixed using this
-                              argument (e.g., set to (0,0) to flatten out
-                              the spline at both ends
+            extrapolate (string): 'constant':  extrapolate using constants
+                                  'gradient':  extrapolate using end slopes
             verbose (bool): debug info
             log (bool):  Not implemented yet.
       '''
       function.__init__(self,parent)
-      self.knots = None
-      self.factors = None
-      self.s = s       # specify a global tension parameter
-      self.gradient = gradient     # constrain the anchors by slope?
-      self.slopes = None           # End slopes if not using gradient
+      self.s = s                   # specify a global smoothness parameter
+      #self.gradient = gradient    # constrain the anchors by slope?
+      self.slopes = slopes         # End slopes ((0,0) to flatten at ends)
       self.pars = None
       self.verbose = verbose
       self.log = log
 
-   def init_pars(self, nid=0):
-      # one parameter for each knot points
-      p = []
-      if self.log:
-         limited = [0,0]
-      else:
-         limited = [1,0]
-      pi = [{'fixed':0, 'limited':limited, 'limits':[0.0,0.0], 'step':0.001, 
-             'value':1.0} for i in range(len(self.parent.allbands))]
-      bs = self.parent.allbands
-      nf = len(bs)
-      knots = self.parent.ave_waves
-      if bs[0] == 'blue':
-         if self.gradient:
-            dw = (knots[0] - knots[1])/(knots[1] - knots[2])
-            pi[0]['tied']='p[1] + %8.4f*(p[1]-p[2])' % (dw)
+   def init_pars(self, nid=0, init=None):
+      # one parameter for each knot points, but keep last fixed at 1.0
+      np = len(self.parent.bands) - 1
+      pi = num.array([1.0 for i in range(np)])
+      if init is not None:
+         if len(init) == len(pi):
+            pi[:] = init[:]
+         elif len(init) == len(pi)+1:
+            pi[:] = init[:-1]
          else:
-            pi[0]['tied'] = 'p[1]'
-      if self.parent.allbands[-1] == 'red':
-         pi[-1]['value'] = pi[-2]['value']
-         if self.gradient:
-            dw = (knots[-1] - knots[-2]) / (knots[-2] - knots[-3] )
-            pi[-1]['tied']='p[%d] + %8.4f*(p[%d]-p[%d])' % (nf-2, dw, nf-2, nf-3)
-         else:
-            pi[-1]['tied'] = 'p[%d]' % (nf - 2)
-      pi[nid]['fixed'] = 1
+            print "Warning: initial mangler parameters inconsistent"
       return(pi)
 
    def set_pars(self, pars):
@@ -200,28 +168,31 @@ class f_spline(function):
    def __call__(self, x):
       if self.parent.ave_waves is None or self.pars is None:
          return x*0+1.0
-      #if self.gradient:
-      xyds = scipy.interpolate.splrep(self.parent.ave_waves, self.pars, 
-              w=self.pars*0+1, s=self.s)
-      #else:
-      #   xyds = tspline.tspsi(self.parent.ave_waves, self.pars, 
-      #         tension=self.tension, slopes=self.slopes)
+      p = num.zeros((len(self.pars)+3,))
+      p[1] = 1.0    # normalized to first band (since only interested in colors)
+      p[2:-1] = self.pars  # these control the shape. p[0] and p[-1] control slopes
+      ws = num.zeros((len(self.parent.ave_waves)+2,))
+      ws[1:-1] = self.parent.ave_waves
+      ws[0] = ws[1]-(ws[2]-ws[1])
+      ws[-1] = ws[-2] + (ws[-2]-ws[-3])
+      print ws
+
+      dx1 = ws[2] - ws[1]
+      dx2 = ws[-3] - ws[-2]
+      if self.slopes is None:
+         # naturally extend the slope, make curvature 0
+         p[0] = p[1] + (p[2]-p[1])/dx1*(ws[0] - ws[1])
+         p[-1] = p[-2] + (p[-3]-p[-2])/dx2*(ws[-1] - ws[-2])
+      else:
+         # Artificially set the slopes
+         p[0] = p[1] + self.slopes[0]*(ws[1] - ws[0])
+         p[-1] = p[-2] + self.slopes[1]*(ws[-1] - ws[-2])
+         
+      xyds = scipy.interpolate.splrep(ws, p, w=p*0+1, s=self.s)
 
       res = num.array([scipy.interpolate.splev(x[i], xyds) \
             for i in range(x.shape[0])])
 
-      y0 = scipy.interpolate.splev(self.parent.ave_waves[0], xyds)
-      y1 = scipy.interpolate.splev(self.parent.ave_waves[-1], xyds)
-      if self.gradient:
-         dy0 = scipy.interpolate.splev(self.parent.ave_waves[0], xyds, der=1)
-         dy1 = scipy.interpolate.splev(self.parent.ave_waves[-1], xyds, der=1)
-         res = num.where(x < self.parent.ave_waves[0], 
-               y0 + (x-self.parent.ave_waves[0])*dy0, res)
-         res = num.where(x > self.parent.ave_waves[-1], 
-               y1 + (x - self.parent.ave_waves[-1])*dy1, res)
-      else:
-         res = num.where(x < self.parent.ave_waves[0], y0, res)
-         res = num.where(x > self.parent.ave_waves[-1], y1, res)
       return(res)
 
 class f_ccm(function):
@@ -241,12 +212,12 @@ class f_ccm(function):
       self.pars = [0.0, 3.1]
       self.verbose = verbose
 
-   def init_pars(self, nid=0):
-      # one parameter for each of scale, ebv, rv
-      pi = [{'fixed':0, 'limited':[1,0], 'limits':[0.0, 0.0], 'value':1.0, 'step':0.0001},
-            {'fixed':0, 'limited':[0,0], 'value':0.0, 'step':0.0001},
-            {'fixed':0, 'limited':[1,0], 'limits':[0.0, 0.0], 'value':3.1, 'step':0.0001}]
-      return(pi[1:])
+   def init_pars(self, nid=0, init=None):
+      # one parameter for each of ebv, rv
+      if init is not None:
+         if len(init) == 2:
+            return init
+      return([0.0, 3.1])
 
    def set_pars(self, pars):
       self.pars = pars
@@ -327,7 +298,9 @@ class mangler:
 
    def create_anchor_filters(self, bands, anchorwidth):
       '''Given a set of filters in bands, create two fake filters at
-      either end to serve as anchor filters.
+      either end to serve as anchor filters. These can be useful for
+      controling splines that don't naturally allow their end slopes
+      to be constrained.
       
       Args:
          bands (list of str): The list of filters to construct colors from
@@ -429,22 +402,17 @@ class mangler:
       else:
          if self.normfilter not in bands:
             raise ValueError, "normfilter must be one of bands"
-      if fixed_filters is not None:
-         if fixed_filters == "blue":
-            fixed_filters = [bands[0]]
-         elif fixed_filters == 'red':
-            fixed_filters = [bands[-1]]
-         elif fixed_fitlers == 'both':
-            fixed_filters = [bands[0], bands[-1]]
-         else:
-            raise ValueError, "fixed_filters must be 'blue','red', or 'both'"
-         self.allbands = bands
-      else:
-         self.create_anchor_filters(bands, anchorwidth)
-         self.allbands = ['blue'] + bands + ['red']
+      self.nid = bands.index(self.normfilter)
 
       # The average wavelengths of the filters being used
-      self.ave_waves = num.array([fset[b].ave_wave for b in self.allbands])
+      self.ave_waves = num.array([fset[b].ave_wave for b in self.bands])
+      minb = self.bands[num.argmin(self.ave_waves)]
+      maxb = self.bands[num.argmax(self.ave_waves)]
+      
+      ## Anchor wavelengths if method requires them
+      #w0 = fset[minb].wave.min() - 100
+      #w1 = fset[maxb].wave.max() + 100
+      #self.anchorwaves = num.concatenate([[w0],self.ave_waves,[w1]])
 
       # Construct the flux levels we want from the colors
       #flux_rats = num.power(10, 0.4*colors)    # M X N-1 of these
@@ -458,7 +426,7 @@ class mangler:
          self.w = 1.0
       self.eresp_rats
       self.resp_rats = num.where(self.gids, self.resp_rats, 1)
-      id = self.allbands.index(self.normfilter)
+      id = self.bands.index(self.normfilter)
       if self.verbose:
          print "You input the following colors:"
          for i in range(colors.shape[1]):
@@ -472,23 +440,16 @@ class mangler:
 
 
       # Do some initial setup
-      pi = self.function.init_pars(nid=id)
+      pi = self.function.init_pars(nid=id, init=init)
 
-      if init is not None:
-         if len(init) == len(pi):
-            for j in range(len(init)):
-               pi[j]['value'] = init[j]
 
       if self.verbose:
          quiet = 0
       else:
          quiet = 1
-      #quiet = 1
-      result = mpfit.mpfit(self.leastsq, parinfo=pi, quiet=quiet, maxiter=200,
-            ftol=ftol, gtol=gtol, xtol=xtol, functkw={'bands':bands,'nid':id})
-      if (result.status == 5) : print \
-        'Maximum number of iterations exceeded in mangle_spectrum'
-      self.function.set_pars(result.params)
+      result = leastsq(self.leastsq, pi, args=(bands,), xtol=1e-4, ftol=1e-4,
+            gtol=1e-4, full_output=True)
+      self.function.set_pars(result[0])
       if self.verbose:
          print "The final colors of the SED are:"
          print self.get_colors(bands)
@@ -497,7 +458,7 @@ class mangler:
 
       return(result)
 
-   def leastsq(self, p, fjac, bands, nid):
+   def leastsq(self, p, bands):
       self.function.set_pars(p)
       mflux = self.get_mflux()
       mresp = self.resp_rats*0
@@ -510,16 +471,7 @@ class mangler:
                          fset[bands[j+1]].response(self.wave[i], mflux[i], z=self.z)
 
       delt = (self.resp_rats[self.gids] - mresp[self.gids])*self.w
-      #f = plt.figure(200)
-      #f.clear()
-      #ax = f.add_subplot(111)
-      #if len(ax.lines) == 2:
-      #   ax.lines[1].set_ydata(mresp[self.gids])
-      #else:
-      #   ax.plot(filts[self.gids], self.resp_rats[self.gids],'.')
-      #   ax.plot(filts[self.gids], mresp[self.gids],'.')
-      #plt.draw()
-      return (0, num.ravel(delt))
+      return num.ravel(delt)
 
 messages = ['Bad input parameters','chi-square less than ftol',
       'paramters changed less than xtol',
@@ -585,12 +537,8 @@ def mangle_spectrum2(wave,flux,bands, mags, emags=None, fixed_filters=None,
    res = m.solve(bands, colors, ecolors=ecolors, fixed_filters=fixed_filters,
          anchorwidth=anchorwidth, xtol=xtol, ftol=ftol, gtol=gtol,
          init=init)
-   if res.status > 4:
-      print "Warning:  %s" % messages[res.status]
-   elif res.status < 0:
-      print "Warning:  some unknown error occurred"
-   elif verbose:
-      print "mpfit finised with:  %s" % messages[res.status]
+   if result[4] > 4 or verbose:
+      print "Warning: %s" % result[5]
 
    # finally, normalize the flux
    mflux = m.get_mflux()
@@ -602,8 +550,12 @@ def mangle_spectrum2(wave,flux,bands, mags, emags=None, fixed_filters=None,
    for i in range(len(mflux)):
       mmag = fset[m.normfilter].synth_mag(wave,mflux[i],z=z)
       mflux[i] = mflux[i]*num.power(10,-0.4*(omag[i]-mmag))
+   if len(m.ave_waves) > len(m.function.pars):
+      pars = num.concatenate([m.function.pars,[1.0]])
+   else:
+      pars = m.function.pars
 
-   return (mflux, m.ave_waves, m.function.pars)
+   return (mflux, m.ave_waves, pars)
 
 def apply_mangle(wave,flux,sw,sf,method='tspline', **margs):
 
