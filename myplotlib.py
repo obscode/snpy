@@ -28,6 +28,14 @@ rcParams['ytick.minor.size'] = 4
 rcParams['xtick.major.pad'] = 10
 rcParams['ytick.major.pad'] = 10
 
+def find_renderer(fig):
+   if hasattr(fig.canvas, "get_renderer"):
+      renderer = fig.canvas.get_renderer()
+   else:
+      import io
+      fig.canvas.pring_pdf(io.BylesIO())
+      renderer = fig._cachedRenderer
+   return renderer
 
 
 def line_bbox(line):
@@ -155,7 +163,7 @@ class SimplePlot:
 
    def get_bbox(self, label):
       '''Get the bounding box of an object in Figure coordinates'''
-      bbox = label.get_window_extent()
+      bbox = label.get_window_extent(find_renderer(self.fig))
       bboxi = bbox.inverse_transformed(self.fig.transFigure)
       return bboxi
 
@@ -166,7 +174,7 @@ class SimplePlot:
       xlabs.append(self.axis.get_xaxis().offsetText)
       if self.axis.get_xlabel() != '':
          xlabs.append(self.axis.get_xaxis().get_label())
-      fbbox = self.fig.patch.get_window_extent()
+      #fbbox = self.fig.patch.get_window_extent(find_renderer(self.fig))
       #xlabs = [lab for lab in xlabs if fbbox.overlaps(lab.get_window_extent())]
       return xlabs
 
@@ -177,7 +185,7 @@ class SimplePlot:
       ylabs.append(self.axis.get_yaxis().offsetText)
       if self.axis.get_ylabel() != '':
          ylabs.append(self.axis.get_yaxis().get_label())
-      fbbox = self.fig.patch.get_window_extent()
+      #fbbox = self.fig.patch.get_window_extent()
       #ylabs = [lab for lab in ylabs if fbbox.overlaps(lab.get_window_extent())]
       return ylabs
 
@@ -188,7 +196,7 @@ class SimplePlot:
       bboxes = []
       for label in labels:
          if label.get_visible():
-            bbox = label.get_window_extent()
+            bbox = label.get_window_extent(find_renderer(self.fig))
             bboxi = bbox.inverse_transformed(self.fig.transFigure)
             bboxes.append(bboxi)
       # Now put them all together into self.N uber-boxes
@@ -203,7 +211,7 @@ class SimplePlot:
       for label in labels:
          if label.get_visible():
             #print label
-            bbox = label.get_window_extent()
+            bbox = label.get_window_extent(find_renderer(self.fig))
             bboxi = bbox.inverse_transformed(self.fig.transFigure)
             bboxes.append(bboxi)
       # Now put them all together into self.M uber-bboxes:
@@ -275,6 +283,8 @@ class SimplePlot:
 
    def draw(self, hide_corner_labels=1):
       '''Draw the panel and everything in it.'''
+      # Save a renderer:
+      self._renderer = find_renderer(self.fig)
       self.set_minor_ticks()
       #self.fig.canvas.draw()
       plt.draw()
@@ -424,7 +434,7 @@ class MultiPlot:
 
    def get_bbox(self, label):
       '''If a title exists, how tall is it?'''
-      bbox = label.get_window_extent()
+      bbox = label.get_window_extent(find_renderer(self.fig))
       bboxi = bbox.inverse_transformed(self.fig.transFigure)
       return bboxi
 
@@ -537,8 +547,9 @@ class MultiPlot:
       xlabs.append(self.axes[k].get_xaxis().offsetText)
       if self.axes[k].get_xlabel() != '':
          xlabs.append(self.axes[k].get_xaxis().get_label())
-      fbbox = self.fig.patch.get_window_extent()
-      xlabs = [lab for lab in xlabs if fbbox.overlaps(lab.get_window_extent())]
+      fbbox = self.fig.patch.get_window_extent(find_renderer(self.fig))
+      xlabs = [lab for lab in xlabs \
+            if fbbox.overlaps(lab.get_window_extent(find_renderer(self.fig)))]
       return xlabs
 
    def get_yticklabels(self, k):
@@ -548,12 +559,14 @@ class MultiPlot:
       ylabs.append(self.axes[k].get_yaxis().offsetText)
       if self.axes[k].get_ylabel() != '':
          ylabs.append(self.axes[k].get_yaxis().get_label())
-      fbbox = self.fig.patch.get_window_extent()
-      ylabs = [lab for lab in ylabs if fbbox.overlaps(lab.get_window_extent())]
+      fbbox = self.fig.patch.get_window_extent(find_renderer(self.fig))
+      ylabs = [lab for lab in ylabs \
+            if fbbox.overlaps(lab.get_window_extent(find_renderer(self.fig)))]
       return ylabs
 
    def draw(self, hide_corner_labels=1):
       '''Draw the panel and everything in it.'''
+      self._renderer = find_renderer(self.fig)
       #self.fig.canvas.draw()
       plt.draw()
       # Now that everything's been rendered, let's clean up shop:
@@ -737,7 +750,7 @@ class PanelPlot:
 
    def get_bbox(self, label):
       '''If a title exists, how tall is it?'''
-      bbox = label.get_window_extent()
+      bbox = label.get_window_extent(find_renderer(self.fig))
       bboxi = bbox.inverse_transformed(self.fig.transFigure)
       return bboxi
 
@@ -751,7 +764,7 @@ class PanelPlot:
       bboxes = []
       for label in labels:
          if label.get_visible():
-            bbox = label.get_window_extent()
+            bbox = label.get_window_extent(find_renderer(self.fig))
             bboxi = bbox.inverse_transformed(self.fig.transFigure)
             bboxes.append(bboxi)
       # Now put them all together into an uber-bbox:
@@ -768,7 +781,7 @@ class PanelPlot:
       bboxes = []
       for label in labels:
          if label.get_visible():
-            bbox = label.get_window_extent()
+            bbox = label.get_window_extent(find_renderer(self.fig))
             bboxi = bbox.inverse_transformed(self.fig.transFigure)
             bboxes.append(bboxi)
       # Now put them all together into an uber-bbox:
@@ -779,6 +792,7 @@ class PanelPlot:
       '''Change the axes positions to match the current paddings.
       Also, update the positions of the Panels' labels if they are
       defined.'''
+      plt.draw()
       for k in range(self.num):
          i,j = self.ij(k)
          rect = [self.left_pad + sum(self.pwidths[0:i]),
@@ -876,8 +890,9 @@ class PanelPlot:
       nonsensical labels (don't know where they're coming from.'''
       xlabs = self.axes[k].get_xticklabels()
       xlabs.append(self.axes[k].get_xaxis().offsetText)
-      fbbox = self.fig.patch.get_window_extent()
-      xlabs = [lab for lab in xlabs if fbbox.overlaps(lab.get_window_extent())]
+      fbbox = self.fig.patch.get_window_extent(find_renderer(self.fig))
+      xlabs = [lab for lab in xlabs \
+            if fbbox.overlaps(lab.get_window_extent(find_renderer(self.fig)))]
       return xlabs
 
    def get_yticklabels(self, k):
@@ -885,12 +900,14 @@ class PanelPlot:
       and last if there is an offset.'''
       ylabs = self.axes[k].get_yticklabels()
       ylabs.append(self.axes[k].get_yaxis().offsetText)
-      fbbox = self.fig.patch.get_window_extent()
-      ylabs = [lab for lab in ylabs if fbbox.overlaps(lab.get_window_extent())]
+      fbbox = self.fig.patch.get_window_extent(find_renderer(self.fig))
+      ylabs = [lab for lab in ylabs \
+            if fbbox.overlaps(lab.get_window_extent(find_renderer(self.fig)))]
       return ylabs
 
    def draw(self, hide_corner_labels=1):
       '''Draw the panel and everything in it.'''
+      self._renderer = find_renderer(self.fig)
       #self.fig.canvas.draw()
       plt.draw()
       self.set_minor_ticks()
@@ -908,39 +925,6 @@ class PanelPlot:
             for lab in self.axes[k].get_xticklabels():
                lab.set_visible(False)
             self.axes[k].xaxis.offsetText.set_visible(False)
-      #2) Get rid of any corner tick labels that overlap:
-      # first, make them all visible
-      #if hide_corner_labels:
-      #   for i in range(1,self.N):
-      #      lab1s = self.get_xticklabels(i-1)[0:-1]
-      #      lab2s = self.get_xticklabels(i)[0:-1]
-      #      [lab.set_visible(True) for lab in lab1s]
-      #      [lab.set_visible(True) for lab in lab2s]
-      #   for j in range(1,self.M):
-      #      lab1s = self.get_yticklabels((j-1)*self.N)[0:-1]
-      #      lab2s = self.get_yticklabels(j*self.N)[0:-1]
-      #      [lab.set_visible(True) for lab in lab1s]
-      #      [lab.set_visible(True) for lab in lab2s]
-      #   plt.draw()
-      #   for i in range(1,self.N):
-      #      lab1s = self.get_xticklabels(i-1)[0:-1]
-      #      bboxes1 = [lab.get_window_extent() for lab in lab1s]
-      #      lab2s = self.get_xticklabels(i)[0:-1]
-      #      bboxes2 = [lab.get_window_extent() for lab in lab2s]
-      #      for j in range(len(bboxes1)):
-      #         for k in range(len(bboxes2)):
-      #            if bboxes1[j].overlaps(bboxes2[k]):
-      #               lab2s[k].set_visible(False)
-
-      #   for j in range(1,self.M):
-      #      lab1s = self.get_yticklabels((j-1)*self.N)[0:-1]
-      #      bboxes1 = [lab.get_window_extent() for lab in lab1s]
-      #      lab2s = self.get_yticklabels(j*self.N)[0:-1]
-      #      bboxes2 = [lab.get_window_extent() for lab in lab2s]
-      #      for i in range(len(bboxes1)):
-      #         for k in range(len(bboxes2)):
-      #            if bboxes1[i].overlaps(bboxes2[k]):
-      #               lab2s[k].set_visible(False)
 
       #3) Make room for everything:
       if self._title is not None:
