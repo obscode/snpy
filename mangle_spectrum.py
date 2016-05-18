@@ -380,7 +380,7 @@ class mangler:
                                wave0,'A to ',wave1,'A'
       
 
-   def solve(self, bands, colors, fixed_filters=None, 
+   def solve(self, bands, colors, ecolors=None, fixed_filters=None, 
          anchorwidth=100, xtol=1e-10, ftol=1e-4, gtol=1e-10,
          init=None):
       '''Solve for the mangling function that will produce the observed colors
@@ -392,6 +392,7 @@ class mangler:
                                should correspond to bands[i-1]-bands[i],
                                if 2d, the first index should reflect spectrum
                                number.
+         ecolors (float array or None): the errors in colors.
          fixed_filters (2-tuple or None): The filters whose control points
                               should remain fixed. If None, two fake filters
                               will be created.
@@ -403,6 +404,8 @@ class mangler:
       # going to try to do multiple-epoch colors simultaneously with one
       #  mangle function.  colors[i,j] = color for epoch i, color j
       colors = num.asarray(colors)
+      if ecolors is not None:
+         ecolors = num.asarray(ecolors)
       if len(num.shape(colors)) == 1:
          colors = colors.reshape((1,colors.shape[0]))
 
@@ -444,10 +447,16 @@ class mangler:
       self.ave_waves = num.array([fset[b].ave_wave for b in self.allbands])
 
       # Construct the flux levels we want from the colors
-      flux_rats = num.power(10, 0.4*colors)    # M X N-1 of these
+      #flux_rats = num.power(10, 0.4*colors)    # M X N-1 of these
+      #eflux_rats = flux_rats*ecolors/1.0857
       dzps = num.array([fset[bands[i]].zp - fset[bands[i+1]].zp \
             for i in range(0,len(bands)-1)])
       self.resp_rats = num.power(10, -0.4*(colors - dzps[num.newaxis,:]))
+      if ecolors is not None:
+         self.w = 1.0857/(self.resp_rats*ecolors)
+      else:
+         self.w = 1.0
+      self.eresp_rats
       self.resp_rats = num.where(self.gids, self.resp_rats, 1)
       id = self.allbands.index(self.normfilter)
       if self.verbose:
@@ -500,7 +509,7 @@ class mangler:
             mresp[i,j] = fset[bands[j]].response(self.wave[i], mflux[i], z=self.z)/\
                          fset[bands[j+1]].response(self.wave[i], mflux[i], z=self.z)
 
-      delt = self.resp_rats[self.gids] - mresp[self.gids]
+      delt = (self.resp_rats[self.gids] - mresp[self.gids])*self.w
       #f = plt.figure(200)
       #f.clear()
       #ax = f.add_subplot(111)
@@ -519,9 +528,10 @@ messages = ['Bad input parameters','chi-square less than ftol',
       'Exceeded maximum number of iterations',
       'ftol is too small','xtol is too small','gtol is too small']
 
-def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None, 
+def mangle_spectrum2(wave,flux,bands, mags, emags=None, fixed_filters=None, 
       normfilter=None, z=0, verbose=0, anchorwidth=100,
-      method='tspline', xtol=1e-6, ftol=1e-6, gtol=1e-6, init=None, **margs):
+      method='tspline', xtol=1e-6, ftol=1e-6, gtol=1e-6, init=None, 
+      **margs):
    '''Given an input spectrum, multiply by a smooth function (aka mangle)
    such that the synthetic colors match observed colors.
 
@@ -530,6 +540,7 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
       flux (float array):  Input fluxes in arbitrary units
       bands (list of str): list of observed filters
       mags (float array): Observed magnitudes
+      emags (float array): errors in observed magnitudes.
       m_mask (bool array): mask array indicating valid magnitudes.
       fixed_filters (str or None):  If not None, append fake filters on the
                                     red and/or blue end of the spectrum, keeping
@@ -555,15 +566,23 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
       '''
    m = mangler(wave, flux, method, z=z, verbose=verbose, 
          normfilter=normfilter, **margs)
+   if emags is not None:
+      if len(num.shape(emags)) != len(num.shape(mags)):
+         raise ValueError, "mags and emags must have the same shape"
    if len(num.shape(mags)) == 1:
       oned = True
       gids = num.less(mags[:-1],90)*num.less(mags[1:],90)
       colors = num.where(gids, mags[:-1]-mags[1:], 99.9)
+      if emags is not None:
+         ecolors = num.where(gids, sqrt(emags[:-1]**2 + emags[1:]**2), 99.9)
    else:
       oned = False
       gids = num.less(mags[:-1,:],90)*num.less(mags[1:,:],90)
       colors = num.where(gids, mags[:-1,:]-mags[1:,:], 99.9)
-   res = m.solve(bands, colors, fixed_filters=fixed_filters,
+      if emags is not None:
+         ecolors = num.where(gids, sqrt(emags[:-1,:]**2 + emags[1:,:]**2), 99.9)
+
+   res = m.solve(bands, colors, ecolors=ecolors, fixed_filters=fixed_filters,
          anchorwidth=anchorwidth, xtol=xtol, ftol=ftol, gtol=gtol,
          init=init)
    if res.status > 4:
