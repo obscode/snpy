@@ -175,7 +175,6 @@ class f_spline(function):
       ws[1:-1] = self.parent.ave_waves
       ws[0] = ws[1]-(ws[2]-ws[1])
       ws[-1] = ws[-2] + (ws[-2]-ws[-3])
-      print ws
 
       dx1 = ws[2] - ws[1]
       dx2 = ws[-3] - ws[-2]
@@ -424,7 +423,6 @@ class mangler:
          self.w = 1.0857/(self.resp_rats*ecolors)
       else:
          self.w = 1.0
-      self.eresp_rats
       self.resp_rats = num.where(self.gids, self.resp_rats, 1)
       id = self.bands.index(self.normfilter)
       if self.verbose:
@@ -527,18 +525,22 @@ def mangle_spectrum2(wave,flux,bands, mags, emags=None, fixed_filters=None,
       colors = num.where(gids, mags[:-1]-mags[1:], 99.9)
       if emags is not None:
          ecolors = num.where(gids, sqrt(emags[:-1]**2 + emags[1:]**2), 99.9)
+      else:
+         ecolors = colors*0+1
    else:
       oned = False
       gids = num.less(mags[:-1,:],90)*num.less(mags[1:,:],90)
       colors = num.where(gids, mags[:-1,:]-mags[1:,:], 99.9)
       if emags is not None:
          ecolors = num.where(gids, sqrt(emags[:-1,:]**2 + emags[1:,:]**2), 99.9)
+      else:
+         ecolors = colors*0+1
 
    res = m.solve(bands, colors, ecolors=ecolors, fixed_filters=fixed_filters,
          anchorwidth=anchorwidth, xtol=xtol, ftol=ftol, gtol=gtol,
          init=init)
-   if result[4] > 4 or verbose:
-      print "Warning: %s" % result[5]
+   if res[4] > 4 or verbose:
+      print "Warning: %s" % res[5]
 
    # finally, normalize the flux
    mflux = m.get_mflux()
@@ -550,10 +552,10 @@ def mangle_spectrum2(wave,flux,bands, mags, emags=None, fixed_filters=None,
    for i in range(len(mflux)):
       mmag = fset[m.normfilter].synth_mag(wave,mflux[i],z=z)
       mflux[i] = mflux[i]*num.power(10,-0.4*(omag[i]-mmag))
-   if len(m.ave_waves) > len(m.function.pars):
-      pars = num.concatenate([m.function.pars,[1.0]])
-   else:
-      pars = m.function.pars
+   #if len(m.ave_waves) > len(m.function.pars):
+   #   pars = num.concatenate([m.function.pars,[1.0]])
+   #else:
+   pars = m.function.pars
 
    return (mflux, m.ave_waves, pars)
 
