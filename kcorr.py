@@ -245,7 +245,7 @@ def K(wave, spec, f1, f2, z, photons=1):
       return (kf1f2, 1)
 
 def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1, 
-      R_host=3.1, version="H3", photons=1):
+      R_host=3.1, version="H3", photons=1, interpSED=True, extrapSED=False):
    '''Find the cross-band k-correction for a series of type Ia SED from
    SNooPy's catalog. These can be thought of as "empirical" K-corrections.
    
@@ -267,6 +267,12 @@ def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1,
       photons (bool): If True, compute fluxes in units of photons rather
                       than energy. Default is true and should be used unless
                       filter definition is in energy units.
+      interpSED (bool): If True, use linear interpolation to interpolate
+                      between SED epochs, otherwise use nearest-neighbor.
+      extrapSED (bool): If True, extrapolate SED beyond epoch limits. Currently,
+                      this is done by simply replicating. This will cause
+                      k-corretions between these limits to be reported as
+                      "good". Use at your own risk! Default: False.
 
    Returns
       2-tuple:  (K,mask)
@@ -286,7 +292,8 @@ def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1,
    # Loop through the list of days
    for day in days:
       day = int(day)
-      spec_wav,spec_f = get_SED(day, version)
+      spec_wav,spec_f = get_SED(day, version, interpolate=interpSED,
+            extrapolate=extrapSED)
       if spec_wav is None:
          # print "Warning:  no spectra for day %d, setting Kxy=0" % day
          kcorrs.append(0.0)
@@ -412,7 +419,8 @@ def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z,
          return(kcorrs,mask)
 
 def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H', 
-      colorfilts=None, full_output=0, mepoch=False, **mopts):
+      colorfilts=None, full_output=0, mepoch=False, interpSED=True,
+      extrapSED=False, **mopts):
    '''Compute (cross-)band K-corrections with "mangling" using built-in library
    of spectral SEDs. The SEDs are first multiplied by a smooth spline such that
    the synthetic colors match the observed colors.
@@ -434,6 +442,12 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
                               splines).
       full_output (bool):  If True, output more information than just the
                           K-corrections and mask.
+      interpSED (bool): If True, use linear interpolation to interpolate
+                      between SED epochs, otherwise use nearest-neighbor.
+      extrapSED (bool): If True, extrapolate SED beyond epoch limits. Currently,
+                      this is done by simply replicating. This will cause
+                      k-corretions between these limits to be reported as
+                      "good". Use at your own risk! Default: False.
       mepoch (bool): If True, a single mangling function is solved for
                      all epochs. EXPERIMENTAL.
       mopts (dict): All additional arguments to function are sent to 
@@ -474,7 +488,8 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
       sids = []
       for j in range(len(days)):
          day = int(days[j])
-         s,f = get_SED(day, version)
+         s,f = get_SED(day, version, interpolate=interpSED,
+               extrapolate=extrapSED)
          if s is None:
             spec_wavs.append(num.arange(980.,24981.0,10.))
             spec_fs.append(num.zeros((2401,), dtype=num.float64))
@@ -529,7 +544,8 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
          kcorrs.append([])
          mask.append([])
          day = int(days[j])
-         spec_wav,spec_f = get_SED(day, version)
+         spec_wav,spec_f = get_SED(day, version, interpolate=interpSED,
+               extrapolate=extrapSED)
          if spec_wav is None:
             # print "Warning:  no spectra for day %d, setting Kxy=0" % day
             kcorrs[-1] = num.zeros((len(filts),), dtype=num.float32)
@@ -563,7 +579,8 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
                # check the colors
                for i in range(len(fs)-1):
  
-                  print "input color:  %s-%s = %f" % (fs[i],fs[i+1], ms[i]-ms[i+1]),
+                  print "input color:  %s-%s = %f" % \
+                        (fs[i],fs[i+1], ms[i]-ms[i+1]),
                   f1 = filters.fset[fs[i]]
                   f2 = filters.fset[fs[i+1]]
                   col = f1.synth_mag(spec_wav*(1+z), man_spec_f[0]) - \
@@ -599,7 +616,8 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
       return(kcorrs, mask, Rts, m_opts)
 
 def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal, 
-      Rv_host=3.1, Rv_gal=3.1, version='H', redlaw='f99', strict_ccm=False):
+      Rv_host=3.1, Rv_gal=3.1, version='H', redlaw='f99', strict_ccm=False,
+      interpSED=True, extrapSED=False):
    '''Compute the observed value of the selective-to-total extinction, R,
    by applying an extinction curve to a set of library Ia spectral SEDs and
    computing synthetic photometry:
@@ -618,17 +636,23 @@ def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal,
    ie, the color excess for filters :math:`\lambda_2` and :math:`\lambda_3`.
    
    Args:
-       filter1,filter2,filter3 (str): the 3 filters defining R
-       z (float): redshift of host compoenent of extinction
-       days (int array): epochs at which to comptue R (t-Tmax(B))
-       EBVhost (float): host component of extinction to apply
-       EBVgal (float): Milky-way (foreground) component of extinction to apply
-       Rv_host (float): R_V for host component
-       Rv_gal (float): R_V for MW component
-       version (str): Version of Ia SED library. See :func:`.get_SED`.
-       redlaw (str): Which reddening law to use. See :mod:`snpy.utils.deredden`
-       strict_ccm (bool): If True and using CCM reddening law, do not apply
-                          the corrections due to O'Donnel.'''
+      filter1,filter2,filter3 (str): the 3 filters defining R
+      z (float): redshift of host compoenent of extinction
+      days (int array): epochs at which to comptue R (t-Tmax(B))
+      EBVhost (float): host component of extinction to apply
+      EBVgal (float): Milky-way (foreground) component of extinction to apply
+      Rv_host (float): R_V for host component
+      Rv_gal (float): R_V for MW component
+      version (str): Version of Ia SED library. See :func:`.get_SED`.
+      redlaw (str): Which reddening law to use. See :mod:`snpy.utils.deredden`
+      strict_ccm (bool): If True and using CCM reddening law, do not apply
+                         the corrections due to O'Donnel.
+      interpSED (bool): If True, use linear interpolation to interpolate
+                     between SED epochs, otherwise use nearest-neighbor.
+      extrapSED (bool): If True, extrapolate SED beyond epoch limits. Currently,
+                     this is done by simply replicating. This will cause
+                     k-corretions between these limits to be reported as
+                     "good". Use at your own risk! Default: False.'''
    try:
       N = len(days)
       outarr = 1
@@ -638,7 +662,8 @@ def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal,
 
    Rs = []
    for day in days:
-      spec_wav,spec_f = get_SED(int(day), version)
+      spec_wav,spec_f = get_SED(int(day), version, interpolate=interpSED,
+            extrapolate=extrapSED)
       if spec_wav is None:
          Rs.append(99.9)
       # Redden the spectrum based on Cardelli et al. and assumed EBVgal + EBVhost
@@ -666,7 +691,7 @@ def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal,
       return(Rs[0])
 
 def A_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1, 
-      version='H3'):
+      version='H3', interpSED=True, extrapSED=False):
    try:
       N = len(days)
       outarr = 1
@@ -678,7 +703,8 @@ def A_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1,
    for day in days:
       if day < -19:  day=-18
       if day > 70:  day = 69
-      spec_wav,spec_f = get_SED(int(day), version)
+      spec_wav,spec_f = get_SED(int(day), version, interpolate=interpSED,
+            extrapolate=extrapSED)
       if spec_wav is None:
          Rs.append(99.9)
          continue
@@ -699,7 +725,8 @@ def A_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1,
       return(As[0])
 
 def R_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1, 
-      version='H', redlaw='f99', strict_ccm=False):
+      version='H', redlaw='f99', strict_ccm=False, interpSED=True,
+      extrapSED=False):
    '''Compute the 'true' value of R based on a fiducial value of Rv for both Galactic and
    host extinction and the SED of a supernova.  The filter is such that:
 
@@ -716,7 +743,8 @@ def R_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1,
    for day in days:
       if day < -19:  day=-18
       if day > 70:  day = 69
-      spec_wav,spec_f = get_SED(int(day), version)
+      spec_wav,spec_f = get_SED(int(day), version, interpolate=interpSED,
+            extrapolate=extrapSED)
       if spec_wav is None:
          Rs.append(99.9)
          continue
