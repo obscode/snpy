@@ -485,7 +485,8 @@ class sn(object):
       return result
 
    def kcorr(self, bands=None, mbands=None, mangle=1, interp=1, use_model=0, 
-         min_filter_sep=400, use_stretch=1, **mopts):
+         min_filter_sep=400, use_stretch=1, interpSED=True,
+         extrapSED=False, **mopts):
       '''Compute the k-corrections for the named filters.
       In order to get the best k-corrections possible,
       we warp the SNIa SED (defined by self.k_version) to match the observed
@@ -507,6 +508,12 @@ class sn(object):
                                  than this are rejected. (Default: 400 A)
          use_stretch (bool): If True, stretch the SED in time to match the
                              stretch/dm15 of the object. (Default: True)
+         interpSED (bool): If True, use linear interpolation to interpolate
+                      between SED epochs, otherwise use nearest-neighbor.
+         extrapSED (bool): If True, extrapolate SED beyond epoch limits. 
+                      Currently, this is done by simply replicating. This will 
+                      cause k-corretions between these limits to be reported as
+                      "good". Use at your own risk! Default: False.
          mopts (dict): Any additional arguments are sent to the function
                        mangle_spectrum.mangle_spectrum2()
 
@@ -561,7 +568,8 @@ class sn(object):
             days = days.tolist()
             self.ks[band],self.ks_mask[band] = map(array,kcorr.kcorr(days, 
                self.restbands[band], band, self.z, self.EBVgal, 0.0,
-               version=self.k_version))
+               version=self.k_version, interpSED=interpSED, 
+               extrapSED=extrapSED))
             self.ks_mask[band] = self.ks_mask[band].astype(bool)
             #self.ks_tck[band] = scipy.interpolate.splrep(x, self.ks[band], k=1, s=0)
             if len(x) > 1:
@@ -617,8 +625,9 @@ class sn(object):
          raise RuntimeError, \
             "Error:  your epochs are all outside -20 < t < 70.  Check self.Tmax"
       kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle(t/(1+self.z)/s, bands, 
-            mags, masks, restbands, self.z, 
-            colorfilts=mbands, version=self.k_version, full_output=1, **mopts)
+            mags, masks, restbands, self.z, colorfilts=mbands, 
+            version=self.k_version, full_output=1, interpSED=interpSED,
+            extrapSED=extrapSED, **mopts)
       mask = greater(mask, 0)
       kcorrs = array(kcorrs)
       Rts = array(Rts)
@@ -666,7 +675,7 @@ class sn(object):
       if 'ks_mopts' not in self.__dict__:
          raise AttributeError, "Mangling info not found... try running self.kcorr()"
       epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
-      wave,flux = kcorr.get_SED(int(epoch), version=self.k_version)
+      wave,flux = kcorr.get_SED(epoch, version=self.k_version)
       man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][i])[0]
       if not normalize:
          return(wave*(1+self.z),man_flux,flux,man_flux/flux)
@@ -1634,7 +1643,7 @@ class sn(object):
       Returns:
          matplotlib.figure:  the figure instance of the plot.
       '''
-      return plotmod.plot_kcorrs(self, colors, symbols)
+      return plotmod.plot_kcorrs(self, colors, symbols, outfile)
 
    def bolometric(self, bands, method="direct", lam1=None, lam2=None, 
          refband=None, EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ', 
