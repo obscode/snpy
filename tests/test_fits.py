@@ -23,9 +23,9 @@ for model in models:
       stype='st'
    s.choose_model(model, stype=stype)
    if model == 'color_model':
-      s.fit(['u','B','V','g','r','i','Y','J','H'], Rv=2.0, kcorr=False)
+      s.fit(['u','B','V','g','r','i','Y','J','H'], Rv=2.0, dokcorr=False)
    else:
-      s.fit(['u','B','V','g','r','i','Y','J','H'], kcorr=False)
+      s.fit(['u','B','V','g','r','i','Y','J','H'], dokcorr=False)
    s.summary()
    s.save('SN2006ax_%s.snpy' % model)
    
@@ -34,7 +34,11 @@ for model in models:
       s.restbands['V'] = 'Vs'
       s.restbands['r'] = 'Rs'
       s.restbands['i'] = 'Is'
-   s.fit(['u','B','V','g','r','i','Y','J','H'], kcorr=False)
+   if model == 'color_model':
+      s.fit(['u','B','V','g','r','i','Y','J','H'], Rv=2.0, dokcorr=False)
+   else:
+      s.fit(['u','B','V','g','r','i','Y','J','H'], dokcorr=False)
+
    s.summary()
    s.save('SN2006ax_%s_st.snpy' % model)
 
