@@ -21,7 +21,7 @@ from filters import standards
 Vega = standards['VegaB']
 from utils import deredden
 from mangle_spectrum import mangle_spectrum2
-from scipy.integrate import simps
+from scipy.integrate import trapz
 from scipy.interpolate import splrep,splev
 from numpy import *
 import sys
@@ -218,6 +218,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
       if len(bs) == 1:
          # No mangling possible
          mflux = flux
+         mfuncs.append(flux*0+1)
       else:
          init = [pars0.get(b, 1.0) for b in bs]
          mflux,ave_wave,pars = mangle_spectrum2(wave*(1+sn.z), flux, bs, 
@@ -246,7 +247,6 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
       mag = mags[i, idx]
       mflux = mflux*power(10, 
             -0.4*(mag - filt.zp))/filt.response(wave, mflux/(1+sn.z), z=sn.z)
-      fluxes.append(mflux)
       # Note:  the quantity power()/filt.response() is actually
       # dimensionless. Therefore mflux is in erg/s/cm^2/AA
       # and *not* in photons
@@ -256,7 +256,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
       mflux,a,b = deredden.unred(wave,mflux,EBVhost, R_V=Rv, redlaw=redlaw)
 
       # Finally!  integrate!
-      fbol = simps(mflux[i1:i2], x=wave[i1:i2], even='avg')
+      fbol = trapz(mflux[i1:i2], x=wave[i1:i2])
       if lam2 > wave.max():
          # add Rayleigh-Jeans extrapolation (~ 1/lam^4)
          fbol += mflux[-1]*wave[-1]/3*(1 - power(wave[-1]/lam2,3))
@@ -264,7 +264,8 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
       filters_used.append(bs)
       boloflux.append(fbol)
       epochs.append(ts[i])
-      waves.append(wave)
+      waves.append(wave[i1:i2])
+      fluxes.append(mflux[i1:i2])
 
    boloflux = array(boloflux)
    epochs = array(epochs)
@@ -283,7 +284,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
 def bolometric_direct(sn, bands=None, 
               EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ',
               interpolate=None, extrapolate=False, SED=None, Tmax=None,
-              DM=None, cosmo='LambdaCDM', verbose=False):
+              DM=None, cosmo='LambdaCDM', verbose=False, extra_output=False):
 
    if verbose: log("Starting bolometric calculation for %s\n" % sn.name)
 
@@ -441,7 +442,7 @@ def bolometric_direct(sn, bands=None,
       fluxes.append(flam[masks[i]])
 
       # Finally!  integrate!
-      fbol = simps(flam[masks[i]], x=lam_eff[masks[i]], even='avg')
+      fbol = trapz(flam[masks[i]], x=lam_eff[masks[i]])
 
       filters_used.append(bs)
       boloflux.append(fbol)
