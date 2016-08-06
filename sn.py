@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys,string,os
+import warnings
 have_sql = 1
 import sqlmod
 if 'SQLSERVER' in os.environ:
@@ -334,7 +335,7 @@ class sn(object):
          return(ret_data)
 
    def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0,
-         kcorr=1):
+         dokcorr=True, kcorr=None):
       '''Use the Lira Law to derive a color excess.  [Bband] and [Vband] 
       should be whichever observed bands corresponds to restframe B and V,
       respectively.  The color excess is estimated to be the median of the 
@@ -350,7 +351,7 @@ class sn(object):
                              missing B or V data
          tmin/tmax (flaot): range over which to fit Lira Law
          plot (bool):  If True, produce a plot with the fit.
-         kcoor (bool):  If True, k-correct the data before fitting
+         dokcoor (bool):  If True, k-correct the data before fitting
          
       Returns:
          3-tuple:  (EBV, error, slope)
@@ -360,12 +361,16 @@ class sn(object):
          slope: the late-time slope of the B-V color curve
          
       '''
+      if kcorr is not None:
+         warnings.warn("Use of kcorr argument is deprecated. Use dokcorr "
+                       " instead", stacklevel=2)
+         dokcorr=kcorr
 
       # find V-maximum
       t_maxes,maxes,e_maxes,restbands = self.get_rest_max([Vband])
       Tmax = t_maxes[0]
 
-      t,BV,eBV,flag = self.get_color(Bband, Vband, kcorr=kcorr)
+      t,BV,eBV,flag = self.get_color(Bband, Vband, dokcorr=dokcorr)
 
       # find all points that have data in both bands
       gids = equal(flag, 0)
@@ -716,7 +721,7 @@ class sn(object):
 
 
    def get_color(self, band1, band2, interp=1, use_model=0, model_float=0, 
-      kcorr=0):
+      dokcorr=0, kcorr=None):
       '''return the observed SN color of [band1] - [band2].  
       
       Args:
@@ -726,7 +731,7 @@ class sn(object):
                            defined for the filter, use the model to interpolate
          model_float (bool): If True, then re-fit the model to each filter
                              independently (so each has independent Tmax)
-         kcorr (bool): If True, return k-corrected color.
+         dokcorr (bool): If True, return k-corrected color.
 
       Returns:
          4-tuple:  (MJD, color, error, flag)
@@ -747,10 +752,15 @@ class sn(object):
             * 8 - One or both k-corrections invalid
       '''
 
-      if kcorr:
+      if kcorr is not None:
+         warnings.warn("Use of kcorr argument is deprecated. Use dokcorr "
+                       " instead", stacklevel=2)
+         dokcorr=kcorr
+
+      if dokcorr:
          if band1 not in self.ks_tck or band2 not in self.ks_tck:
             raise RuntimeError, "No k-corrections defined.  Either set " + \
-                  "kcorr=0 or run self.kcorr() first"
+                  "dokcorr=0 or run self.kcorr() first"
       # First, get a table of all photometry:
       data = self.get_mag_table([band1,band2])
 
@@ -758,7 +768,7 @@ class sn(object):
          gids = less(data[band1], 90)*less(data[band2], 90)
          mjd = compress(gids, data['MJD'])
          col = compress(gids, data[band1]) - compress(gids, data[band2])
-         if kcorr:
+         if dokcorr:
             k1 = scipy.interpolate.splev(mjd, self.ks_tck[band1])
             k2 = scipy.interpolate.splev(mjd, self.ks_tck[band2])
             col = col - k1 + k2
@@ -829,7 +839,7 @@ class sn(object):
       b2 = where(less(data[band2], 90), data[band2], interps[1])
       e_b2 = where(less(data["e_"+band2], 90), data["e_"+band2], doffsets[1])
       colors = b1 - b2
-      if kcorr:
+      if dokcorr:
          k1 = scipy.interpolate.splev(data['MJD'], self.ks_tck[band1])
          k2 = scipy.interpolate.splev(data['MJD'], self.ks_tck[band2])
          colors = colors - k1 + k2
@@ -1194,8 +1204,8 @@ class sn(object):
       pickle.dump(self, f)
       f.close()
    
-   def fit(self, bands=None, mangle=1, kcorr=1, reset_kcorrs=1, k_stretch=True, 
-         margs={}, **args):
+   def fit(self, bands=None, mangle=1, dokcorr=1, reset_kcorrs=1, 
+         k_stretch=True, margs={}, **args):
       '''Fit the N light curves with the currently set model (see 
       self.choose_model()).  The parameters that can be varried or held 
       fixed depend on the model being used (try help(self.model)
@@ -1210,7 +1220,7 @@ class sn(object):
                                 rest-bands.
          mangle (bool):  If True, mangle the Ia SED to fit observed colors
                          before computing k-corrections.
-         kcorr (bool):  If True, compute k-corrections as part of the fit.
+         dokcorr (bool):  If True, compute k-corrections as part of the fit.
          reset_kcorrs (bool):  If True, zero-out k-corrections before fitting.
          k_stretch (bool):  If True, stretch the Ia SED in time to match
                             dm15/st of the object.
@@ -1223,10 +1233,10 @@ class sn(object):
 
       NOTE:  If you have data that has already been k-corrected (either
              outside SNooPy or by setting the individual data's K
-             attributes, use kcorr=0 and reset_kcorrs=1.  If you have
+             attributes, use dokcorr=0 and reset_kcorrs=1.  If you have
              run the self.kcorr() manually and want to keep those
-             k-corrections, use kcorr=0 and reset_kcorrs=0.  Otherwise,
-             use the default kcorr=1 and reset_kcorrs=1.
+             k-corrections, use dokcorr=0 and reset_kcorrs=0.  Otherwise,
+             use the default dokcorr=1 and reset_kcorrs=1.
 
       Returns:
          None
@@ -1238,6 +1248,10 @@ class sn(object):
          k-corrections.
       '''
 
+      if kcorr is not None:
+         warnings.warn("Use of kcorr argument is deprecated. Use dokcorr "
+                       " instead", stacklevel=2)
+         dokcorr=kcorr
 
       if bands is None:
          # By default, we fit the bands whose restbands are provided by the model
@@ -1268,7 +1282,7 @@ class sn(object):
       self.model.fit(bands, **args)
 
 
-      if kcorr:
+      if dokcorr:
          kbands = [band for band in bands if band not in self.ks]
          if len(kbands) > 0:
             if not self.quiet:
@@ -1475,20 +1489,26 @@ class sn(object):
       return plotmod.plot_filters(self, bands, day, outfile=outfile)
 
 
-   def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None, 
-         clear=True):
+   def plot_color(self, f1, f2, epoch=True, deredden=True, 
+         dokcorr=False, kcorr=None, outfile=None, clear=True):
       '''Plot the color curve (color versus time) given by f1 and f2.
 
       Args:
          f1,f2 (str):  The two filters defining the color (f1-f2)
          epoch (bool):  If True, plot time relative to Tmax
          deredden (bool): If True, remove Milky-Way foreground reddening.
+         dokcorr (bool): If True, apply and defined K-corrections to the colors
          outpfile (str): Optional name for graph output to file.
 
       Returns:
          matplotlib.figure:  the figure istance with the plot.
       '''
-      return plotmod.plot_color(self, f1,f2,epoch, deredden, outfile,
+      if kcorr is not None:
+         warnings.warn("Use of kcorr argument is deprecated. Use dokcorr "
+                       " instead", stacklevel=2)
+         dokcorr=kcorr
+
+      return plotmod.plot_color(self, f1,f2,epoch, deredden, dokcorr, outfile,
             clear)
 
    def compute_w(self, band1, band2, band3, R=None):

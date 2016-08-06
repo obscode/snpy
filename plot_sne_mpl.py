@@ -717,8 +717,8 @@ def plot_lira(t, t2, t_maxes, BV, eBV, BV2, tmin, tmax, c):
    p.canvas.draw()
    return p
 
-def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None,
-      clear=True):
+def plot_color(self, f1, f2, epoch=True, deredden=True, dokcorr=False, 
+      outfile=None, clear=True):
    '''Plot the color ([f1]-[f2]) evolution curve for the SN.  If  [epoch]
    is True and Bmax is defined, plot relative to T(Bmax).  If [deredden]
    is True, remove MW reddening.  Specify [outfile] to save to file.'''
@@ -728,7 +728,8 @@ def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None,
    ax.set_xlabel('JD - JD(Bmax)')
    ax.set_ylabel('%s-%s' % (f1,f2))
 
-   MJD,BV,eBV,flag = self.get_color(f1, f2, interp=1, use_model=0, kcorr=0)
+   MJD,BV,eBV,flag = self.get_color(f1, f2, interp=1, use_model=0, 
+         dokcorr=dokcorr)
    if epoch:
       if self.Tmax:
          t0 = self.Tmax
@@ -747,9 +748,7 @@ def plot_color(self, f1, f2, epoch=True, deredden=True, outfile=None,
       eBV = sqrt(power(eBV,2) + (R1-R2)**2*0.1**2*self.EBVgal**2)
 
    bids = equal(flag, 0)
-   print bids
    rids = equal(flag, 1)
-   print rids
    ax.errorbar(MJD[bids]-t0, BV[bids], yerr=eBV[bids], fmt='o', capsize=0, 
          color='black', label='obs')
    ax.errorbar(MJD[rids]-t0, BV[rids], yerr=eBV[rids], fmt='o', capsize=0, 
