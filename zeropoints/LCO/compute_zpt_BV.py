@@ -6,8 +6,8 @@ import sys,os,string
 from snpy.filters import standards,fset
 
 fs = ['B','V','V0','V1']
-Bvega = 0.03
-Vvega = 0.03
+Bvega = 0.3
+Vvega = 0.3
 vegaB = standards['Vega']['VegaB']   # Bohlin version 5 (2004)
 
 # Need to convert these "standard" vega magnitudes into Natrual magnitudes using Contreras
@@ -18,8 +18,8 @@ vegaB = standards['Vega']['VegaB']   # Bohlin version 5 (2004)
 ip_vega = fset['i_40'].synth_mag(vegaB.wave, vegaB.resp)
 
 # Use the color terms to transform to natural system from Contreras et al. (2010)
-B_vega = Bvega - 0.067*(Bvega - Vvega)
-V_vega = Vvega + 0.061*(Vvega - ip_vega)
+B_vega = Bvega - 0.061*(Bvega - Vvega)
+V_vega = Vvega + 0.058*(Vvega - ip_vega)
 # I derived this color term for the 'temp' V-band by fitting synthetic photometry
 V1_vega = Vvega + 0.047*(Vvega - ip_vega)
 
