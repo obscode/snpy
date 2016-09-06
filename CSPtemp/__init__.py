@@ -281,7 +281,7 @@ class dm15_template:
       if band == 'H':  return breakpoly(self.dm15, 1.72, [-5.24, -1.46, 417.9], False)
       return 0
 
-   def teval(self, band, time, dm15, gen=1):
+   def teval(self, band, time, dm15, gen=1, extrap=False):
       f,ef,mask = finterp(band, time, dm15, 'dm15', gen, extrap=extrap)
 
       return(num.where(mask,-2.5*num.log10(f),-1))
@@ -408,7 +408,7 @@ class st_template:
       if band == 'H':  return breakpoly(self.st, 1.02, [-4.30, 4.26, 20.40], True)
       return 0
 
-   def teval(self, band, time, st, gen=1):
+   def teval(self, band, time, st, gen=1, extrap=False):
       f,ef,mask = finterp(band, time, st, 'st', gen, extrap=extrap)
 
       return(num.where(mask,-2.5*num.log10(f),-1))
