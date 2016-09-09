@@ -638,7 +638,7 @@ for obs in obsdirs:
       for line in lines:
          l = line.split()
          if l[2].find('=') >= 0:
-            # WE have a std=mag format
+            # We have a std=mag format
             std,mag = map(string.strip, l[2].split('='))
             if std  in standards:
                try:
@@ -655,6 +655,14 @@ for obs in obsdirs:
                      "Could not find standard %s for filter %s" % (std,l[0])
 
 
+         elif l[2] == 'AB':
+            # We have an AB system, so in principle there is no standard. The
+            # zero-point is derived from the filter function alone. See
+            # documentation.
+            newf = filter(l[0], os.path.join(dir,l[1]), 0.0, string.join(l[3:]))
+            newf.zp = 16.84692 + 2.5*num.log10(
+                  scipy.integrate.trapz(newf.resp/newf.wave, x=newf.wave))
+            fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
          else:
             fset.observatories[obs_name].telescopes[tel_name].add_filter(
                          filter(l[0], os.path.join(dir,l[1]),
