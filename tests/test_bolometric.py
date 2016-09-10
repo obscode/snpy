@@ -1,43 +1,41 @@
-#!/usr/bin/env python
-import matplotlib
-matplotlib.use('Tkagg')
-from matplotlib.pyplot import *
+import pytest
 from snpy import get_sn
 from snpy.utils import fit1dcurve
 from snpy.version import __version__
 
+@pytest.fixture
+def snobj():
+   import snpy
+   snobj = snpy.get_sn('SN2006ax.txt')
+   for f in snobj.data:
+      snobj.data[f].template(method='spline2')
+   return snobj
+
 # Test computing of bolometric light-curve
 
-s = get_sn('SN2006ax_color_model.snpy')
-for f in s.data:
-   s.data[f].template()
+def test_bolo_direct(snobj):
+   x,y,f,lims = snobj.bolometric(['u','B','V','r','i','Y','J','H'], 
+      method='direct', interpolate='spline', SED='H3', verbose=True,
+      EBVhost=0, Rv=3.1)
+   checksum = sum(y)*1e-44
+   assert round(checksum, 3) == round(2.24522,3)
 
-x2,y2,f2,lims2 = s.bolometric(['u','B','V','r','i','Y','J','H'], 
-      method='direct', interpolate='spline', SED='H3', verbose=True)
-plot(x2,y2/1e43, 's', label='Direct: Hsiao')
+def test_bolo_direct_model(snobj):
+   
+   snobj.choose_model('color_model', stype='st')
+   snobj.fit(dokcorr=False, Rv=3.1)
+   x,y,f,lims = snobj.bolometric(['u','B','V','r','i','Y','J','H'], 
+      method='direct', interpolate='model', SED='H3')
+   checksum = sum(y)*1.e-44
+   assert round(checksum,3) == round(2.570625, 3)
 
-x4,y4,f4,lims4 = s.bolometric(['u','B','V','r','i','Y','J','H'], 
-      method='direct', interpolate='model', extrapolate=True, SED='H3', 
-      verbose=True)
-plot(x4,y4/1e43, 's', label='Direct: Hsiao+extrap')
-
-# Try to use consistent integration limits when comparing
-l0 = min([lim[0] for lim in lims4])
-l1 = max([lim[1] for lim in lims4])
-
-x1,y1,f1,lims1 = s.bolometric(['u','B','V','r','i','Y','J','H'], 
+def test_bolo_SED(snobj):
+   from snpy import fset
+   l0 = fset['u'].wave.min()
+   l1 = fset['H'].wave.max()
+   x,y,f,lims = snobj.bolometric(['u','B','V','r','i','Y','J','H'], 
       method='SED', interpolate='spline', refband='B', lam1=l0,
-      lam2=l1, SED='H3', verbose=True)
-plot(x1,y1/1e43, 'o', label='SED: Hsiao Tempalte')
-
-x3,y3,f3,lims3 = s.bolometric(['u','B','V','r','i','Y','J','H'], 
-      method='direct', interpolate='spline', SED=None, verbose=True, 
-      outfile='test_bolo.dat')
-plot(x3,y3/1e43, 'd', label='Direct: Vega')
-
-legend()
-xlabel('Days after B-maximum')
-ylabel('Bolometric Luminosity ($10^{45} erg\cdot s^{-1}$)')
-
-savefig('bolometric.eps')
+      lam2=l1, SED='H3', EBVhost=0, Rv=3.1)
+   checksum = sum(y)*1.e-44
+   assert round(checksum,3) == round(2.726931, 3)
 

@@ -1,18 +1,30 @@
-#!/usr/bin/env python
-
-# test the fitting methods.
+import pytest
 from snpy import get_sn
 from snpy.utils import fit1dcurve
-print type(str)
+
+allresults = {'chebyshev': 828.730,
+           'gp': 827.172,
+           'hermite': 828.730,
+           'hermiteE': 828.730,
+           'hyperspline': 827.426,
+           'laguerre': 828.730,
+           'polynomial': 828.730,
+           'spline': 827.290,
+           'spline2': 827.426}
+
+@pytest.fixture
+def snobj():
+   import snpy
+   snobj = snpy.get_sn('SN2006ax.txt')
+   return snobj
 
 funcs = fit1dcurve.functions
-print "%-11s %-11s %-11s" % ('Bmax', 'Tmax','dm15')
-
+results = {}
 for func in funcs:
-   s = get_sn('SN2006ax_kcorr.snpy')
-   s.B.template(method=func)
-   print "%6.3f(%s) %6.3f(%s) %6.3f(%s)" % \
-         (s.B.Mmax, str(s.B.e_Mmax).split('.')[1][0:3],
-          s.B.Tmax, str(s.B.e_Tmax).split('.')[1][0:3],
-          s.B.dm15, str(s.B.e_dm15).split('.')[1][0:3])
-   
+   if func in allresults:
+      results[func] = allresults[func]
+
+@pytest.mark.parametrize("func,Tmax", results.items())
+def test_interp(snobj, func, Tmax):
+   snobj.B.template(method=func)
+   assert round(Tmax,3) == round(snobj.B.Tmax,3)
