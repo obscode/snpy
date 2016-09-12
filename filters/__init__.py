@@ -416,10 +416,10 @@ class standard_set:
       for syst in self.systems:
          print syst+": "+self.systems[syst].name
 
-   def list_SEDS(self):
+   def list_SEDs(self):
       for syst in self.systems:
          print self.systems[syst].name
-         self.systems[syst].list_SEDS()
+         self.systems[syst].list_SEDs()
 
    def cache_spectra(self):
       for syst in self.systems.values():

@@ -1,7 +1,7 @@
 B   B_tel_ccd_atm_ext_1.2.dat  VegaB=0.03   TAM scanned B filter for Swope at LCO + CTIO extinction
-V   V_tel_ccd_atm_ext_1.2.dat  VegaB=0.008  TAM scanned current V filter for Swope at LCO + CTIO extinction
-V1  VLC3009_max_WLcorr_atm.txt VegaB=0.008  TAM scanned V intermediate filter for Swope at LCO + CTIO extinction
-V0  VLC3014_max_WLcorr_atm.txt VegaB=0.008  TAM scanned V broken filter for Swope at LCO + CTIO extinction
+V   V_tel_ccd_atm_ext_1.2.dat  VegaB=0.0096  TAM scanned current V filter for Swope at LCO + CTIO extinction
+V1  VLC3009_max_WLcorr_atm.txt VegaB=0.0096  TAM scanned V intermediate filter for Swope at LCO + CTIO extinction
+V0  VLC3014_max_WLcorr_atm.txt VegaB=0.0096  TAM scanned V broken filter for Swope at LCO + CTIO extinction
 u   u_tel_ccd_atm_ext_1.2.dat  bd17B=10.518 TAM scanned u filter for Swope at LCO + CTIO extinction
 g   g_tel_ccd_atm_ext_1.2.dat  bd17B=9.644  TAM scanned g filter for Swope at LCO + CTIO extinction
 r   r_tel_ccd_atm_ext_1.2.dat  bd17B=9.352  TAM scanned r filter for Swope at LCO + CTIO extinction
