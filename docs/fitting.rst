@@ -41,5 +41,6 @@ priors so that the uncertainties are far more realistic.
    models
    fitting_LM
    fitting_MCMC
+   photometric_systems
 
 .. [Burns2014] Burns et al. ApJ, 189, 32B (2014). `ADS <http://adsabs.harvard.edu/abs/2014arXiv1405.3934B>`_
