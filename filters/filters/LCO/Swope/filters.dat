@@ -9,16 +9,16 @@ i   i_tel_ccd_atm_ext_1.2.dat  bd17B=9.250  TAM scanned i filter for Swope at LC
 Y   Y_SWO_TAM_scan_atm.dat     VegaB=0      TAM scanned Y filter for Retrocam+Swope
 J   J_SWO_TAM_scan_atm.dat     VegaB=0      TAM scanned J filter for Retrocam+Swope
 H   H_SWO_TAM_scan_atm.dat     VegaB=0      TAM scanned H filter for Retrocam+Swope
-K   kfilter                    11.967       K-band for Swope at LCO
-oB  bshiftedswo.txt            13.669       shifted B filter for Swope at LCO
-oV  V_9844_resp.dat            13.7514      New V filter for Swope at LCO
-oV0 vshiftedswo.txt            13.774       Old (broken) shifted V filter for Swope at LCO + CTIO extinction
-ou  ushiftedswo.txt            12.400       shifted u filter for Swope at LCO
-og  gshiftedswo.txt            14.432       shifted g filter for Swope at LCO
-or  rshiftedswo.txt            14.136       shifted r filter for Swope at LCO
-oi  ishiftedswo.txt            13.687       shifted i filter on Swope at LCO
-oY  yfilter                    12.687       Y-band on Swope at LCO
-oJ  jfilter                    12.853       J-band for Swope at LCO
-oH  hfilter                    12.555       H-band for Swope at LCO
-Yc  yfilter                    12.687       Yc-band for PANIC on Baade, LCO
-Jc  jfilter                    12.853       Jc-band for PANIC on Baade, LCO
+#K   kfilter                    11.967       K-band for Swope at LCO
+#oB  bshiftedswo.txt            13.669       shifted B filter for Swope at LCO
+#oV  V_9844_resp.dat            13.7514      New V filter for Swope at LCO
+#oV0 vshiftedswo.txt            13.774       Old (broken) shifted V filter for Swope at LCO + CTIO extinction
+#ou  ushiftedswo.txt            12.400       shifted u filter for Swope at LCO
+#og  gshiftedswo.txt            14.432       shifted g filter for Swope at LCO
+#or  rshiftedswo.txt            14.136       shifted r filter for Swope at LCO
+#oi  ishiftedswo.txt            13.687       shifted i filter on Swope at LCO
+#oY  yfilter                    12.687       Y-band on Swope at LCO
+#oJ  jfilter                    12.853       J-band for Swope at LCO
+#oH  hfilter                    12.555       H-band for Swope at LCO
+#Yc  yfilter                    12.687       Yc-band for PANIC on Baade, LCO
+#Jc  jfilter                    12.853       Jc-band for PANIC on Baade, LCO
