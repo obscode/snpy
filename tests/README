@@ -1,2 +1,10 @@
-This is a folder where I'm going to put some test scripts.  These test
-scripts should run with no errors.
+Running these tests requires the pytest module:
+
+pip install pytest
+
+Note that if you are running SNooPy in a virtual environment, you need to use
+the pip located in that virtual environment to install pytest, otherwise, it
+won't be able to load SNooPy's modules for testing.
+
+Simply run 'pytest' in this folder. These test scripts should run with no 
+errors.

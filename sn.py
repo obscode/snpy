@@ -717,11 +717,100 @@ class sn(object):
    #        t, c, ec, less_equal(mask,2))
    #  if interactive:
 
+   def interp_table(self, bands, use_model=False, model_float=False, 
+         dokcorr=False):
+      '''For a given set of bands, construct a table of contemporaneous
+      photometry, interpolating any missing data.
 
+      Args:
+         bands (list): Filters with which to construct the table
+         use_model (bool): If True, use the model to interpolate and
+                           allow extrapolations based on the model
+         model_float (bool): If True, re-fit the model to each filter
+                           independently (so each as independent Tmax)
+         dokcorr (bool): If True, return k-corrected values
+      
+      Returns:
+         4-tuple:  (MJD, mags, emags, flags)
 
+         MJD:  the epoch of observations. This is the same for all filters,
+               so is a single 1D array
+         mags: list of 1D arrays of magnitudes, one for each input band
+         emags: list of 1D arrays of errors, one for each intput band
+         flags: list of 1D arrays, indicating how the value was derived:
+                * 0 - observation was measured
+                * 1 - value was based on an interpolation. Pretty safe
+                * 2 - value was based on extrapolation of the model.  Meh.
+                * 4 - value was obtained by extrapolation. Not safe to use.
+                * 8 - k-corrections are not valid
+      '''
+      # First, get a table of all photometry:
+      data = self.get_mag_table(bands)
 
-   def get_color(self, band1, band2, interp=1, use_model=0, model_float=0, 
-      dokcorr=0, kcorr=None):
+      ms = []
+      ems = []
+      flags = []
+      for band in bands:
+         bids = greater(data[band], 90)   # where we need to fill in
+         if dokcorr:
+            if band not in self.ks_tck:
+               raise RuntimeError, "No k-corrections defined for %s.  Either set dokcorr=0 or run self.kcorr() first" % band
+            k = scipy.interpolate.splev(data['MJD'], self.ks_tck[band])
+            kflag = (less(data['MJD'],self.ks_tck[band][0][0]) &\
+                    greater(data['MJD'], self.ks_tck[band][0][-1]))*8
+
+         else:
+            k = 0
+            kflag = 0
+
+         if not sometrue(bids):
+            # They all good, carry on.
+            ms.append(data[band]-k)
+            ems.append(data['e_'+band])
+            flags.append(bids*1 + kflag)
+            continue
+         # Need to interpolate
+
+         if use_model:
+            if float_model:
+               temp,etemp,mask = self.model(band, self.data[band].MJD)
+               weight = self.data[band].e_flux**2
+               weight = power(weight, -1)*mask*self.data[band].mask
+               # weighted mean offset
+               offset = sum((self.data[band].mag - temp)*weight)/\
+                              sum(weight)
+               # error in mean offset  (MAD)
+               doffset = median(absolute(self.data[band].mag - \
+                                                     temp-offset))
+            else:
+               offset = 0
+               doffset = 0
+            temp,etemp,mask = self.model(band, data['MJD'])
+            ms.append(where(bids, temp+offset, data[band]) - k)
+            ems.append(where(bids, doffset, data['e_'+band]))
+            # IDs where valid interpolation is done
+            iids = mask & greater_equal(data['MJD'],self.data[band].MJD.min())\
+                   & less_equal(data['MJD'], self.data[band].MJD.max())
+            # IDs where valid extrapolation is done
+            eids = mask & (less(data['MJD'],self.data[band].MJD.min())\
+                   | greater(data['MJD'], self.data[band].MJD.max()))
+            flags.append(where(bids, iids*1+eids*2+(-mask)*4, bids)+kflag)
+         else:
+            interp = getattr(self.data[band], 'interp', None)
+            if interp is None:
+               raise ValueError, "Error: interpolator missing for %s" % band
+            temp,mask = self.data[band].interp(data['MJD'])
+            etemp = self.data[band].interp.error(data['MJD'])
+            ms.append(where(bids, temp, data[band])-k)
+            ems.append(where(bids, etemp, data['e_'+band]))
+            iids = mask
+            eids = -mask
+            flags.append(where(bids, iids*1 + eids*4, bids)+kflag)
+
+      return (data['MJD'], ms, ems, flags)
+
+   def get_color(self, band1, band2, interp=True, use_model=False, 
+         model_float=False, dokcorr=False, kcorr=None):
       '''return the observed SN color of [band1] - [band2].  
       
       Args:
@@ -757,99 +846,42 @@ class sn(object):
                        " instead", stacklevel=2)
          dokcorr=kcorr
 
-      if dokcorr:
-         if band1 not in self.ks_tck or band2 not in self.ks_tck:
-            raise RuntimeError, "No k-corrections defined.  Either set " + \
-                  "dokcorr=0 or run self.kcorr() first"
-      # First, get a table of all photometry:
-      data = self.get_mag_table([band1,band2])
-
       if not interp:
-         gids = less(data[band1], 90)*less(data[band2], 90)
-         mjd = compress(gids, data['MJD'])
-         col = compress(gids, data[band1]) - compress(gids, data[band2])
+         data = self.get_mag_table([band1, band2])
+         gids = less(data[band1], 90) & less(data[band2], 90)
+         mjd = data['MJD'][gids]
+         col = (data[band1] - data[band2])[gids]
+         ecol = sqrt(data['e_'+band1]**2 + data['e_'+band2]**2)[gids]
+         flags = gids[gids]*0
          if dokcorr:
-            k1 = scipy.interpolate.splev(mjd, self.ks_tck[band1])
-            k2 = scipy.interpolate.splev(mjd, self.ks_tck[band2])
-            col = col - k1 + k2
-         ecol = sqrt(power(data['e_'+band1][gids], 2) + 
-                     power(data['e_'+band2][gids], 2))
-         flags = floor(0*mjd).astype('l')
-         ids1 = argmin(absolute(mjd[:,newaxis] - s.data[band1].MJD[newaxis,:]),
-               axis=1)
-         ids2 = argmin(absolute(mjd[:,newaxis] - s.data[band2].MJD[newaxis,:]),
-               axis=1)
-         flags = flags + (s.data[band1].mask[ids1]+s.data[band2].mask[ids2])*8
+            if band1 not in self.ks:
+               raise ValueError, \
+                     "band %s has no k-corrections, use self.kcorr()" % band1
+            if band2 not in self.ks:
+               raise ValueError, \
+                     "band %s has no k-corrections, use self.kcorr()" % band2
+            col = col - self.ks[band1] + self.ks[band2]
+            flags = flags + (-self.ks_mask[band1]*-self.ks_mask[band2])*8
+         return (mjd,col,ecol,flags)
+      # First, get a table of all photometry:
+      MJD,ms,ems,flags = self.interp_table([band1,band2], use_model=use_model,
+            model_float=model_float, dokcorr=dokcorr)
 
-         return(mjd, col, ecol, floor(0*mjd).astype('l'))
+      # We really don't care which one flags conditions
+      flags = bitwise_or(flags[0],flags[1])
+      if not interp:
+         gids = equal(flags,0) | equal(flags, 8)
+         mjd = MJD[gids]
+         col = ms[0][gids] - ms[1][gids]
+         ecol = sqrt(power(ems[0][gids], 2) + 
+                     power(ems[1][gids], 2))
+         return(mjd, col, ecol, flags[gids])
 
-      # Now, if we are interpolating, do so by fitting each band 
-      # independently: 
-      # Just weighted average between model and data
-      interps = []
-      masks = []
-      doffsets = []
-      offsets = []
-      if use_model:
-         for band in [band1,band2]:
-            if float_model:
-               temp,etemp,mask = self.model(band, self.data[band].MJD)
-               weight = self.data[band].e_flux**2
-               weight = power(weight, -1)*mask*self.data[band].mask
-               offsets.append(sum((self.data[band].mag - temp)*weight)/sum(weight))
-               doffsets.append(median(absolute(self.data[band].mag - \
-                                                     temp-offsets[-1])))
-            else:
-               offsets.append(0)
-               doffsets.append(0)
-            temp,etemp,mask = self.model(band, data['MJD'])
-            interps.append(temp + offsets[-1])
-            masks.append(mask)
-      else:
-         for band in [band1,band2]:
-            temp,mask = self.data[band].eval(data['MJD'])
-            interps.append(temp)
-            masks.append(mask)
-            doffsets.append(0)
-
-      # Now we have interpolated values for band1,band2 where needed
-      # First, where both bands are measured, flag as 0, otherwise only one 
-      #  is measured and we flag as 1
-      m1 = less(data[band1], 90);  m2 = less(data[band2], 90)
-      flag = where(m1*m2, 0, 1)
-
-      ## Get the range where we are doing interpolation
-      #i1 = max(min(nonzero(m1)[0]), min(nonzero(m2)[0]))
-      #i2 = min(max(nonzero(m1)[0]), max(nonzero(m2)[0]))
-      ## from 0 to i1 (non-inclusive) and i2 to end, we have extrapolation, flag
-      ## as 2
-      flag = flag + where(equal(flag,1)*(-masks[0]+-masks[1]),4,0)
-
-      # Lastly, where data is just plain bad
-      ids1 = argmin(absolute(data['MJD'][:,newaxis] - \
-            self.data[band1].MJD[newaxis,:]), axis=1)
-      ids2 = argmin(absolute(data['MJD'][:,newaxis] - \
-            self.data[band2].MJD[newaxis,:]), axis=1)
-      flag = flag + \
-            where(self.data[band1].mask[ids1]*self.data[band2].mask[ids2],0,8)
-
-      # Now that the flags are set properly, we do the math:
-      b1 = where(less(data[band1], 90), data[band1], interps[0])
-      e_b1 = where(less(data["e_"+band1], 90), data["e_"+band1], doffsets[0])
-      b2 = where(less(data[band2], 90), data[band2], interps[1])
-      e_b2 = where(less(data["e_"+band2], 90), data["e_"+band2], doffsets[1])
-      colors = b1 - b2
-      if dokcorr:
-         k1 = scipy.interpolate.splev(data['MJD'], self.ks_tck[band1])
-         k2 = scipy.interpolate.splev(data['MJD'], self.ks_tck[band2])
-         colors = colors - k1 + k2
-      e_colors = sqrt(power(e_b1, 2) + power(e_b2, 2))
-
-      return(data['MJD'], colors, e_colors, flag)
+      return(MJD, ms[0]-ms[1], sqrt(ems[0]**2 + ems[1]**2), flags)
 
    def getEBVgal(self, calibration='SF11'):
       '''Gets the value of E(B-V) due to galactic extinction.  The ra and decl
-      member varialbles must be set beforehand.
+      member variables must be set beforehand.
       
       Args:
          calibration (str):  Which MW extionction calibraiton ('SF11' or 
@@ -1021,9 +1053,11 @@ class sn(object):
             if k_correct and filter in self.ks_tck:
                ks = scipy.interpolate.splev(ts + self.Tmax, self.ks_tck[filter])
                # mask out valid k-corrections
-               mids = argmin(absolute(ts[:,newaxis]-self.data[filter].MJD[newaxis,:]+\
+               mids = argmin(absolute(ts[:,newaxis]-\
+                     self.data[filter].MJD[newaxis,:]+\
                      self.Tmax))
-               ks_mask = self.ks_mask[filter][mids]*greater_equal(ts, -19)*less_equal(ts, 70)
+               ks_mask = self.ks_mask[filter][mids]*greater_equal(ts, -19)*\
+                     less_equal(ts, 70)
                mask = mask*ks_mask
                ms = ms - ks
             ms = ms[mask]
@@ -1205,7 +1239,7 @@ class sn(object):
       f.close()
    
    def fit(self, bands=None, mangle=1, dokcorr=1, reset_kcorrs=1, 
-         k_stretch=True, margs={}, **args):
+         k_stretch=True, margs={}, kcorr=None, **args):
       '''Fit the N light curves with the currently set model (see 
       self.choose_model()).  The parameters that can be varried or held 
       fixed depend on the model being used (try help(self.model)
@@ -1489,7 +1523,7 @@ class sn(object):
       return plotmod.plot_filters(self, bands, day, outfile=outfile)
 
 
-   def plot_color(self, f1, f2, epoch=True, deredden=True, 
+   def plot_color(self, f1, f2, epoch=True, deredden=True, interp=False,
          dokcorr=False, kcorr=None, outfile=None, clear=True):
       '''Plot the color curve (color versus time) given by f1 and f2.
 
@@ -1508,47 +1542,85 @@ class sn(object):
                        " instead", stacklevel=2)
          dokcorr=kcorr
 
-      return plotmod.plot_color(self, f1,f2,epoch, deredden, dokcorr, outfile,
-            clear)
+      return plotmod.plot_color(self, f1,f2,epoch, deredden, interp, dokcorr, 
+            outfile, clear)
 
-   def compute_w(self, band1, band2, band3, R=None):
-      '''Returns the reddeining-free magnitude (AKA Wesenheit function)
+   def compute_w(self, band1, band2, band3, R=None, Rv=3.1, interp=False,
+                 use_model=False, float_model=True, dokcorr=False):
+      '''Returns the reddening-free magnitude (AKA Wesenheit function)
       in the sense that:
       w = band1 - R(band1,band2,band3)*(band2 - band3)
-      for for instance compute_w(V,B,V) would give:
+      for instance compute_w(V,B,V) would give:
       w = V - Rv(B-V)
       
       Args:
          band1,band2,band3 (str): The three filters defining w
          R (float or None):  the R parameter to use (if None,
                             compute assuming reddening due to dust
-                            with reddening law R_V = self.Rvhost
+                            with reddening law R_V = Rv
+         Rv (float or None): If specified and R is None, use this
+                            Rv to compute R(\lambda) for filters
+         interp (bool):  If True, interpolate missing data
+         use_model (bool):  If True, use a fit model, rather than an
+                         interpolator to do the interpolation
+         float_model (bool):  If using model interpolation, allow the
+                         model for each filter to float to an indepenent
+                         maximum.
+         dokcorr (bool):  If True, apply k-corrections to the data.
+
+      Returns:
+         (w,ew,flag):  w:  Wesenheit magnitude
+                      ew:  error in w
+                    flag:  bitwise OR of the following conditions:
+                           0:  all magnitudes measured at every epoch
+                           1:  some magnitudes interpolated (safely)
+                           2:  some magnitudes extrapolated based on model
+                           4:  some magnitudes extrapolated (not safe)
+                           8:  some k-corrections not valid
       '''
       # First, let's get the proper value of R:
       if R is None:
-         R1 = fset[band1].R(self.Rvhost, Ia_w, Ia_f)
-         R2 = fset[band2].R(self.Rvhost, Ia_w, Ia_f)
-         R3 = fset[band3].R(self.Rvhost, Ia_w, Ia_f)
+         R1 = fset[band1].R(Rv, Ia_w, Ia_f)
+         R2 = fset[band2].R(Rv, Ia_w, Ia_f)
+         R3 = fset[band3].R(Rv, Ia_w, Ia_f)
          R = R1/(R2 - R3)
 
-      # Now, we're probably going to have to interpolate band2 and band3 to get
-      # the colors at times of band1, so let's spline it.
-      t = self.data[band1].MJD - self.Tmax
-      m = self.data[band1].mag
-      e_m = self.data[band1].e_mag
-      t2 = self.data[band2].MJD - self.Tmax
-      t3 = self.data[band3].MJD - self.Tmax
-      m2 = self.data[band2].mag
-      e_m2 = self.data[band2].e_mag
-      m3 = self.data[band3].mag
-      e_m3 = self.data[band3].e_mag
+      if dokcorr:
+         if band1 not in self.ks or band2 not in self.ks or \
+               band3 not in self.ks:
+            raise ValueError, "Not all requested bands have k-corrections.  "+\
+                              "Try running self.kcorr()"
+      # Now, we need the values. First, if not interpolating, just use the 
+      # data
+      if not interp:
+         data = self.get_mag_table([band1,band2,band3])
+         gids = less(data[band1],90) & less(data[band2],90) & \
+               less(data[band3],90)
+         if dokcorr:
+            k1 = self.ks[band1][gids]
+            k2 = self.ks[band2][gids]
+            k3 = self.ks[band3][gids]
+         else:
+            k1 = k2 = k3 = 0
 
-      ev2 = fit_spline.interp_spline(t2, m2, e_m2, t, k=3)
-      ev3 = fit_spline.interp_spline(t3, m3, e_m3, t, k=3)
+         mjd = data['MJD']
+         m1 = data[band1][gids] - k1; em1 = data['e_'+band1][gids]
+         m2 = data[band2][gids] - k2; em2 = data['e_'+band2][gids]
+         m3 = data[band3][gids] - k3; em3 = data['e_'+band3][gids]
+
+         w = m1 - R*(m2 - m3)
+         ew = sqrt(em1**2 + R**2*(em2**2 + em3**2))
+         return mjd,w,ew,-isnan(w)
+
+      # Here we need interpolation
+      mjd,ms,ems,flags = self.interp_table([band1,band2,band3], 
+            use_model=use_model, float_model=float_model, dokcorr=dokcorr)
 
       # Now compute w:
-      w = m - R*(ev2 - ev3)
-      return(w)
+      w = ms[0] - R*(ms[1] - ms[2])
+      ew = sqrt(ems[0]**2 + R**2*(ems[1]**2 + ems[2]**2))
+      flags = flags[0] | flags[1] | flags[2]
+      return(mjd,w,ew,flags)
 
    def mask_data(self):
       '''Interactively mask out bad data and unmask the data as well.  The only
@@ -1570,7 +1642,7 @@ class sn(object):
          the mask attribute for every lc instance in self.data is udpated.
       '''
       for f in self.data:
-         self.data[f].mask_epoch(tmin, mtax)
+         self.data[f].mask_epoch(tmin, tmax)
 
    def mask_emag(self, emax):
       '''Mask out data with (magnitude) error larger than [emax].
