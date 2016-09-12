@@ -6,8 +6,8 @@ import sys,os,string
 from snpy.filters import standards,fset
 
 fs = ['B','V','V0','V1']
-Bvega = 0.3
-Vvega = 0.3
+Bvega = 0.03
+Vvega = 0.03
 vegaB = standards['Vega']['VegaB']   # Bohlin version 5 (2004)
 
 # Need to convert these "standard" vega magnitudes into Natrual magnitudes using Contreras
