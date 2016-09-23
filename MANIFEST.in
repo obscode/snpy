@@ -2,3 +2,20 @@ recursive-include docs *
 include CHANGELOG
 include INSTALL
 include README.md
+include snpy/*.pickle
+include snpy/*.dat
+include snpy/typeIa/*
+include snpy/CSPtemp/*.pickle
+include snpy/CSPtemp/*.h
+include snpy/CSPtemp/fits/*
+include snpy/CSPtemp/templates/*
+include snpy/CSPtemp/templates.dat
+include snpy/dm15temp/templates/*
+include snpy/dm15temp/*.pickle
+include snpy/dm15temp/*.h
+include snpy/SwiftTemp/*.dat
+include snpy/utils/*.pickle
+include snpy/spline2/*.h
+recursive-include snpy/filters/filters *
+recursive-include snpy/filters/standards *
+exclude snpy/filters/standards/CALSPEC/*

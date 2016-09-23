@@ -4,7 +4,8 @@
 
 import os,sys, string
 from pkg_resources import parse_version
-from numpy.distutils.core import setup
+#from numpy.distutils.core import setup
+from setuptools import setup
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
 try:
