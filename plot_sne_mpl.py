@@ -395,6 +395,7 @@ def plot_filters(self, bands=None, day=0, fill=0, outfile=None):
 
    ax.set_xbound((minw, maxw))
 
+   pyplot.tight_layout()
    pyplot.draw()
    p.cb = ButtonClick(p, bindings={'d':change_SED, 'D':change_SED})
    p.cb.connect()
@@ -541,7 +542,22 @@ def plot_sn(self, **kwargs):
    prunex = kwargs.get('prunex', None)
    pruney = kwargs.get('pruney', None)
 
-   Toff = 0
+   # See  what filters we're going to use:
+   if self.filter_order is not None:
+      bands = self.filter_order
+   else:
+      bands = self.data.keys()
+      eff_wavs = []
+      for filt in bands:
+         eff_wavs.append(fset[filt].ave_wave)
+      eff_wavs = asarray(eff_wavs)
+      ids = argsort(eff_wavs)
+      self.filter_order = [bands[i] for i in ids]
+      bands = self.filter_order
+
+   # Now let's make a sensible time offset so that we can get rid of
+   # overlapping xlabels
+   Toff = self.data[bands[0]].MJD.min()
    if epoch:
       if self.Tmax is None:  
          Tmax = 0
@@ -557,22 +573,9 @@ def plot_sn(self, **kwargs):
             Toff = float(JDoff)
          except:
             raise ValueError, "JDOffset must be Boolean, 'auto', or number"
-   else:
-      Toff = 0
+   #else:
+   #   Toff = 0
 
-   # See  what filters we're going to use:
-   if self.filter_order is not None:
-      bands = self.filter_order
-   else:
-      bands = self.data.keys()
-      eff_wavs = []
-      for filt in bands:
-         eff_wavs.append(fset[filt].ave_wave)
-      eff_wavs = asarray(eff_wavs)
-      ids = argsort(eff_wavs)
-      self.filter_order = [bands[i] for i in ids]
-      bands = self.filter_order
-      
    for b in bands:
       if not single:
          colors[b] = 'blue'
@@ -754,6 +757,7 @@ def plot_color(self, f1, f2, epoch=True, deredden=True, interp=False,
    ax.errorbar(MJD[rids]-t0, BV[rids], yerr=eBV[rids], fmt='o', capsize=0, 
          color='red', mfc='red', label='inter')
    ax.legend(prop={'size':12})
+   pyplot.tight_layout()
    pyplot.draw()
    #p.canvas.draw()
    if outfile is not None:
@@ -1060,6 +1064,7 @@ def plot_mangled_SED(event):
    ax.legend()
    #ax.set_xlim(wmin,wmax)
 
+   pyplot.tight_layout()
    f.canvas.draw()
 
 def bind_c(event):
