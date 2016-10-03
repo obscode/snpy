@@ -185,6 +185,11 @@ class model:
       self.fixed = []
       for key in args.keys():
          if key in self.parameters:
+            # check that it is a valid floag
+            try:
+               testvalue = 1.0*args[key]
+            except TypeError:
+               raise ValueError, "You are trying to hold %s fixed, but with an illegal value or type: %s" % (key, str(args[key]))
             self.parameters[key] = args[key]
             self.fixed.append(key)
             del args[key]
