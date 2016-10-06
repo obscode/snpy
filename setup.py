@@ -39,7 +39,6 @@ def configuration(parent_package='', top_path=None):
    config.add_subpackage('snpy')
    config.add_scripts(['bin/snpy'])
    config.add_scripts(['bin/update-snpy'])
-#   config.add_data_files('ipythonrc-SN')
    return config
 
 

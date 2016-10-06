@@ -1,10 +1,7 @@
 '''This class lets you interactively fit using the fit1dcurve
 classes.'''
 import numpy as num
-try:
-   from myplotlib import PanelPlot
-except:
-   from snpy.myplotlib import PanelPlot
+from snpy.myplotlib import PanelPlot
 from matplotlib import pyplot as plt
 try:
    import fit1dcurve
