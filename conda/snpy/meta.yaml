@@ -1,0 +1,38 @@
+package:
+  name: snpy
+  version: 2.1.3
+
+source:
+   git_rev: 2.1.0
+   git_url: https://github.com/obscode/snpy.git
+
+requirements:
+   build:
+      - python
+      - setuptools
+      - numpy
+
+   run:
+      - python
+      - numpy >1.7
+      - scipy
+      - pymysql
+      - pyfits
+      - matplotlib
+      - ipython
+      - emcee
+      - pymc
+      - astropy
+
+test:
+   requires:
+      - pytest
+
+   commands:
+      - pytest
+
+about:
+   home: http://csp.obs.carnegiescience.edu/data/snpy
+   license: MIT
+   license_file: LICENSE
+   summary: A python package for analysis of supernova light-curves.
