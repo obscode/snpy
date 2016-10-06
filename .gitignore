@@ -8,3 +8,8 @@
 */build/
 */_build/
 tests/__pycache__
+*.cache/
+dist
+.eggs
+MANIFEST
+snpy.egg-info
