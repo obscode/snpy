@@ -9,17 +9,14 @@ been moved to the :mod:`snpy.filter` module.
 '''
 
 import os,sys,string,re
-#import pygplot
 import numpy as num
 import scipy.interpolate
 from utils import deredden
 try:
-   import FITS
-   have_FITS=1
+   from astropy.io import fits as pyfits
 except ImportError:
    try:
       import pyfits
-      have_FITS=0
    except ImportError:
       sys.stderr.write('Error:  You need pyfits to run snpy.  You can get it\n')
       sys.stderr.write('        from:  http://www.stsci.edu/resources/'+\
@@ -43,56 +40,32 @@ def dm152s(dm15):
    return 2.13 - 2.44*dm15 + 2.07*dm15**2 - 0.7*dm15**3
 
 # Load all the SED templates:
-if have_FITS:
-   # Hsiao's uberspectrum:
-   f = FITS.FITS(os.path.join(spec_base, 'Hsiao_SED_V2.fits'))
-   h_sed = f.data()
-   h_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], dtype=num.float32) - \
-         f['CRPIX1'] + 1)*f['CDELT1']
-   f.close()
-   # Hsiao's new OPT+NIR uberspectrum
-   f = FITS.FITS(os.path.join(spec_base, 'Hsiao_SED_V3.fits'))
-   h3_sed = f.data()
-   h3_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], dtype=num.float32) - \
-         f['CRPIX1'] + 1)*f['CDELT1']
-   f.close()
-   # Nugent's uberspectrum:
-   f = FITS.FITS(os.path.join(spec_base, "Nugent_SED.fits"))
-   n_sed = f.data()
-   n_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], dtype=num.float32) - \
-         f['CRPIX1'] + 1)*f['CDELT1']
-   # Nugent's 91bg-like SED:
-   f = FITS.FITS(os.path.join(spec_base, "Nugent_91bg_SED.fits"))
-   n91_sed = f.data()
-   n91_wav = f['CRVAL1'] + (num.arange(f['NAXIS1'], dtype=num.float32) - \
-         f['CRPIX1'] + 1)*f['CDELT1']
-else:
-   # Hsiao's uberspectrum:
-   f = pyfits.open(os.path.join(spec_base, 'Hsiao_SED_V2.fits'))
-   h_sed = f[0].data
-   head = f[0].header
-   h_wav = head['CRVAL1'] + (num.arange(head['NAXIS1'],dtype=num.float32) - \
-         head['CRPIX1'] + 1)*head['CDELT1']
-   f.close()
-   # Hsiao's new OPT+NIR uberspectrum
-   f = pyfits.open(os.path.join(spec_base, 'Hsiao_SED_V3.fits'))
-   h3_sed = f[0].data
-   head = f[0].header
-   h3_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
-         head['CRPIX1'] + 1)*head['CDELT1']
-   f.close()
-   # Nugent's uberspectrum:
-   f = pyfits.open(os.path.join(spec_base, "Nugent_SED.fits"))
-   n_sed = f[0].data
-   head = f[0].header
-   n_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
-         head['CRPIX1'] + 1)*head['CDELT1']
-   # Nugent's 91bg-like SED:
-   f = pyfits.open(os.path.join(spec_base, "Nugent_91bg_SED.fits"))
-   n91_sed = f[0].data
-   head = f[0].header
-   n91_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
-         head['CRPIX1'] + 1)*head['CDELT1']
+# Hsiao's uberspectrum:
+f = pyfits.open(os.path.join(spec_base, 'Hsiao_SED_V2.fits'))
+h_sed = f[0].data
+head = f[0].header
+h_wav = head['CRVAL1'] + (num.arange(head['NAXIS1'],dtype=num.float32) - \
+      head['CRPIX1'] + 1)*head['CDELT1']
+f.close()
+# Hsiao's new OPT+NIR uberspectrum
+f = pyfits.open(os.path.join(spec_base, 'Hsiao_SED_V3.fits'))
+h3_sed = f[0].data
+head = f[0].header
+h3_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
+      head['CRPIX1'] + 1)*head['CDELT1']
+f.close()
+# Nugent's uberspectrum:
+f = pyfits.open(os.path.join(spec_base, "Nugent_SED.fits"))
+n_sed = f[0].data
+head = f[0].header
+n_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
+      head['CRPIX1'] + 1)*head['CDELT1']
+# Nugent's 91bg-like SED:
+f = pyfits.open(os.path.join(spec_base, "Nugent_91bg_SED.fits"))
+n91_sed = f[0].data
+head = f[0].header
+n91_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
+      head['CRPIX1'] + 1)*head['CDELT1']
 
 def linterp(spec1, spec2, day1, day2, day):
    if day1 == day2:

@@ -45,11 +45,15 @@ from scipy.interpolate import bisplrep,bisplev
 import scipy.optimize
 import pickle
 try:
-   import FITS
-   have_fits = True
+   from astropy.io import fits as pyfits
 except ImportError:
-   import pyfits
-   have_fits = False
+   try:
+      import pyfits
+   except ImportError:
+      sys.stderr.write('Error:  You need pyfits to run snpy.  You can get it\n')
+      sys.stderr.write('        from:  http://www.stsci.edu/resources/'+\
+                       'software_hardware/pyfits/\n')
+      raise ImportError
 
 debug=0
 
@@ -97,18 +101,13 @@ def load_data(band, param='dm15', gen=1):
          return
 
 
-      if have_fits:
-         h = FITS.FITS(file)
-         fdata = h.data()
-         edata = FITS.qread(file.replace('mean','std'))
-      else:
-         f = pyfits.open(file)
-         h = f[0].header
-         fdata = f[0].data
-         f2 = pyfits.open(file.replace('mean','std'))
-         edata = f2[0].data
-         f.close()
-         f2.close()
+      f = pyfits.open(file)
+      h = f[0].header
+      fdata = f[0].data
+      f2 = pyfits.open(file.replace('mean','std'))
+      edata = f2[0].data
+      f.close()
+      f2.close()
 
       xs = h['CRVAL1'] + (num.arange(1,h['NAXIS1']+1) - h['CRPIX1'])\
             *h['CDELT1']
