@@ -17,17 +17,16 @@ requirements:
       - numpy >1.7
       - scipy
       - pymysql
-      - pyfits
       - matplotlib
       - ipython
-      - emcee
       - pymc
       - astropy
 
 test:
    requires:
       - pytest
-
+   source_files:
+      - tests
    commands:
       - pytest
 

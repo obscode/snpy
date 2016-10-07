@@ -1385,7 +1385,8 @@ class sn(object):
       '''
       if snemcee is None:
          print "Sorry, in order to fit with MCMC sampler, you need to install"
-         print "the emcee module (http://dan.iel.fm/emcee/current/)"
+         print "the emcee module. Try 'pip install emcee'  or get the source"
+         print " from http://dan.iel.fm/emcee/current/" 
          return None
 
       if len(self.model._fbands) == 0:
