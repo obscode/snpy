@@ -754,7 +754,8 @@ def plot_color(self, f1, f2, epoch=True, deredden=True, interp=False,
    rids = equal(flag, 1)
    ax.errorbar(MJD[bids]-t0, BV[bids], yerr=eBV[bids], fmt='o', capsize=0, 
          color='black', label='obs')
-   ax.errorbar(MJD[rids]-t0, BV[rids], yerr=eBV[rids], fmt='o', capsize=0, 
+   if sometrue(rids):
+      ax.errorbar(MJD[rids]-t0, BV[rids], yerr=eBV[rids], fmt='o', capsize=0, 
          color='red', mfc='red', label='inter')
    ax.legend(prop={'size':12})
    pyplot.tight_layout()
