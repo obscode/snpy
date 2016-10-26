@@ -354,11 +354,12 @@ class sn(object):
          dokcoor (bool):  If True, k-correct the data before fitting
          
       Returns:
-         3-tuple:  (EBV, error, slope)
+         4-tuple:  (EBV, error, slope, eslope)
 
          EBV: the E(B-V) color-excess
          error: undertainty based on fit
          slope: the late-time slope of the B-V color curve
+         eslope: the error in the late-time slope
          
       '''
       if kcorr is not None:
@@ -370,7 +371,8 @@ class sn(object):
       t_maxes,maxes,e_maxes,restbands = self.get_rest_max([Vband])
       Tmax = t_maxes[0]
 
-      t,BV,eBV,flag = self.get_color(Bband, Vband, dokcorr=dokcorr)
+      t,BV,eBV,flag = self.get_color(Bband, Vband, dokcorr=dokcorr, 
+            interp=interpolate)
 
       # find all points that have data in both bands
       gids = equal(flag, 0)
@@ -769,10 +771,10 @@ class sn(object):
             ems.append(data['e_'+band])
             flags.append(bids*1 + kflag)
             continue
-         # Need to interpolate
 
+         # Need to interpolate from here on in
          if use_model:
-            if float_model:
+            if model_float:
                temp,etemp,mask = self.model(band, self.data[band].MJD)
                weight = self.data[band].e_flux**2
                weight = power(weight, -1)*mask*self.data[band].mask
@@ -846,7 +848,13 @@ class sn(object):
                        " instead", stacklevel=2)
          dokcorr=kcorr
 
+      it1 = getattr(self.data[band1], 'interp', None)
+      it2 = getattr(self.data[band2], 'interp', None)
+      mod1 = band1 in self.model._fbands
+      mod2 = band2 in self.model._fbands
+
       if not interp:
+         # easy
          data = self.get_mag_table([band1, band2])
          gids = less(data[band1], 90) & less(data[band2], 90)
          mjd = data['MJD'][gids]
@@ -860,22 +868,29 @@ class sn(object):
             if band2 not in self.ks:
                raise ValueError, \
                      "band %s has no k-corrections, use self.kcorr()" % band2
-            col = col - self.ks[band1] + self.ks[band2]
-            flags = flags + (-self.ks_mask[band1]*-self.ks_mask[band2])*8
+            # Now, we need to find indexes into each dataset that correspond
+            #  to data['MJD']. 
+            ids1 = searchsorted(self.data[band1].MJD, mjd)
+            ids2 = searchsorted(self.data[band2].MJD, mjd)
+            col = col - self.ks[band1][ids1] + self.ks[band2][ids2]
+            flags = flags + (-self.ks_mask[band1][ids1]*\
+                             -self.ks_mask[band2][ids2])*8
          return (mjd,col,ecol,flags)
-      # First, get a table of all photometry:
-      MJD,ms,ems,flags = self.interp_table([band1,band2], use_model=use_model,
+      elif use_model and mod1 and mod2:
+         MJD,ms,ems,flags = self.interp_table([band1,band2], use_model=True,
             model_float=model_float, dokcorr=dokcorr)
+      elif not use_model and it1 and it2:
+         MJD,ms,ems,flags = self.interp_table([band1,band2], use_model=False,
+            model_float=model_float, dokcorr=dokcorr)
+      elif not use_model and mod1 and mod2:
+         MJD,ms,ems,flags = self.interp_table([band1,band2], use_model=True,
+            model_float=model_float, dokcorr=dokcorr)
+      else:
+         raise RutimeError, "You asked for interpolation, but there are no"\
+               " models or interpolators defined"
 
       # We really don't care which one flags conditions
       flags = bitwise_or(flags[0],flags[1])
-      if not interp:
-         gids = equal(flags,0) | equal(flags, 8)
-         mjd = MJD[gids]
-         col = ms[0][gids] - ms[1][gids]
-         ecol = sqrt(power(ems[0][gids], 2) + 
-                     power(ems[1][gids], 2))
-         return(mjd, col, ecol, flags[gids])
 
       return(MJD, ms[0]-ms[1], sqrt(ems[0]**2 + ems[1]**2), flags)
 
@@ -1546,7 +1561,7 @@ class sn(object):
             outfile, clear)
 
    def compute_w(self, band1, band2, band3, R=None, Rv=3.1, interp=False,
-                 use_model=False, float_model=True, dokcorr=False):
+                 use_model=False, model_float=True, dokcorr=False):
       '''Returns the reddening-free magnitude (AKA Wesenheit function)
       in the sense that:
       w = band1 - R(band1,band2,band3)*(band2 - band3)
@@ -1563,7 +1578,7 @@ class sn(object):
          interp (bool):  If True, interpolate missing data
          use_model (bool):  If True, use a fit model, rather than an
                          interpolator to do the interpolation
-         float_model (bool):  If using model interpolation, allow the
+         model_float (bool):  If using model interpolation, allow the
                          model for each filter to float to an indepenent
                          maximum.
          dokcorr (bool):  If True, apply k-corrections to the data.
@@ -1614,7 +1629,7 @@ class sn(object):
 
       # Here we need interpolation
       mjd,ms,ems,flags = self.interp_table([band1,band2,band3], 
-            use_model=use_model, float_model=float_model, dokcorr=dokcorr)
+            use_model=use_model, model_float=model_float, dokcorr=dokcorr)
 
       # Now compute w:
       w = ms[0] - R*(ms[1] - ms[2])
