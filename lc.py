@@ -182,6 +182,12 @@ class lc:
       if '_flux' in odict: del odict['_flux']
       return odict
 
+   def __setstate__(self, state):
+      self.__dict__.update(state)
+      if getattr(self, 'interp',None) is not None:
+         if getattr(self.interp, 'mean', None) is None:
+            self.interp.mean = self.mean
+
    def time_sort(self):
       ids = argsort(self.MJD)
       self.MJD = take(self.MJD, ids)
@@ -356,6 +362,39 @@ class lc:
       print "the following methods are available for constructing templates:"
       fit1dcurve.list_types()
 
+   def mean(self, x, flux=False):
+      '''A convenience function used with the GP interpolator. If a model
+      exists for the LC, use it where it is valid, otherwise, return
+      an extrapolation.'''
+      scalar = False
+      if len(shape(x)) == 0:
+         scalar = True
+      x = atleast_1d(x)
+      if x.shape[0] == 0:
+         '''empty array, just return some sensible value'''
+         if flux:
+            return x*0 + median(self.flux)
+         else:
+            return x*0 + median(self.mag)
+
+
+      if len(x.shape) == 2 and x.shape[1] == 1:
+         x = x[:,0]
+      if self.band in self.parent.model._fbands:
+         sids = argsort(x)
+         # There is no harm extrapolating, since we're actually interpolating
+         # data
+         m,em,f = self.parent.model(self.band, x[sids], extrap=True)
+         y = x*0
+         put(y, sids, m)
+         if flux:
+            return power(10.0, -0.4*(y - self.filter.zp))
+         return y
+      # No model, so we'll just give a reasonable constant mean
+      if flux:
+         return x*0 + median(self.flux)
+      return x*0 + median(self.mag)
+
    def template(self, fitflux=False, do_sigma=True, Nboot=50, 
          method=default_method, compute_params=True, interactive=False, **args):
       '''A backwrd-compatibility alias for :meth:`.spline_fit`.'''
@@ -376,6 +415,8 @@ class lc:
       xx,yy,ee = fit1dcurve.regularize(x, y, ey)
       if len(xx) < 2:
          raise ValueError, "Cannot interpolate data with less than two distinct data points"
+      if method == 'gp':
+         args['mean'] = self.mean
       self.interp = fit1dcurve.Interpolator(method, x, y, ey, self.mask, **args)
       if interactive:
          self.mp = plotmod.launch_int_fit(self, fitflux=fitflux)

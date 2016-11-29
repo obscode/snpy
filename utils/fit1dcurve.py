@@ -936,14 +936,14 @@ if pymc is not None:
                'scale':None,
                'amp':None}
          for key in args:
-            if key not in self.pars:
+            if key not in self.pars and key != "mean":
                raise TypeError, \
                      "%s is an invalid keyword argument for this method" % key
-            self.pars[key] = args[key]
-         #if 'func' in args:
-         #   self.func = args['func']
-         #else:
-         #   self.func = lambda x:  x*0 + num.median(self.y)
+            if key != "mean": self.pars[key] = args[key]
+         if 'mean' in args:
+            self.mean = args['mean']
+         else:
+            self.mean = lambda x:  x*0 + num.median(self.y)
    
          # Make sure the data conform to the spine requirements
          self.median = num.median(self.y)
@@ -953,14 +953,15 @@ if pymc is not None:
       def __str__(sef):
          return "Gaussian Process"
 
-      def func(self, x):
-         return x*0 + self.median
+      #def func(self, x):
+      #   return x*0 + self.median
 
       def __getstate__(self):
          # we need to define this because Mean and Cov are not pickleable
          dict = self.__dict__.copy()
          if 'M' in dict:  del dict['M']
          if 'C' in dict:  del dict['C']
+         if 'mean' in dict: dict['mean'] = None
          # Setting setup to None will force re-generation of M and C
          #  when we are unpickled
          dict['setup'] = False
@@ -980,14 +981,14 @@ if pymc is not None:
             self.diff_degree = 3
    
          if self.amp is None:
-            self.amp = num.std(self.y)
+            self.amp = num.std(y - self.mean(x))
    
          if self.scale is None:
             #self.scale = (self.x.max() - self.x.min())/2
             self.scale = 30
             
    
-         self.M = GP.Mean(self.func)
+         self.M = GP.Mean(self.mean)
          self.C = GP.Covariance(GP.matern.euclidean, diff_degree=self.diff_degree,
                            amp=self.amp, scale=self.scale)
    
