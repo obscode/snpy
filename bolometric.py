@@ -175,7 +175,10 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
          # interpolation is in the absolute time, so use MJD
          mag,mask = sn.data[b].interp(res['MJD'][gids])
          mags[i] = where(masks[i], mags[i], mag)
-         masks[i] = masks[i] + mask
+         if extrapolate:
+            masks[i] = -isnan(mags[i])
+         else:
+            masks[i] = masks[i] + mask
 
    elif interpolate == 'model':
       # we fill in (where we can) missing data using the model
@@ -385,7 +388,10 @@ def bolometric_direct(sn, bands=None,
          # interpolation is in the absolute time, so use MJD
          mag,mask = sn.data[b].interp(res['MJD'])
          mags[i] = where(masks[i], mags[i], mag)
-         masks[i] = masks[i] + mask
+         if extrapolate:
+            masks[i] = -isnan(mags[i])
+         else:
+            masks[i] = masks[i] + mask
 
    elif interpolate == 'model':
       # we fill in (where we can) missing data using the model
