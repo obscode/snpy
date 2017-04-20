@@ -618,10 +618,8 @@ def plot_sn(self, **kwargs):
    p.title(title)
    if kwargs.get('epoch', False):
       p.xlabel('Days after B maximum')
-   elif kwargs.get('JDoffset', False):
-      p.xlabel('JD - %d' % Toff)
    else:
-      p.xlabel('Date')
+      p.xlabel('JD - %d' % Toff)
    p.ylabel(ylabel)
    for ax in p.axes:
       if flip:  
