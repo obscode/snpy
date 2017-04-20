@@ -142,7 +142,7 @@ class f_spline(function):
    parameter. The higher the smoothing, the less curvature the spline can
    have. This is good for keeping the spline from "wigglig" too much.'''
 
-   def __init__(self, parent, s=0, gradient=False, slopes=None, 
+   def __init__(self, parent, s=0, k=3, gradient=False, slopes=None, 
          verbose=False, log=False):
       '''
          Args:
@@ -153,12 +153,14 @@ class f_spline(function):
             slopes (2-tuple): The end slopes can be kept fixed using this
                               argument (e.g., set to (0,0) to flatten out
                               the spline at both ends
+            k (int): The order of the spline. Odds numbers work best.
             verbose (bool): debug info
             log (bool):  Not implemented yet.
       '''
       function.__init__(self,parent)
       self.knots = None
       self.factors = None
+      self.k = k
       self.s = s       # specify a global tension parameter
       self.gradient = gradient     # constrain the anchors by slope?
       self.slopes = None           # End slopes if not using gradient
@@ -202,7 +204,7 @@ class f_spline(function):
          return x*0+1.0
       #if self.gradient:
       xyds = scipy.interpolate.splrep(self.parent.ave_waves, self.pars, 
-              w=self.pars*0+1, s=self.s)
+              w=self.pars*0+1, k=self.k, s=self.s)
       #else:
       #   xyds = tspline.tspsi(self.parent.ave_waves, self.pars, 
       #         tension=self.tension, slopes=self.slopes)
