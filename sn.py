@@ -982,7 +982,10 @@ class sn(object):
       '''
       print >> out, '-'*80
       print >> out, "SN ",self.name
-      if self.z:  print >> out, "z = %.3f         " % (self.z),
+      if self.z:  
+         print >> out, "z = %.4f         " % (self.z),
+      if getattr(self, '_zcmb', None) is not None:
+         print >> out, "zcmb = %.4f         " % (self.zcmb),
       if self.ra:  print >> out, "ra=%9.5f        " % (self.ra),
       if self.decl:  print >> out, "dec=%9.5f" % (self.decl),
       print >> out, ""
@@ -991,12 +994,16 @@ class sn(object):
       print >> out, ""
 
       print >> out, "Fit results (if any):"
-      for band in self.restbands:
-         print >> out, "   Observed %s fit to restbad %s" % (band, self.restbands[band])
+      #for band in self.restbands:
+      #   print >> out, "   Observed %s fit to restbad %s" % (band, self.restbands[band])
+      systs = self.systematics()
       for param in self.parameters:
          if self.parameters[param] is not None:
-            print >> out, "   %s = %.3f  +/-  %.3f" % (param, self.parameters[param],
+            line = "   %s = %.3f  +/-  %.3f" % (param, self.parameters[param],
                                                        self.errors[param])
+            if param in systs and systs[param] is not None:
+               line += "  +/- %.3f (sys)" % systs[param]
+         print >> out, line
 
    def dump_lc(self, epoch=0, tmin=-10, tmax=70, k_correct=0, mw_correct=0):
       '''Outputs several files that contain the lc information: the data,

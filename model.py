@@ -562,6 +562,7 @@ class EBV_model(model):
          systs['DM'] += power(2.17*0.1,2)     # assume 10% error in Ho
       systs['DM'] = sqrt(systs['DM'])
       systs['EBVhost'] = 0.06
+      systs['dm15'] = 0.06
       return(systs)
 
 def read_table(file):
@@ -786,6 +787,11 @@ class EBV_model2(model):
       if include_Ho:
          systs['DM'] += power(2.17*0.1,2)     # assume 10% error in Ho
       systs['DM'] = sqrt(systs['DM'])
+      systs['EBVhost'] = 0.06
+      if self.stype == 'dm15':
+         systs['dm15'] = 0.06
+      else:
+         systs['st'] = 0.03
       return(systs)
 
 
@@ -981,6 +987,13 @@ class max_model(model):
       id = argmax(absolute(t0 - days))
       return errors[parameter][id]
 
+   def systematics(self, calibration=1, include_Ho=False):
+      '''Returns the systematic errors in the paramters as a dictionary.  
+      If no estimate is available, return None for that parameter.'''
+      systs = dict.fromkeys(self.parameters.keys())
+      systs['st'] = 0.03
+      return(systs)
+
 class max_model2(model):
    '''Same as max_model, but here we let Tmax for each filter be a free parameter.'''
 
@@ -1127,6 +1140,13 @@ class max_model2(model):
          return self.__dict__[attr]
       else:
          raise AttributeError, "Attribute %s not found" % (attr)
+
+   def systematics(self, calibration=1, include_Ho=False):
+      '''Returns the systematic errors in the paramters as a dictionary.  
+      If no estimate is available, return None for that parameter.'''
+      systs = dict.fromkeys(self.parameters.keys())
+      systs['st'] = 0.03
+      return(systs)
 
 
 
@@ -1531,6 +1551,6 @@ class color_model(model):
       '''Returns the systematic errors in the paramters as a dictionary.  
       If no estimate is available, return None for that parameter.'''
       systs = dict.fromkeys(self.parameters.keys())
-      # DM contains systematics for Ho, plus average of calibration
-      #  uncertainties
+      systs['EBVhost'] = 0.06
+      systs['st'] = 0.03
       return(systs)
