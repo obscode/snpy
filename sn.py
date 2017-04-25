@@ -491,6 +491,68 @@ class sn(object):
          return (result[0][0],result[1][0],result[2][0],result[3][0])
       return result
 
+   def scorr(self, bands=None, SED='H3'):
+      '''Compute the S-corrections for the named filters. The underlying
+      SED is taken as the same that was used to compute k-corretions. If
+      k-corrections have not been computed, we simply used the SED
+      specified with no mangling.
+
+      Args:
+         bands (list or Noen): List of filter so S-correct or all if None
+                               (default: None)
+         SED (string):  If k-corrections have not been computed, we fall
+                        back on using the SED spedified here. See 
+                        kcorr.get_SED().
+
+         Returns:
+            None
+         
+         Effects:
+            Upon successful completion, the following member variables will
+            be populated:
+
+            * self.Ss:       dictionary of S-corrections indexed by filter
+            * self.Ss_mask:  dictionary indicating valid S-corrections
+      '''
+      if bands is None:
+         bands = self.data.keys()
+
+      self.Ss = {}
+      self.Ss_mask = {}
+      for band in bands:
+         if self.restbands[band] == band:
+            # No S-correction
+            self.Ss[band] = self.data[band].mag*0
+            self.Ss_mask[band] = less(self.Ss[band],1)
+            continue
+         st = getattr(self, 'ks_s', 1.0)
+         mopt = getattr(self, 'ks_mopts', {})
+         if band not in mopt:
+            # No k-corrections, we'll just use SED
+            x = self.data[band].MJD
+            # days since Bmax in the frame of the SN
+            days = (x - self.Tmax)/(1+self.z)/st
+            days = days.tolist()
+            self.Ss[band],self.Ss_mask[band] = map(array,kcorr.kcorr(days, 
+               self.restbands[band], band, self.z, self.EBVgal, 0.0,
+               version=self.k_version, Scorr=True))
+            self.Ss_mask[band] = self.Ss_mask[band].astype(bool)
+         else:
+            self.Ss[band] = []
+            self.Ss_mask[band] = []
+            for i in range(len(self.data[band].MJD)):
+               wave,flux,dum1,dum2 = self.get_mangled_SED(band,i)
+               if wave is None:
+                  S,f = 0,0
+               else:
+                  S,f = kcorr.S(wave,flux,fset[band],fset[self.restbands[band]],
+                        z=self.z)
+               self.Ss[band].append(S)
+               self.Ss_mask[band].append(f)
+            self.Ss[band] = array(self.Ss[band])
+            self.Ss_mask[band] = array(self.Ss_mask[band])
+         
+    
    def kcorr(self, bands=None, mbands=None, mangle=1, interp=1, use_model=0, 
          min_filter_sep=400, use_stretch=1, **mopts):
       '''Compute the k-corrections for the named filters.
@@ -672,6 +734,8 @@ class sn(object):
       
       if 'ks_mopts' not in self.__dict__:
          raise AttributeError, "Mangling info not found... try running self.kcorr()"
+      if self.ks_mopts[band][i] is None:
+         return(None,None,None,None)
       epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
       wave,flux = kcorr.get_SED(int(epoch), version=self.k_version)
       man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][i])[0]
@@ -1005,7 +1069,8 @@ class sn(object):
                line += "  +/- %.3f (sys)" % systs[param]
          print >> out, line
 
-   def dump_lc(self, epoch=0, tmin=-10, tmax=70, k_correct=0, mw_correct=0):
+   def dump_lc(self, epoch=0, tmin=-10, tmax=70, k_correct=0, 
+               s_correct=False, mw_correct=0):
       '''Outputs several files that contain the lc information: the data,
       uncertainties, and the models themselves.
       
@@ -1014,6 +1079,7 @@ class sn(object):
          tmin/tmax (float): the time range over which to output the model
                             (default:  -10 days to 70 days after Tmax)
          k_correct (bool): If True, k-correct the data/models (default: False)
+         s_correct (bool): If True, s-correct the data/models (default: False)
          mw_correct (bool): If True, de-reddent the MW extintcion 
                             (default: False)
 
@@ -1043,7 +1109,10 @@ class sn(object):
          print >> f, "#  column 1:  time"
          print >> f, "#  column 2:  oberved magnitude"
          print >> f, "#  column 3:  error in observed magnitude"
-         print >> f, "#  column 4:  Flag:  0=OK  1=Invalid K-correction"
+         print >> f, "#  column 4:  Flag:  0=OK  1=Invalid S/K-correction"
+         if s_correct:
+            print >> f, "# NOTE  Data have been S-corrected from %s to %s" %\
+                  (filter, self.restbands[filter])
          if mw_correct:
             Ia_w,Ia_f = kcorr.get_SED(0, 'H3')
             Alamb = fset[filter].R(wave=Ia_w, flux=Ia_f, Rv=3.1)*self.EBVgal
@@ -1062,6 +1131,19 @@ class sn(object):
                      (self.data[filter].MJD[i]-toff, 
                      self.data[filter].mag[i] - ks - Alamb, 
                      self.data[filter].e_mag[i], flag)
+            elif s_correct:
+               flag = 0
+               if filter not in self.Ss:
+                  flag = 1
+                  Ss = 0
+               else:
+                  flag = (not self.Ss_mask[filter][i])
+                  Ss = self.Ss[filter][i]
+               print >> f, "%.2f  %.3f  %.3f  %d" % \
+                     (self.data[filter].MJD[i]-toff, 
+                     self.data[filter].mag[i] + Ss - Alamb, 
+                     self.data[filter].e_mag[i], flag)
+
             else:
                flag = (not self.data[filter].mask[i])
                print >> f, "%.2f  %.3f  %.3f  %d" % \
@@ -2030,6 +2112,12 @@ def get_sn(str, sql=None, **kw):
             s = import_lc(str)
          except RuntimeError:
             raise RuntimeError, "Could not load %s into SNPY" % str
+   elif str.find('http://') == 0 or str.find('https://') == 0:
+      import get_osc
+      s,message = get_osc.get_obj(str)
+      if s is None:
+         print message
+         return None
    else:
       s = sn(str, source=sql, **kw)
    return s
