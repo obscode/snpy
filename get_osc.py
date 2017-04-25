@@ -26,7 +26,7 @@ def get_obj(url):
    try:
       u = urllib.urlopen(url)
    except:
-      retrun None,"Invalid URL"
+      return None,"Invalid URL"
    try:
       d = json.load(u)
    except:
