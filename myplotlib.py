@@ -17,19 +17,29 @@ import matplotlib.text as text
 from numpy import *
 from matplotlib import ticker
 from matplotlib import gridspec
-
 from matplotlib import rcParams
-rcParams['font.size'] = 18
-rcParams['font.family'] = 'serif'
-rcParams['xtick.major.size'] = 8
-rcParams['xtick.labelsize'] = 'large'
-rcParams['ytick.major.size'] = 8
-rcParams['ytick.labelsize'] = 'large'
-rcParams['xtick.minor.size'] = 4
-rcParams['ytick.minor.size'] = 4
-rcParams['xtick.major.pad'] = 10
-rcParams['ytick.major.pad'] = 10
-rcParams['legend.numpoints'] = 1
+
+def update_rcParams(key, val):
+    if key in rcParams:
+        rcParams[key] = val
+
+update_rcParams('font.size', 18)
+update_rcParams('font.family', 'serif')
+update_rcParams('xtick.major.size', 8)
+update_rcParams('xtick.labelsize', 'large')
+update_rcParams('xtick.direction', "in")
+update_rcParams('xtick.minor.visible', True)
+update_rcParams('xtick.top', True)
+update_rcParams('ytick.major.size', 8)
+update_rcParams('ytick.labelsize', 'large')
+update_rcParams('ytick.direction', "in")
+update_rcParams('ytick.minor.visible', True)
+update_rcParams('ytick.right', True)
+update_rcParams('xtick.minor.size', 4)
+update_rcParams('ytick.minor.size', 4)
+update_rcParams('xtick.major.pad', 10)
+update_rcParams('ytick.major.pad', 10)
+update_rcParams('legend.numpoints', 1)
 
 def scale_fonts(factor):
    rcParams['font.size'] *= factor
