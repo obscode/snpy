@@ -222,7 +222,7 @@ class model:
       # update errors and covariance matrix
       if C is None:
          raise RuntimeError, "Error:  Covariance Matrix is singular.  " + \
-               "Either two or more parameters are degenerate or the model" + \
+               "Either two or more parameters are degenerate or the model " + \
                "has become insensitive to one or more parameters."
       C = C*self.rchisquare    # the trick for underestimated errors.
       self.C = {}
