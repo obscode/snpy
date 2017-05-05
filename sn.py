@@ -1408,7 +1408,7 @@ class sn(object):
       for filter in bands:
          if self.restbands[filter] not in self.model.rbs:
             raise AttributeError, \
-                  "Error:  filter %s is not supported by this model" % filter+\
+                  "Error:  filter %s is not supported by this model" % self.restbands[filter] + \
                   ", set self.restbands accordingly"
 
       if reset_kcorrs:
