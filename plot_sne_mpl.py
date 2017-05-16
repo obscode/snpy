@@ -998,8 +998,8 @@ def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
    bands = [bands[i] for i in ids]
       
    n_plots = len(bands)
-   p = myplotlib.PanelPlot(1, n_plots, num=112, figsize=(6,n_plots),
-        nymax=5, prunex=None)
+   p = myplotlib.PanelPlot(1, n_plots, num=112, figsize=(6,n_plots))
+        
    p.title("Use 'm' to plot mangled SED for any point")
    p.xlabel('Epoch (days)')
    p.ylabel('K-corrections')
