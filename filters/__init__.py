@@ -286,18 +286,19 @@ class filter(spectrum):
       (specwave) or (specwave, flux).  If z is supplied, first blueshift
       the filter by this amount (ie, you are observing a redshifed spectrum).'''
       numer = self.response(specwave, flux=flux, z=z, zeropad=zeropad,
-            photons=0)
+            photons=1)*ch
+      # numer is in erg*Angstrom/s/cm^2
       if numer <= 0:
          return(num.nan)
 
       if not isinstance(specwave, spectrum):
-         denom = self.response(specwave, 2.997925e18/num.power(specwave,2), 
-               photons=0)
+         # 3631 Jy*c --> erg*Angstrom/s/cm^2
+         denom = self.response(specwave, 3631*1.e-23*c/specwave, photons=0)
       else:
          wave = specwave.wave
-         denom = self.response(wave, 2.997925e18/num.power(wave,2), photons=0)
+         denom = self.response(wave, 3631*1.e-23*c/wave, photons=0)
 
-      result = -2.5*num.log10(numer/denom) - 48.6
+      result = -2.5*num.log10(numer/denom)# - 48.6
       return(result)
 
    def eff_wave(self, specwave, flux=None, z=0, zeropad=0):
