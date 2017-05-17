@@ -114,8 +114,9 @@ class model:
          mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[newaxis,:]+\
                self.Tmax), axis=1)
          # mask based on original mask and limits of Hsiao spectrum
+         ks_st = getattr(self.parent, 'ks_s', 1.0)
          mask2 = self.parent.ks_mask[band][mids]*\
-               greater_equal(t, -19)*less_equal(t, 70)
+               greater_equal(t/ks_st, -19)*less_equal(t/ks_st, 70)
       else:
          K = 0*t
          mask2 = ones(t.shape, dtype=bool)
