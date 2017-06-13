@@ -4,9 +4,7 @@ import warnings
 have_sql = 1
 import sqlmod
 if 'SQLSERVER' in os.environ:
-   sqlmod.default_sql = sqlmod.__dict__['sql_'+os.environ['SQLSERVER']]()
-else:
-   sqlmod.default_sql = sqlmod.sql_local()
+   sqlmod.setSQL(os.environ['SQLSERVER'])
 have_sql = sqlmod.have_sql
 
 try:
