@@ -18,4 +18,5 @@ spline2/*.pyc
 sqlmod/*.pyc
 tspack/*.pyc
 utils/*.pyc
-tests/__pycache__
+__pycache__
+.cache
