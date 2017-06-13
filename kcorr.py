@@ -391,12 +391,12 @@ def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z,
          ms = num.compress(m_mask[j],mags[j])
  
          # Now we mangle the spectrum:
-         man_spec_f,man_waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,fs, 
+         man_spec_f,state,pars = mangle_spectrum2(spec_wav*(1+z),spec_f,fs, 
                ms, **mopts)
       if full_output:
-         waves_a.append(man_waves)
+         waves_a.append(state['ave_waves'])
          manf_a.append(man_spec_f)
-         factors_a.append(factors)
+         factors_a.append(pars)
  
       for i in range(len(filts)):
          f1 = filters.fset[restfilts[i]]
@@ -461,10 +461,10 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
          * if not full_output: 2-tuple (K,mask):
             * K (flaot array):  K-corrections for filts
             * mask (bool array): mask of valid K-corrections
-         * if full_output: 5-tuple (K,mask,anchors,factors,funcs)
-            * anchors (float array): wavelengths of anchor points
-            * factors (float array): factors corresponding to anchors
-            * funcs (float array): mangling function evaluated at anchors
+         * if full_output: 4-tuple (K,mask,Rts,mopts)
+            * Rts (float array): The total-to-selective absorption ratio
+                                 based on filter functions and mangled SED
+            * mopts (dict): mangling function state dictionary
    '''
 
    if 'method' in mopts:
@@ -506,6 +506,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
             if num.sometrue(m_mask[:,i])]
       if len(fs) <=1 :
          waves,man_spec_fs,factors = spec_wavs,spec_fs,spec_wavs*0.0+1.0
+         state,pars = None,None
       else:
          #cs = mags[:,:-1] - mags[:,1:]
          #gids = m_mask[:,:-1]*m_mask[:,1:]
@@ -513,7 +514,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
          #cs[-gids] = 99.9   # flag invalid value
          gids = m_mask*sids[:,num.newaxis]
          ms = where(gids, ms, 99.9)
-         man_spec_fs,waves,factors = mangle_spectrum2(spec_wavs*(1+z),
+         man_spec_fs,state,pars = mangle_spectrum2(spec_wavs*(1+z),
                spec_fs, fs, ms, **mopts)
 
 
@@ -527,7 +528,10 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
             m_opts.append(None)
             continue
          if full_output:
-            args = {'sw':waves, 'sf':factors}
+            args = {}
+            if state is not None:
+               args['state'] = state
+               args['pars'] = pars
             for key in mopts:
                args[key] = mopts[key]
             m_opts.append(args)
@@ -563,6 +567,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
             # only one filter, so no color information, leave the SED alone:
             waves,man_spec_f,factors = spec_wav,spec_f,spec_wav*0.0+1.0
             man_spec_f = [man_spec_f]
+            state,pars = None,None
          else:
             #cs = num.compress(m_mask[j],mags[j])[0:-1] - \
             #     num.compress(m_mask[j],mags[j])[1:]
@@ -574,7 +579,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
   
             # Now we mangle the spectrum.  Note, we are redshifting the spectrum
             # here, so do NOT set z in mangle_spectrum2.
-            man_spec_f,waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,
+            man_spec_f,state,pars = mangle_spectrum2(spec_wav*(1+z),spec_f,
                   fs, ms, **mopts)
  
             if debug:  print "factors = ",factors
@@ -590,7 +595,10 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
                   print "  output color:  %f" % (col)
   
          if full_output:
-            args = {'sw':waves, 'sf':factors}
+            args = {}
+            if state is not None:
+               args['state'] = state
+               args['pars'] = pars
             for key in mopts:
                args[key] = mopts[key]
             m_opts.append(args)

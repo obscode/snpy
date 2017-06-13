@@ -1045,7 +1045,16 @@ def plot_mangled_SED(event):
    wave,flux = kcorr.get_SED(day, version='H3')
    ax.plot(wave,flux, label='Original SED', color='black')
    if band in self.ks_mopts:
-      man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][id])[0]
+      if 'state' in self.ks_mopts[band][id]:
+         man_flux = mangle_spectrum.apply_mangle(wave,flux, 
+               **self.ks_mopts[band][id])[0]
+      else:
+         args = {}
+         args['state'] = dict(ave_waves=self.ks_mopts[band][id]['sw'])
+         args['pars'] = self.ks_mopts[band][id]['sf']
+         man_flux = mangle_spectrum.apply_mangle(wave,flux,init=False,**args)[0]
+   else:
+      man_flux = flux
    ax.plot(wave, man_flux, label='Mangled SED', color='darkgreen')
    ax.plot(wave, man_flux/flux*ax.get_ylim()[1], color='orange')
 

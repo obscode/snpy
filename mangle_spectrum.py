@@ -7,6 +7,7 @@ functions.  So far, there's tension splines and CCM.'''
 
 import types
 import numpy as num
+from numpy.linalg import lstsq
 from snpy.filters import fset
 from snpy.filters import filter
 from snpy.filters import vegaB
@@ -17,6 +18,7 @@ except:
    tspline = None
 from snpy.utils import deredden
 from snpy.utils import mpfit
+from snpy.utils.bspline import bspline_basis
 import copy
 #from matplotlib import pyplot as plt
 
@@ -140,7 +142,7 @@ class f_tspline(function):
 class f_spline(function):
    '''Spline mangler. Splines are controlled by a smoothing
    parameter. The higher the smoothing, the less curvature the spline can
-   have. This is good for keeping the spline from "wigglig" too much.'''
+   have. This is good for keeping the spline from "wiggling" too much.'''
 
    def __init__(self, parent, s=0, k=3, gradient=False, slopes=None, 
          verbose=False, log=False):
@@ -226,6 +228,147 @@ class f_spline(function):
          res = num.where(x > self.parent.ave_waves[-1], y1, res)
       return(res)
 
+class f_Bspline(function):
+   '''Basis spline mangler of degree k. These splines are controled by a number of
+   knot points. The first and last (k+1) are repeated to "clamp" the spline at the
+   end points and force the spline through those points. There is no smoothing
+   parameter (yet). Because the spline is decomposed into a linear combination of
+   basis functions, the integration over wavelength can be done ahead of time and
+   the synthetic photometry is then just a linear combination. This should speed
+   things up a lot.'''
+
+   def __init__(self, parent, k=3, gradient=False, slopes=None, 
+         verbose=False, log=False):
+      '''
+         Args:
+            parent (instance): Mangler that will fit the function.
+            k (int): The order of the spline. Odds numbers work best.
+            gradient (bool): If true, constrain the gradients at either end
+                             using the anchors
+            slopes (2-tuple): The end slopes can be kept fixed using this
+                              argument (e.g., set to (0,0) to flatten out
+                              the spline at both ends
+            verbose (bool): debug info
+            log (bool):  Not implemented yet.
+      '''
+      function.__init__(self,parent)
+      self.knots = None
+      self.factors = None
+      self.k = k
+      self.gradient = gradient     # constrain the anchors by slope?
+      self.slopes = None           # End slopes if not using gradient
+      self.pars = None
+      self.verbose = verbose
+      self.log = log
+      self.knots = []
+      self.basis = {}              # basis vectors, indexed by:
+                                   #  [filter,spectrum,basis]
+
+   def init_pars(self, nid=0):
+      # one parameter for each knot points, unless slopes are constrained
+      bs = self.parent.bands
+      nf = len(bs)            
+      args = {}
+      if nf == 2: 
+         # only linear allowed
+         k = 1
+         Nknots = 2
+         self.knots = num.array([fset[bs[0]].wave[0], fset[bs[1]].wave[-1]])
+         args['gradient'] = False
+         args['zeroslope'] = False
+      elif nf == 3 and self.k > 1:
+         k = 2
+         Nknots = 2
+         self.knots = num.array([fset[bs[0]].wave[0], fset[bs[1]].wave[-1]])
+         args['gradient'] = False
+         args['zeroslope'] = False
+      else:
+         #max_degree = (nf+3)/2
+         #k = min(self.k, max_degree)
+         k = 3
+         #Nknots = nf - k + 3          # note: 2 extra because endpoint contraints
+         Nknots = nf
+         ## Exponentially spaced seems to work best
+         #self.knots = num.exp(num.linspace(num.log(fset[bs[0]].wave[0]),
+         #                       num.log(fset[bs[-1]].wave[-1]),Nknots))
+         self.knots = num.concatenate([[fset[bs[0]].wave[0]],
+            [fset[b].ave_wave for b in bs[1:-1]], [fset[bs[-1]].wave[-1]]])
+         if self.gradient:
+            args['gradient'] = True
+         else:
+            args['zeroslope'] = True
+
+      if self.verbose:
+         print self.parent.bands
+         print 'Nk = ',Nknots
+         print 'knots:',self.knots
+      # The basis splines
+      bsp = [bspline_basis(self.knots,self.parent.wave[i],k,**args) \
+            for i in range(self.parent.wave.shape[0])]
+      self.bsp = bsp
+
+      # setup the parameters
+      if self.log:
+         limited = [0,0]
+      else:
+         limited = [1,0]
+      pi = [{'fixed':0, 'limited':limited, 'limits':[0.0,0.0], 'step':0.001, 
+             'value':1.0} for i in range(self.bsp[0].shape[1])]
+
+      # For each filter, compute the reponse for every flux vector multiplied
+      # by each basis spline.
+      for f in self.parent.bands:
+         self.basis[f] = []
+         for i in range(self.parent.wave.shape[0]):
+            self.basis[f].append(num.array([fset[f].response(self.parent.wave[i],
+               self.parent.flux[i]*bsp[i][:,j]) for j in range(bsp[i].shape[1])]))
+      
+      scale = -num.inf
+      # now re-scale to reasonable values
+      for f in self.basis:
+         for a in self.basis[f]:
+            scale = max(scale, a.max())
+      
+      for f in self.basis:
+         for i in range(len(self.basis[f])):
+            self.basis[f][i] /= scale
+
+      if nid > len(pi)-1:
+         pi[-1]['fixed'] = 1
+      else:
+         pi[nid]['fixed'] = 1
+      return(pi)
+
+   def set_pars(self, pars):
+      self.pars = num.asarray(pars)
+
+   def __call__(self, x):
+      '''This should only be called after the least-squares fitting. Otherwise,
+      use the self.basis vectors.'''
+      if self.pars is None:
+         return x*0+1.0
+      res = num.array([num.dot(b,self.pars) for b in self.bsp])
+      knots = self.knots
+      # clamped spline, so it must pass through end-points, but if we used the
+      # gradient trick, we need to transform back to original coeficients.
+      if self.gradient and len(knots) > 3:
+         dl1 = (knots[1]-knots[0])
+         dl2 = (knots[2]-knots[0])
+         dlm1 = (knots[-1]-knots[-2])
+         dlm2 = (knots[-1]-knots[-3])
+         y0 = self.pars[0] - dl1/dl2*(self.pars[1]-self.pars[0])
+         y1 = self.pars[-1] + dlm1/dlm2*(self.pars[-1]-self.pars[-2])
+         # gradient at end-points is also clamped, so use recursion relation
+         yp0 = self.k/dl2*(self.pars[1]-self.pars[0])
+         yp1 = self.k/dlm2*(self.pars[-1] - self.pars[-2])
+      else:
+         y0 = self.pars[0]
+         y1 = self.pars[-1]
+         yp0 = yp1 = 0
+      res = num.where(num.less(x,knots[0]), y0 + yp0*(x-knots[0]), res)
+      res = num.where(num.greater(x,knots[-1]), y1 + yp1*(x-knots[-1]), res)
+      return(res)
+
 class f_ccm(function):
    '''The Cardelli, Clayton, and Mathis (1989) reddening law as a smooth
    fucntion. This would be what dust does to a spectrum, so is a good
@@ -261,6 +404,7 @@ class f_ccm(function):
 
 mangle_functions = {'spline':f_spline,
                     'tspline':f_tspline,
+                    'bspline':f_Bspline,
                     'ccm':f_ccm}
 
 
@@ -295,12 +439,28 @@ class mangler:
          self.flux = self.flux.reshape((1,self.flux.shape[0]))
       self.ave_waves = None
       if method not in mangle_functions:
-         methods = ",".join(mangle_funcitons.keys())
+         methods = ",".join(mangle_functions.keys())
          raise ValueError, "method must be one of the following:\n%s" % methods
       self.function = mangle_functions[method](self, **margs)
       self.z = z
       self.verbose=margs.get('verbose', False)
 
+   def _setstate(self, state):
+      '''Update the state of the manlger from previously saved state.'''
+      for key in state:
+         self.__dict__[key] = state[key]
+
+   def _getstate(self):
+      '''Save the current state of the mangler. Only stuff that will
+      change after __init__ has been run.'''
+      state = {}
+      state['allbands'] = getattr(self, 'allbands',None)
+      state['ave_waves'] = getattr(self, 'ave_waves', None)
+      state['bands'] = getattr(self, 'bands', None)
+      state['resp_rats'] = getattr(self, 'resp_rats', None)
+      state['mfactors'] = getattr(self, 'mfactors', None)
+      return state
+ 
    def get_colors(self, bands):
       '''Given a set of filters, determine the colors of the mangled
       spectrum for the current set of function parameters.  You'll get
@@ -321,7 +481,7 @@ class mangler:
       return cs
 
    def get_mflux(self):
-      '''Given the current paramters, return the mangled flux.'''
+      '''Given the current parameters, return the mangled flux.'''
       #if self.verbose:  print 'calling mangling function'
       mflux = self.function(self.wave)
       #if self.verbose:  print 'done'
@@ -356,20 +516,20 @@ class mangler:
       resp = num.array([0.,0.,1.,1.,0.,0.])
       dwave = num.array([anchorwidth+2., anchorwidth+1., anchorwidth, 3., 2., 1.])
    
-      filts['blue'].wave = wave0 - dwave
-      filts['blue'].resp = resp*1.0
-      filts['red'].wave = wave1 + dwave[::-1]
-      filts['red'].resp = resp
+      fset['blue'].wave = wave0 - dwave
+      fset['blue'].resp = resp*1.0
+      fset['red'].wave = wave1 + dwave[::-1]
+      fset['red'].resp = resp
    
       # Setup zero points to reasonable values
-      filts['red'].zp = filts['red'].compute_zpt(vegaB, 0.0)
-      filts['blue'].zp = filts['blue'].compute_zpt(vegaB, 0.0)
+      fset['red'].zp = filts['red'].compute_zpt(vegaB, 0.0)
+      fset['blue'].zp = filts['blue'].compute_zpt(vegaB, 0.0)
    
-      filts['red'].ave_wave = num.sum(filts['red'].wave)/len(filts['red'].wave)
-      filts['blue'].ave_wave = num.sum(filts['blue'].wave)/len(filts['blue'].wave)
+      fset['red'].ave_wave = num.sum(filts['red'].wave)/len(filts['red'].wave)
+      fset['blue'].ave_wave = num.sum(filts['blue'].wave)/len(filts['blue'].wave)
    
-      wave0 = filts['blue'].wave[0]
-      wave1 = filts['red'].wave[-1]
+      wave0 = fset['blue'].wave[0]
+      wave1 = fset['red'].wave[-1]
    
       if wave0 < self.wave.min()*(1+self.z) or wave1 > self.wave.max()*(1+self.z): 
          print 'Problem in mangle_spectrum: SED does not cover anchor filter '+\
@@ -381,6 +541,58 @@ class mangler:
       if(self.verbose): print 'Anchor filter definitions cover  ', \
                                wave0,'A to ',wave1,'A'
       
+
+   def lstsq(self, bands, mags):
+      '''In the special case of a mangling flunctiont that has a linear basis,
+      we can move the integration out of the solving and reduce the problem to
+      a linear least-squares one. This should be super fast!
+
+      Args:
+         bands (list of str): The list of filters to fit
+         mags (float array): the magnitudes through the bands.
+      '''
+      basis = getattr(self.function, 'basis', None)
+      if basis is None:
+         raise RuntimeError, "Error: you can't use lstsq unless method is linear"
+
+      self.bands = bands
+
+      # We fit responses, so convert to flux relative to normfilter
+      if self.normfilter is not None:
+         if self.normfilter not in self.bands:
+            raise ValueError, "normfilter must be one of the filters to be fit"
+         nid = self.bands.index(self.normfilter)
+      else:
+         nid = len(self.bands)-1
+         self.normfilter = self.bands[-1]
+
+      # Still need to initialize
+      pi = self.function.init_pars(nid=nid)
+
+      if len(num.shape(mags)) == 1:
+         mags = num.array([mags])
+      gids = num.less(mags, 90)    # flag bad/missing data
+      ndf = num.sum(gids)    # number of data points
+
+      # needed responses in units of the normfilter flux
+      resps = []
+      bases = []
+      for i in range(len(mags)):
+         resps.append([])
+         for j,b in enumerate(bands):
+            if gids[i,j]:
+               resps[-1].append(num.power(10, -0.4*(mags[i][j] - fset[b].zp)))
+               bases.append(basis[b][i])
+      resps = num.array(resps)
+      bases = num.array(bases)
+      for i in range(resps.shape[0]):
+         resps[i,:] = resps[i,:]/resps[i,nid]
+      a,d1,d2,d3 = lstsq(bases, num.ravel(resps))
+
+      self.function.set_pars(a)
+
+      
+      return a
 
    def solve(self, bands, colors, fixed_filters=None, 
          anchorwidth=100, xtol=1e-10, ftol=1e-4, gtol=1e-10,
@@ -415,7 +627,7 @@ class mangler:
       self.gids = num.less(colors, 90)
 
       self.bands = bands
-      self.mfluxes = num.zeros((colors.shape[0],len(bands)), dtype=num.float32)
+      #self.mfluxes = num.zeros((colors.shape[0],len(bands)), dtype=num.float32)
       self.mfactors = num.array([num.power(10,-0.4*fset[b].zp) for \
             b in self.bands])
 
@@ -433,7 +645,7 @@ class mangler:
             fixed_filters = [bands[0]]
          elif fixed_filters == 'red':
             fixed_filters = [bands[-1]]
-         elif fixed_fitlers == 'both':
+         elif fixed_filters == 'both':
             fixed_filters = [bands[0], bands[-1]]
          else:
             raise ValueError, "fixed_filters must be 'blue','red', or 'both'"
@@ -492,15 +704,23 @@ class mangler:
 
    def leastsq(self, p, fjac, bands, nid):
       self.function.set_pars(p)
-      mflux = self.get_mflux()
       mresp = self.resp_rats*0
-      filts = num.arange(mresp.shape[1])
-      filts = num.repeat(filts, mresp.shape[0]).reshape(mresp.shape[::-1]).T
-      for i in range(mresp.shape[0]):
-         for j in range(mresp.shape[1]):
-            if not self.gids[i,j]:  continue
-            mresp[i,j] = fset[bands[j]].response(self.wave[i], mflux[i], z=self.z)/\
-                         fset[bands[j+1]].response(self.wave[i], mflux[i], z=self.z)
+      if getattr(self.function, 'basis', None) is not None:
+         for i in range(mresp.shape[0]):
+            for j in range(mresp.shape[1]):
+               if not self.gids[i,j]: continue
+               mresp[i,j] = num.dot(self.function.basis[bands[j]][i], p)/\
+                            num.dot(self.function.basis[bands[j+1]][i],p)
+      else:
+         mflux = self.get_mflux()
+         #filts = num.arange(mresp.shape[1])
+         #filts = num.repeat(filts, mresp.shape[0]).reshape(mresp.shape[::-1]).T
+         for i in range(mresp.shape[0]):
+            for j in range(mresp.shape[1]):
+               if not self.gids[i,j]:  continue
+               mresp[i,j] = \
+                     fset[bands[j]].response(self.wave[i], mflux[i], z=self.z)/\
+                     fset[bands[j+1]].response(self.wave[i], mflux[i], z=self.z)
 
       delt = self.resp_rats[self.gids] - mresp[self.gids]
       #f = plt.figure(200)
@@ -523,7 +743,8 @@ messages = ['Bad input parameters','chi-square less than ftol',
 
 def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None, 
       normfilter=None, z=0, verbose=0, anchorwidth=100,
-      method='tspline', xtol=1e-6, ftol=1e-6, gtol=1e-6, init=None, **margs):
+      method='tspline', lstsq=True, xtol=1e-6, ftol=1e-6, gtol=1e-6, 
+      init=None, **margs):
    '''Given an input spectrum, multiply by a smooth function (aka mangle)
    such that the synthetic colors match observed colors.
 
@@ -548,32 +769,47 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
       method (str): specify the method (function form) with which to mangle
                     the spectrum. 'tspline' for tension spline or 'ccm' for
                     the CCM reddening law.
+      lstsq (bool): If the method (mangling function) supports linear
+                    basis representation and lstsq is True, use linear
+                    least-squares to solve. MUCH faster.
       xtol,ftol,gtol (float):  used to define the tolorance for the 
                     goodness of fit. See ``scipy.optimize.leastsq`` for
                     meaning of these parameters.
       init (list/array): initial values for the mangle parameters.
       margs (dict): All additional arguments to function are sent to 
                     the :class:`mangle_spectrum.Mangler` class.
+   
+   Returns:
+      2-tuple:  (mflux, state, pars)
+                
+                * mflux:  the mangled flux
+                * state:  dictionary of the state of the manler.
+                * pars:   parameters of the mangle function
       '''
    m = mangler(wave, flux, method, z=z, verbose=verbose, 
          normfilter=normfilter, **margs)
-   if len(num.shape(mags)) == 1:
-      oned = True
-      gids = num.less(mags[:-1],90)*num.less(mags[1:],90)
-      colors = num.where(gids, mags[:-1]-mags[1:], 99.9)
+   oned = len(num.shape(mags)) == 1
+
+   if lstsq and getattr(m.function, "basis", None) is not None:
+      # use the least-squares solver
+      res = m.lstsq(bands, mags)
    else:
-      oned = False
-      gids = num.less(mags[:-1,:],90)*num.less(mags[1:,:],90)
-      colors = num.where(gids, mags[:-1,:]-mags[1:,:], 99.9)
-   res = m.solve(bands, colors, fixed_filters=fixed_filters,
-         anchorwidth=anchorwidth, xtol=xtol, ftol=ftol, gtol=gtol,
-         init=init)
-   if res.status > 4:
-      print "Warning:  %s" % messages[res.status]
-   elif res.status < 0:
-      print "Warning:  some unknown error occurred"
-   elif verbose:
-      print "mpfit finised with:  %s" % messages[res.status]
+      # Use the non-linear least-squres method
+      if oned:
+         gids = num.less(mags[:-1],90)*num.less(mags[1:],90)
+         colors = num.where(gids, mags[:-1]-mags[1:], 99.9)
+      else:
+         gids = num.less(mags[:-1,:],90)*num.less(mags[1:,:],90)
+         colors = num.where(gids, mags[:-1,:]-mags[1:,:], 99.9)
+      res = m.solve(bands, colors, fixed_filters=fixed_filters,
+            anchorwidth=anchorwidth, xtol=xtol, ftol=ftol, gtol=gtol,
+            init=init)
+      if res.status > 4:
+         print "Warning:  %s" % messages[res.status]
+      elif res.status < 0:
+         print "Warning:  some unknown error occurred"
+      elif verbose:
+         print "mpfit finised with:  %s" % messages[res.status]
 
    # finally, normalize the flux
    mflux = m.get_mflux()
@@ -586,11 +822,15 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
       mmag = fset[m.normfilter].synth_mag(wave,mflux[i],z=z)
       mflux[i] = mflux[i]*num.power(10,-0.4*(omag[i]-mmag))
 
-   return (mflux, m.ave_waves, m.function.pars)
+   return (mflux, m._getstate(), m.function.pars)
 
-def apply_mangle(wave,flux,sw,sf,method='tspline', **margs):
+def apply_mangle(wave,flux, state, pars, lstsq=False, init=True, **margs):
 
-   m = mangler(wave, flux, method, **margs)
-   m.ave_waves = sw
-   m.function.set_pars(sf)
+   if 'method' not in margs:
+      margs['method'] = 'tspline'
+   m = mangler(wave, flux, **margs)
+   m._setstate(state)
+   if init:
+      m.function.init_pars()
+   m.function.set_pars(pars)
    return(m.get_mflux())
