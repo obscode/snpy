@@ -489,7 +489,7 @@ class sql_oldlocal(sqlbase):
 
 class sql_csp2(sqlbase):
    host = "csp2.lco.cl"
-   user = "CSP"
+   user = "cburns"
    passwd = None
    PHOTO_DB = "Phot"
    port = 3306
