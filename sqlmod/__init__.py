@@ -506,7 +506,7 @@ class sql_csp2(sqlbase):
    PHOTO_JD = "MAGSN.JD"
    PHOTO_MAG = "MAGSN.mag"
    PHOTO_EMAG = "sqrt(MAGSN.err*MAGSN.err + MAGSN.fiterr*MAGSN.fiterr)"
-   PHOTO_FILT = "CASE WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD < 2454846.0) THEN 'J' WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD >= 2454846.0) THEN 'Jrc2' ELSE MAGSN.filt END"
+   PHOTO_FILT = "CASE WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD < 2454846.0) THEN 'J' WHEN (ins='WI' and MAGSN.filt='Y') THEN 'Ydw' WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD >= 2454846.0) THEN 'Jrc2' ELSE MAGSN.filt END"
    PHOTO_K = None      # No K-corrections in the DB
    PHOTO_SNR = "CASE WHEN ins='WI' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/1.6)) WHEN ins='DC' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/3.0)) ELSE 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/2.0)) END"
    PHOTO_COND = "and MAGSN.obj=-1 and MAGSN.mag > 0 and MAGSN.fits=MAGINS.fits and MAGSN.obj=MAGINS.obj"
