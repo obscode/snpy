@@ -935,8 +935,8 @@ class sn(object):
             ids1 = searchsorted(self.data[band1].MJD, mjd)
             ids2 = searchsorted(self.data[band2].MJD, mjd)
             col = col - self.ks[band1][ids1] + self.ks[band2][ids2]
-            flags = flags + (-self.ks_mask[band1][ids1]*\
-                             -self.ks_mask[band2][ids2])*8
+            flags = flags + (logical_not(self.ks_mask[band1][ids1])*\
+                             logical_not(self.ks_mask[band2][ids2]))*8
          return (mjd,col,ecol,flags)
       elif use_model and mod1 and mod2:
          MJD,ms,ems,flags = self.interp_table([band1,band2], use_model=True,
@@ -1712,7 +1712,7 @@ class sn(object):
 
          w = m1 - R*(m2 - m3)
          ew = sqrt(em1**2 + R**2*(em2**2 + em3**2))
-         return mjd,w,ew,-isnan(w)
+         return mjd,w,ew,logical_not(isnan(w))
 
       # Here we need interpolation
       mjd,ms,ems,flags = self.interp_table([band1,band2,band3], 

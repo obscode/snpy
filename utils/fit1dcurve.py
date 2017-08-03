@@ -495,7 +495,7 @@ if polynomial is not None:
          roots = d1.roots()
          # Roots can be complex.  Want only the real ones
          gids = num.iscomplex(roots)
-         roots = num.real(roots[-gids])
+         roots = num.real(roots[num.logical_not(gids)])
          gids = num.greater_equal(roots, xmin)*num.less_equal(roots, xmax)
          roots = roots[gids]
          if len(roots) == 0:

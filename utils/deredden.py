@@ -138,7 +138,7 @@ def fm(wave, R_V=3.1, avglmc=False, lmc2=False):
    xcutuv = 10000.0/2700.0
    xspluv = 10000.0/num.array([2700.0,2600.0])
    iuv = num.greater_equal(x, xcutuv); N_UV = sum(iuv)
-   iopir = -iuv;  Nopir = sum(iopir)
+   iopir = num.logical_not(iuv);  Nopir = sum(iopir)
    if N_UV > 0: 
       xuv = num.concatenate([xspluv,x[iuv]])
    else:  
@@ -201,7 +201,7 @@ def fm07_full(wave, x0, gamma, c1,c2,c3,c4,c5,o1,o2,o3,R,iscale,ipower=1.84):
    curve = x*0.
    xcutuv = 10000.0/2700.0
    iuv = num.greater_equal(x, xcutuv); N_UV = sum(iuv)
-   iopir = -iuv;  Nopir = sum(iopir)
+   iopir = num.logical_not(iuv);  Nopir = sum(iopir)
 
    # Compute UV portion of A(lambda)/E(B-V) curve using FM fitting function and 
    # R-dependent coefficients
