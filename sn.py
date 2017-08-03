@@ -1265,6 +1265,9 @@ class sn(object):
          finally:
             self.sql.close()
 
+   def set_restbands(self):
+      return self.get_restbands()
+
    def get_restbands(self):
       '''Automatically populates the restbands member data with one of 
       the filters supported by the currently selected model. The filter with
