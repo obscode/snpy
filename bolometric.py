@@ -77,6 +77,16 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    if lam2 is None:
       lam2 = array([fset[b].waverange()[1] for b in bands]).max()/(1+sn.z)
 
+   # Allow a list of lam1,lam2 which will allow to sub-integrate the SED
+   # if you want to know what fraction comes out in a particular wavelength
+   # regime
+   scalar = False
+   if len(shape(lam1)) == 0:
+      scalar = True
+      lam1 = [lam1]
+   if len(shape(lam2)) == 0:
+      lam2 = [lam2]
+
    if refband is not None:
       if refband not in bands:
          raise ValueError, "refband %s is not one of your observed filters" % \
@@ -204,35 +214,23 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    fluxes = []
    waves = []
    parss = []
+   refbands = []
 
+   mids = []
    for i in range(len(ts)):
       t = ts[i]
       wave,flux = fSED(t/s)
       # Check limits of integration (in rest frame of SN)
-      if lam1 < wave.min() or (lam2 > wave.max() and not extrap_red):
+      if min(lam1) < wave.min() or (max(lam2) > wave.max() and not extrap_red):
          raise RuntimeError, "Error: your limits of integration (%.3f,%.3f) "\
                              "are outside the limits of the SED (%.3f,%.3f)" %\
-                             (lam1,lam2,wave.min(), wave.max())
+                             (min(lam1),max(lam2),wave.min(), wave.max())
 
       # integration limits
-      i1 = searchsorted(wave, lam1)
-      i2 = searchsorted(wave, lam2)
+      i1 = [searchsorted(wave, lam) for lam in lam1]
+      i2 = [searchsorted(wave, lam) for lam in lam2]
       bs = [bands[j] for j in range(masks.shape[1]) if masks[i,j]]
-      if len(bs) == 1:
-         # No mangling possible
-         mflux = flux
-         mfuncs.append(flux*0+1)
-      else:
-         init = [pars0.get(b, 1.0) for b in bs]
-         mflux,ave_wave,pars = mangle_spectrum2(wave*(1+sn.z), flux, bs, 
-               mags[i,masks[i]], normfilter=refband, init=init, **mopts)
-         mfuncs.append(mflux[0]/flux)
-         mflux = mflux[0]
-         for k,b in enumerate(bs):
-            pars0[b] = pars[k]
-         parss.append(pars)
 
-      # Now scale the spectrum to one of the observed filters
       if refband is None:
          idx = bands.index(bs[0])
          filt = fset[bs[0]]
@@ -241,9 +239,28 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
          if refband not in bs:
             if verbose: log("Warning: refband %s has no observation or "
                   "interpolation for epoch %f" % ts[i])
+            mids.append(False)
             continue 
          idx = bands.index(refband)
          filt = fset[refband]
+      mids.append(True)
+      refbands.append(filt.name)
+
+      if len(bs) == 1:
+         # No mangling possible
+         mflux = flux
+         mfunc = (flux*0+1)
+         #mfuncs.append(mfunc/mfunc.max())
+      else:
+         init = [pars0.get(b, 1.0) for b in bs]
+         mflux,ave_wave,pars = mangle_spectrum2(wave*(1+sn.z), flux, bs, 
+               mags[i,masks[i]], normfilter=refband, init=init, **mopts)
+         mfunc = (mflux[0]/flux)
+         #mfuncs.append(mfunc/mfunc.max())
+         mflux = mflux[0]
+         for k,b in enumerate(bs):
+            pars0[b] = pars[k]
+         parss.append(pars)
 
       # Scale to match photometry. We need to be careful here. The magnitude
       # measures the response of the filter to the *redshifted* spectrum
@@ -259,19 +276,40 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
       mflux,a,b = deredden.unred(wave,mflux,EBVhost, R_V=Rv, redlaw=redlaw)
 
       # Finally!  integrate!
-      fbol = trapz(mflux[i1:i2], x=wave[i1:i2])
-      if lam2 > wave.max():
-         # add Rayleigh-Jeans extrapolation (~ 1/lam^4)
-         fbol += mflux[-1]*wave[-1]/3*(1 - power(wave[-1]/lam2,3))
+      fbol = []
+      ws = []
+      fs = []
+      mfs = []
+      for j in range(len(i1)):
+         ws.append(wave[i1[j]:i2[j]])
+         fs.append(mflux[i1[j]:i2[j]])
+         mfs.append(mfunc[i1[j]:i2[j]])
+         fbol.append(trapz(mflux[i1[j]:i2[j]], x=wave[i1[j]:i2[j]]))
+         if lam2[j] > wave.max():
+            # add Rayleigh-Jeans extrapolation (~ 1/lam^4)
+            fbol[-1] += mflux[-1]*wave[-1]/3*(1 - power(wave[-1]/lam2[j],3))
 
       filters_used.append(bs)
-      boloflux.append(fbol)
+      if scalar:
+         boloflux.append(fbol[0])
+         waves.append(ws[0])
+         fluxes.append(fs[0])
+         mfuncs.append(mfs[0])
+      else:
+         boloflux.append(fbol)
+         waves.append(ws)
+         fluxes.append(fs)
+         mfuncs.append(mfs)
       epochs.append(ts[i])
-      waves.append(wave[i1:i2])
-      fluxes.append(mflux[i1:i2])
 
+   mids = array(mids)
+   mags = mags[mids,:]
+   masks = masks[mids, :]
    boloflux = array(boloflux)
    epochs = array(epochs)
+   waves = array(waves)
+   fluxes = array(fluxes)
+   mfuncs = array(mfuncs)
 
    # lastly, inverse-square law
    if DM is None:
@@ -282,7 +320,8 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    return(dict(epochs=array(epochs), 
                boloflux=array(boloflux), 
                filters_used=filters_used,waves=waves,fluxes=fluxes,
-               mfuncs=mfuncs, mags=mags, masks=masks, pars=parss))
+               mfuncs=mfuncs, mags=mags, masks=masks, pars=parss,
+               refbands=refbands))
 
 def bolometric_direct(sn, bands=None, 
               EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ',

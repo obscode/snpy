@@ -1907,9 +1907,16 @@ class sn(object):
                  mfuncs: the mangling functions
                  mwave:  the wavelength vector or effective wavelenghts
                  mags:   the magnitudes to which we mangled the SED
-                 masks:  th
+                 masks:  the masks showing where interpolation was done
          
       '''
+
+      if DM is None:
+         DM_computed = True
+         DM = self.get_distmod(cosmo=cosmo)
+      else:
+         DM_computed = False
+
       if method == 'direct':
          res = bolometric.bolometric_direct(
                self, bands, EBVhost, Rv, redlaw, extrap_red,
@@ -1921,20 +1928,47 @@ class sn(object):
                self, bands, lam1, lam2, refband, EBVhost, Rv, redlaw,
                extrap_red, Tmax, interpolate, extrapolate, mopts, SED,
                DM, cosmo, use_stretch,verbose)
-         limits = [(l.min(),l.max()) for l in res['waves']]
+         if len(shape(res['boloflux'])) == 1:
+            limits = [(l.min(),l.max()) for l in res['waves']]
+         else:
+            limits = []
+            for i in range(res['waves'].shape[0]):
+              limits.append([(l.min(),l.max()) for l in res['waves'][i]])
 
       if outfile is not None:
          fout = open(outfile, 'w')
          fout.write('# Bolometric luminosity for %s\n' % (self.name))
          fout.write('# Using %s method\n' % (method))
-         fout.write('# Luminosities in units of erg/s\n')
+         fout.write('# E(B-V) = %.2f, R_V = %.2f, redlaw=%s\n' % \
+               (EBVhost,Rv,redlaw))
+         if not DM_computed:
+            fout.write('# DM = %.2f\n' % (DM))
+         else:
+            fout.write(\
+                  '# DM = %.2f  (zcmb = %.4f, H0 = 74.3, and %s cosmo)\n' %\
+                  (DM, self.zcmb, cosmo))
+         fout.write('# Luminosities in units of 10^42 erg/s\n')
          fout.write('# Times are in *observed* frame\n')
-         fout.write('#\n# %6s  %9s  %8s %8s %s\n' % ('t','Lbol','lam1','lamb2',
-            'filters'))
-         for i in range(len(res['epochs'])):
-            fout.write('%7.2f  %9.3e  %8.1f %8.1f %s\n' % \
-                  (res['epochs'][i], res['boloflux'][i], limits[i][0],
-                   limits[i][1], "".join(res['filters_used'][i])))
+         if len(shape(res['boloflux'])) == 2:
+            fout.write('#\n#%6s ' % 't')
+            for j in range(res['boloflux'].shape[1]):
+               fout.write('%8s %8s %6s ' % ('lam1','lam2','L'))
+            fout.write('%s\n' % 'filters')
+            for i in range(res['epochs'].shape[0]):
+               fout.write("%7.2f " % res['epochs'][i])
+               for j in range(res['boloflux'].shape[1]):
+                  fout.write("%8.1f %8.1f %6.3f " %\
+                        (limits[i][j][0], limits[i][j][1],
+                         res['boloflux'][i,j]/1e42))
+               fout.write("%s\n" % ("".join(res['filters_used'][i])))
+         else:
+            fout.write('#\n#%6s  %9s  %8s %8s %s\n' % ('t','Lbol','lam1','lam2',
+               'filters'))
+            for i in range(len(res['epochs'])):
+               fout.write('%7.2f  %6.3f  %8.1f %8.1f %s\n' % \
+                     (res['epochs'][i], res['boloflux'][i]/1e42, 
+                      limits[i][0], limits[i][1],
+                      "".join(res['filters_used'][i])))
          fout.close()
       if not extra_output:
          return (res['epochs'],res['boloflux'],res['filters_used'],limits)
@@ -1944,7 +1978,7 @@ class sn(object):
       else:
          extra = dict(mflux=res['fluxes'], mwaves=res['waves'],
             mags=res['mags'], masks=res['masks'],
-            mfuncs=res['mfuncs'], pars=res['pars'])
+            mfuncs=res['mfuncs'], pars=res['pars'], refbands=res['refbands'])
       return (res['epochs'],res['boloflux'],res['filters_used'],limits,extra)
 
 
