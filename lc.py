@@ -183,10 +183,14 @@ class lc:
       return odict
 
    def __setstate__(self, state):
+      # We need this because GP's need mean function, but pickling a 
+      # member function is not supported. So if we unpickle a GP, set
+      # the mean accordingly.
       self.__dict__.update(state)
       if getattr(self, 'interp',None) is not None:
-         if getattr(self.interp, 'mean', None) is None:
-            self.interp.mean = self.mean
+         if isinstance(self.interp, fit1dcurve.GaussianProcess):
+            if getattr(self.interp, 'mean', None) is None:
+               self.interp.mean = self.mean
 
    def time_sort(self):
       ids = argsort(self.MJD)
