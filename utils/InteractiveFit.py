@@ -8,6 +8,15 @@ try:
 except:
    from snpy.utils import fit1dcurve
 
+def find_renderer(fig):
+   if hasattr(fig.canvas, 'get_renderer'):
+      renderer = fig.canvas.get_renderer()
+   else:
+      import io
+      fig.canvas.print_pdf(io.BytesIO())
+      renderer = fig._cachedRenderer
+   return renderer
+
 class InteractiveFit:
 
    def __init__(self, interp, title=None, figsize=None, fignum=None, draw=True,
@@ -170,7 +179,7 @@ class InteractiveFit:
       ys,m = self.interp(self.x)
       resids = self.interp.residuals(mask=False)
       self._rp,dum,self._rl = self.mp.axes[0].errorbar(self.x, 
-            resids, yerr=self.ey, capsize=0, fmt='o')
+            resids, yerr=self.ey, capsize=0, fmt='o', color='blue')
       #self.mp.set_limits()
       if not num.alltrue(m):
          resids = resids[m]
@@ -247,7 +256,7 @@ class InteractiveFit:
       id = getattr(self, '_statsid', None)
       ax = self.mp.axes[0]
       if id is None:
-         bbox = self._stats_labels.get_window_extent(self.mp.get_renderer())
+         bbox = self._stats_labels.get_window_extent(find_renderer(self.mp.fig))
          bbox = bbox.inverse_transformed(ax.transAxes)
          self._statsid = ax.text(bbox.x1,0.95,label, va='top', ha='left',
               transform=ax.transAxes, fontdict={'size':10})
@@ -262,7 +271,7 @@ class InteractiveFit:
       id = getattr(self, '_parsid', None)
       ax = self.mp.axes[1]
       if id is None:
-         bbox = self._pars_labels.get_window_extent(self.mp.get_renderer())
+         bbox = self._pars_labels.get_window_extent(find_renderer(self.mp.fig))
          bbox = bbox.inverse_transformed(ax.transAxes)
          self._parsid = ax.text(bbox.x1, 0.95, label, va='top', ha='left',
                transform=ax.transAxes, fontdict={'size':10})
