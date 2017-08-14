@@ -769,7 +769,8 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
       for lc in self.parent.data.values():
          mp = getattr(lc, 'mp', None)
          if mp is not None:
-            mp.bc.disconnect()
+            if getattr(mp, 'bc',None) is not None:
+               mp.bc.disconnect()
    if flux: 
       flipaxis = 0
    else:
