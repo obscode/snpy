@@ -301,6 +301,19 @@ class filter(spectrum):
       result = -2.5*num.log10(numer/denom)# - 48.6
       return(result)
 
+   def mag2flux(self, mags, specwave=None, flux=None, z=0):
+      '''Convert an observed magnitude through this filter into a flux
+      in erg/s/cm^2/AA and effective wavelength.'''
+      if specwave is None:
+         specwave = VegaB.wave
+         flux = VegaB.flux
+      flam = num.power(10, -0.4*(mags - self.zp))  # In photons/s/cm^2
+      flam = flam/self.response(specwave, flux, z=z)
+      flam = flam*self.response(specwave, flux, z=z, photons=0)/\
+                  self.response(specwave,specwave*0+1, photons=0)
+      leff = self.eff_wave(specwave, flux, z)
+      return (leff, flam)
+
    def eff_wave(self, specwave, flux=None, z=0, zeropad=0):
       '''Compute the effective wavelength for this filter, given the
       spectrum defined by (specwave) or (specwave, flux).  If z is 
