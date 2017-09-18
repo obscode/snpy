@@ -21,14 +21,16 @@ ip_vega = fset['i_40'].synth_mag(vegaB.wave, vegaB.resp)
 B_vega = Bvega - 0.061*(Bvega - Vvega)
 V_vega = Vvega + 0.058*(Vvega - ip_vega)
 # I derived this color term for the 'temp' V-band by fitting synthetic photometry
-V1_vega = Vvega + 0.047*(Vvega - ip_vega)
+V1_vega = Vvega + 0.044*(Vvega - ip_vega)
 
 vega_mags = [B_vega, V_vega, V_vega, V1_vega]
 
 print "Using the following Natural (shifted) magnitudes for Vega:"
 print "B = ",B_vega
-print "V = ",V_vega
+print "V(LC-3014) = ",V_vega
+print "V(LC-3009) = ",V1_vega
+print "V(LC-9844) = ",V_vega
 print "i' = ",ip_vega
 
 for i in range(len(fs)):
-   print fs[i],fset[fs[i]].compute_zpt(vegaB, vega_mags[i])
+   print fs[i],fset[fs[i]].compute_zpt(vegaB, vega_mags[i]), vega_mags[i]
