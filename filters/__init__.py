@@ -301,6 +301,35 @@ class filter(spectrum):
       result = -2.5*num.log10(numer/denom)# - 48.6
       return(result)
 
+   def mag2flux(self, mag, specwave=None, flux=None, z=0):
+      '''Convert a magnitude in this filter to the flux in erg/s/cm^2.'''
+      if len(num.shape(mag)) == 0:
+         scalar = True
+         mag = num.array([mag])
+      else:
+         scalar = False
+         mag = num.asarray(mag)
+      if specwave is None:
+         wave,flux = standards['Vega']['VegaB'].wave,\
+                     standards['Vega']['VegaB'].resp
+      elif isinstance(specwave, spectrum):
+         wave,flux = specwave.wave,specwave.flux
+      else:
+         if flux is None:
+            raise TypeError, "specwave must either be a spectrum instance or "\
+                  "an array of wavelengths and flux must be specified"
+         wave,flux = specwave,flux
+      flam = num.power(10, -0.4*(mag-self.zp))   # in photons/s/cm^2
+      flam = flam/self.response(wave, flux, z=z)  # now in ergs/s/cm^2
+      
+      # now weighted average over the filter
+      flam = flam * self.response(wave,flux,z=z,photons=0)
+      flam = flam / self.response(wave, wave*0+1, z=z, photons=0)
+
+      if scalar:
+         return flam[0]
+      return flam
+
    def eff_wave(self, specwave, flux=None, z=0, zeropad=0):
       '''Compute the effective wavelength for this filter, given the
       spectrum defined by (specwave) or (specwave, flux).  If z is 

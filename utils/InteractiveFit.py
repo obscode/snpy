@@ -83,7 +83,8 @@ class InteractiveFit:
       self.mp.axes[1].errorbar(self.x, self.y, yerr=self.ey, capsize=0,
             fmt='o')
       if not num.alltrue(self.mask):
-         self._x1, = self.mp.axes[1].plot(self.x[-self.mask], self.y[-self.mask], 'x', 
+         m = num.logical_not(self.mask)
+         self._x1, = self.mp.axes[1].plot(self.x[m], self.y[m], 'x', 
                color='red', ms=16)
       else:
          self._x1 = None
@@ -106,8 +107,9 @@ class InteractiveFit:
       self._rp,dum,self._rl = self.mp.axes[0].errorbar(self.x, 
             resids, yerr=self.ey, capsize=0, fmt='o')
       if not num.alltrue(self.interp.mask):
-         self._x2, = self.mp.axes[0].plot(self.x[-self.mask], 
-               self.interp.residuals(mask=False)[-self.mask], 'x', ms=16, color='red')
+         self._x2, = self.mp.axes[0].plot(self.x[num.logical_not(self.mask)], 
+               self.interp.residuals(mask=False)[num.logical_not(self.mask)],
+               'x', ms=16, color='red')
       else:
          self._x2 = None
       self.mp.axes[0].axhline(0, color='black')
@@ -191,15 +193,18 @@ class InteractiveFit:
       '''Redraw the little red X's if needed'''
       if not num.alltrue(self.mask):
          if self._x1 is not None:
-            self._x1.set_data((self.x[-self.mask], self.y[-self.mask]))
+            self._x1.set_data((self.x[num.logical_not(self.mask)], 
+               self.y[num.logical_not(self.mask)]))
          else:
-            self._x1, = self.mp.axes[1].plot(self.x[-self.mask], 
-                  self.y[-self.mask], 'x', color='red', ms=16)
+            self._x1, = self.mp.axes[1].plot(self.x[num.logical_not(self.mask)],
+                  self.y[num.logical_not(self.mask)], 'x', color='red', ms=16)
          if self._x2 is not None:
-            self._x2.set_data((self.x[-self.mask], self.interp.residuals(mask=False)[-self.mask]))
+            self._x2.set_data((self.x[num.logical_not(self.mask)], 
+               self.interp.residuals(mask=False)[num.logical_not(self.mask)]))
          else:
-            self._x2, = self.mp.axes[0].plot(self.x[-self.mask], 
-                  self.interp.residuals(mask=False)[-self.mask], 'x', color='red', ms=16)
+            self._x2, = self.mp.axes[0].plot(self.x[num.logical_not(self.mask)],
+               self.interp.residuals(mask=False)[num.logical_not(self.mask)], 
+               'x', color='red', ms=16)
       elif self._x1 is not None:
          self._x1.remove()
          self._x1 = None
@@ -214,10 +219,11 @@ class InteractiveFit:
       x,y = event.xdata,event.ydata
       ax = event.inaxes
       if ax is self.mp.axes[0]:
-         id = num.argmin(num.power(x-self.x,2) + num.power(y-self.interp.residuals(mask=False),2))
+         id = num.argmin(num.power(x-self.x,2) + \
+               num.power(y-self.interp.residuals(mask=False),2))
       else:
          id = num.argmin(num.power(x-self.x,2) + num.power(y-self.y,2))
-      self.mask[id] = -self.mask[id]
+      self.mask[id] = num.logical_not(self.mask[id])
       self.redraw_x()
 
    def _bind_r(self, event):

@@ -173,7 +173,7 @@ def finterp(band, t, p, param, gen, extrap=False):
       eZ = num.where(mask, eZ, -1)
    else:
       t1,t2 = get_t_lim(band, param, gen)
-      mask = -num.isnan(Z)
+      mask = num.logical_not(num.isnan(Z))
       # extrapolate lower with t^2 law
       if num.sometrue(num.less(t,t1)):
          Tp = bisplev(t1, p, f, dx=1)
