@@ -1043,6 +1043,8 @@ if pymc is not None:
    
       def draw(self):
          '''Generate a random realization of the spline, based on the data.'''
+         if not self.setup:
+            self._setup()
          self.realization = GP.Realization(self.M, self.C)
     
       def reset_mean(self):
