@@ -13,7 +13,7 @@ except ImportError:
    snemcee = None
 
 try:
-   import triangle
+   import corner as triangle
 except ImportError:
    triangle=None
    
@@ -226,6 +226,9 @@ class sn(object):
       res = set(self.data.keys()) == set(other.data.keys())
       if not res:
          return False
+      res = res and (abs(self.ra - other.ra) < 1e-7)
+      res = res and (abs(self.decl - other.decl) < 1e-7)
+      res = res and (abs(self.z - other.z) < 1e-9)
       for f in self.data.keys():
          res = res and (self.data[f] == other.data[f])
       return res
