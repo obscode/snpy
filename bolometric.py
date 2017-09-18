@@ -31,9 +31,10 @@ def log(msg):
    sys.stderr.write(msg+"\n")
 
 def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
+              tmin=None, tmax=None,
               EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ',
-              Tmax=None, interpolate=None, extrapolate=False, mopts={}, 
-              SED='H3', DM=None, cosmo='LambdaCDM', use_stretch=True, 
+              Tmax=None, interpolate=None, interp_all=False, extrapolate=False,
+              mopts={}, SED='H3', DM=None, cosmo='LambdaCDM', use_stretch=True, 
               extrap_SED=True, extra_output=False, verbose=False):
 
    w,f = get_SED(0, version='H3')
@@ -206,6 +207,13 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    masks = masks[gids,:]
    ts = ts[gids]
 
+   # restrict on wanted interval if necessary
+   if tmin is not None and tmin > ts.min():
+      gids = greater(ts, tmin)
+   if tmax is not None and tmax < ts.max():
+      gids = less(ts, tmax)
+   ts = ts[gids]
+
    # Now mangle the spectra, deredden and integrate-em
    filters_used = []
    boloflux = []
@@ -323,10 +331,11 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
                mfuncs=mfuncs, mags=mags, masks=masks, pars=parss,
                refbands=refbands))
 
-def bolometric_direct(sn, bands=None, 
+def bolometric_direct(sn, bands=None, tmin=None, tmax=None,
               EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ',
-              interpolate=None, extrapolate=False, SED=None, Tmax=None,
-              DM=None, cosmo='LambdaCDM', verbose=False, extra_output=False):
+              interpolate=None, interp_all=False, extrapolate=False, 
+              SED=None, Tmax=None, DM=None, cosmo='LambdaCDM', verbose=False,
+              extra_output=False):
 
    if verbose: log("Starting bolometric calculation for %s\n" % sn.name)
 
@@ -426,7 +435,10 @@ def bolometric_direct(sn, bands=None,
       for i,b in enumerate(bands):
          # interpolation is in the absolute time, so use MJD
          mag,mask = sn.data[b].interp(res['MJD'])
-         mags[i] = where(masks[i], mags[i], mag)
+         if interp_all:
+            mags[i] = mag
+         else:
+            mags[i] = where(masks[i], mags[i], mag)
          if extrapolate:
             masks[i] = -isnan(mags[i])
          else:
@@ -449,6 +461,13 @@ def bolometric_direct(sn, bands=None,
    gids = greater(sum(masks, axis=1), 0)
    mags = mags[gids,:]
    masks = masks[gids,:]
+   ts = ts[gids]
+
+   # Restrict on wanted interval if necessary
+   if tmin is not None and tmin > ts.min():
+      gids = greater(ts, tmin)
+   if tmax is not None and tmax < ts.max():
+      gids = less(ts, tmax)
    ts = ts[gids]
 
    # Now mangle the spectra, deredden and integrate-em
