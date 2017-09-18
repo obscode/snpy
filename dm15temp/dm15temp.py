@@ -111,6 +111,10 @@ class template:
          self.R -= BmR
          self.I -= BmI
 
+   def domain(self, band):
+      s = dm152s(self.dm15)
+      return (-10*s, 70*s)
+
    def eval(self, band, times, z=0, k=1):
       '''Evaluate, using a spline, the value of the template at specific
       times, optionally with a redshift (in the sense that the times should

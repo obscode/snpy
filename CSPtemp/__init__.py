@@ -285,6 +285,9 @@ class dm15_template:
 
       return(num.where(mask,-2.5*num.log10(f),-1))
 
+   def domain(self, band, gen=1):
+      return get_t_lim(band, 'dm15', gen)
+
    def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
          extrap=False):
       '''Evaluate the template in band [band] at epochs [times].  Optionally
@@ -411,6 +414,9 @@ class st_template:
       f,ef,mask = finterp(band, time, st, 'st', gen, extrap=extrap)
 
       return(num.where(mask,-2.5*num.log10(f),-1))
+
+   def domain(self, band, gen=1):
+      return get_t_lim(band, 'st', gen)
 
    def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
          extrap=False):
