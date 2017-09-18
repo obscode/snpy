@@ -180,6 +180,22 @@ class filter(spectrum):
       else:
          return(zpts)
 
+   def eval(self, wave):
+      '''evaluate the filter on the sequence of wavelengths.'''
+      if interp_method == "spline":
+         if self.tck is None:
+            self.tck = scipy.interpolate.splrep(self.wave, self.resp, k=1, s=0)
+         fresp_int = scipy.interpolate.splev(wave, self.tck)
+      else:
+         if self.mint is None:
+            self.mint = scipy.interpolate.interp1d(self.wave, self.resp, 
+                  kind=interp_method)
+         fresp_int = self.mint(trim_wave)
+
+      fresp_int = num.where(num.less(wave,self.wave.min()), num.nan, fresp_int)
+      fresp_int = num.where(num.greater(wave,self.wave.max()), num.nan, 
+                  fresp_int)
+      return(fresp_int)
 
    def response(self, specwave, flux=None, z=0, zeropad=0, photons=1):
       '''Get the response of this filter over the specified spectrum.  This
@@ -270,6 +286,13 @@ class filter(spectrum):
          result = (trim_wave[-1] - trim_wave[0])/(len(trim_wave)-1)*sum(integrand)
 
       return(result)
+
+   def ABoff(self):
+      '''Compute the AB offset for this filter. Due to the way SNooPy stores
+      the zero-points, this only depends on filter function shape.'''
+      return 65.4469-48.6-self.zp + \
+            2.5*num.log10(scipy.integrate.trapz(self.flux/self.wave,self.wave))
+
 
    def synth_mag(self, specwave, flux=None, z=0, zeropad=0):
       '''Compute the synthetic magnitude based on the input spectrum defined by
