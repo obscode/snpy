@@ -13,7 +13,7 @@ except ImportError:
    snemcee = None
 
 try:
-   import triangle
+   import corner as triangle
 except ImportError:
    triangle=None
    
@@ -225,6 +225,9 @@ class sn(object):
       res = set(self.data.keys()) == set(other.data.keys())
       if not res:
          return False
+      res = res and (abs(self.ra - other.ra) < 1e-7)
+      res = res and (abs(self.decl - other.decl) < 1e-7)
+      res = res and (abs(self.z - other.z) < 1e-9)
       for f in self.data.keys():
          res = res and (self.data[f] == other.data[f])
       return res
@@ -736,7 +739,11 @@ class sn(object):
          return(None,None,None,None)
       epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
       wave,flux = kcorr.get_SED(int(epoch), version=self.k_version)
-      man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][i])[0]
+      if 'state' in self.ks_mopts[band][i]:
+         man_flux = mangle_spectrum.apply_mangle(wave,flux, 
+               **self.ks_mopts[band][i])[0]
+      else:
+         man_flux = flux
       if not normalize:
          return(wave*(1+self.z),man_flux,flux,man_flux/flux)
 
