@@ -191,6 +191,7 @@ class lc:
          if isinstance(self.interp, fit1dcurve.GaussianProcess):
             if getattr(self.interp, 'mean', None) is None:
                self.interp.mean = self.mean
+               self.interp.setup = False
 
    def time_sort(self):
       ids = argsort(self.MJD)
@@ -366,7 +367,7 @@ class lc:
       print "the following methods are available for constructing templates:"
       fit1dcurve.list_types()
 
-   def mean(self, x, flux=False):
+   def mean(self, x, flux=False, verbose=False):
       '''A convenience function used with the GP interpolator. If a model
       exists for the LC, use it where it is valid, otherwise, return
       an extrapolation.'''
@@ -386,9 +387,38 @@ class lc:
          x = x[:,0]
       if self.band in self.parent.model._fbands:
          sids = argsort(x)
-         # There is no harm extrapolating, since we're actually interpolating
-         # data
-         m,em,f = self.parent.model(self.band, x[sids], extrap=True)
+         m,em,f = self.parent.model(self.band, x[sids], extrap=False)
+         if not alltrue(f):
+            # need to do linear interpolation between end of template and
+            # remaining points
+            m0,em0,f0 = self.parent.model(self.band, self.MJD)
+            # First valid point
+            mid = argmin(self.MJD[f0])
+            xmin = self.MJD[f0][mid]
+            if verbose:
+               print "extrapolating early data up to ",xmin
+            lids = less(x[sids], xmin)
+            if sometrue(lids):
+               m1,em1,f1 = self.parent.model(self.band, x[sids][lids],
+                     extrap=True)
+               m[lids] = m1
+            mid = argmax(self.MJD[f0])
+            # last valid point on the model
+            xmax = self.MJD[f0][mid]
+            ymax = m0[f0][mid]
+
+            if verbose:
+               print "extrapolating late data from (%f,%f)" % (xmax,ymax)
+
+            lids = greater(x[sids], xmax)
+            if sometrue(lids):
+               gids = greater(self.MJD, xmax)
+               if verbose:
+                  print "   using points at", self.MJD[gids]
+               a,b = polyfit(self.MJD[gids], self.mag[gids], 1)
+               if verbose:
+                  print "   median slope: ", a
+               m[lids] = ymax + a*(x[sids][lids]-xmax)
          y = x*0
          put(y, sids, m)
          if flux:

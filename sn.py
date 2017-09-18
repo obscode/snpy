@@ -123,7 +123,8 @@ class sn(object):
       self.EBVgal = 0.0
       self.fit_mag = False     # fit in magnitude space?
 
-      self.restbands = dict_def(self, {})   # the band to which we are fitting for each band
+      self.restbands = dict_def(self, {})   # the band to which we are fitting 
+                                            #  for each band
       self.ks = {}          # k-corrections
       self.ks_mask = {}     # mask for k-corrections
       self.ks_tck = {}      # spline rep of k-corrections
@@ -333,7 +334,7 @@ class sn(object):
          return(ret_data)
 
    def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0,
-         dokcorr=True, kcorr=None):
+         dokcorr=True, kcorr=None, B14=True):
       '''Use the Lira Law to derive a color excess.  [Bband] and [Vband] 
       should be whichever observed bands corresponds to restframe B and V,
       respectively.  The color excess is estimated to be the median of the 
@@ -350,6 +351,7 @@ class sn(object):
          tmin/tmax (flaot): range over which to fit Lira Law
          plot (bool):  If True, produce a plot with the fit.
          dokcoor (bool):  If True, k-correct the data before fitting
+         B14 (bool):  If True, use Burns et al. (2014) rather than Lira (1996)
          
       Returns:
          4-tuple:  (EBV, error, slope, eslope)
@@ -396,12 +398,16 @@ class sn(object):
       rchisq = sum(power(BV2 - c[0] - c[1]*(t2-55.),2)*w)/(len(BV2) - 2)
       ec = ec*sqrt(rchisq)
 
-      lira_BV = 0.732 - 0.0095*(t2 - 55.0)
-      #lira_EBV = stats.median(BV2 - lira_BV)
-      #e_lira_EBV = 1.49*stats.median(absolute(BV2 - lira_BV - lira_EBV))
+      if B14:
+         st = getattr(self, 'st', 1.0)
+         lira_BV = 0.78 - (0.0097 - 0.004*(st-1))*(t2 - 45.)
+      else:
+         lira_BV = 0.732 - 0.0095*(t2 - 55.0)
       w = power(eBV2,-2)
       lira_EBV = sum((BV2 - lira_BV)*w)/sum(w)
       e_lira_EBV = power(sum(w), -0.5)
+      if B14:
+         e_lira_EBV = sqrt(power(e_lira_EBV,2) + 0.04**2)
 
       print "Vmax occurred at %f" % (t_maxes[0])
       print "Slope of (B-V) vs. t-Tvmax was %f(%f)" % (c[1], ec[1])
@@ -736,7 +742,11 @@ class sn(object):
          return(None,None,None,None)
       epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
       wave,flux = kcorr.get_SED(int(epoch), version=self.k_version)
-      man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][i])[0]
+      if self.ks_mopts[band][i]:
+         man_flux = mangle_spectrum.apply_mangle(wave,flux, 
+               **self.ks_mopts[band][i])[0]
+      else:
+         man_flux = flux
       if not normalize:
          return(wave*(1+self.z),man_flux,flux,man_flux/flux)
 
@@ -1835,7 +1845,8 @@ class sn(object):
 
    def bolometric(self, bands, method="direct", lam1=None, lam2=None, 
          refband=None, EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ', 
-      Tmax=None, interpolate=None, extrapolate=False, mopts={}, SED='H3', 
+      Tmax=None, interpolate=None, interp_all=False, extrapolate=False, 
+      mopts={}, SED='H3', 
       DM=None, cosmo='LambdaCDM', use_stretch=False, verbose=False, 
       outfile=None, extra_output=False):
       '''
@@ -1920,13 +1931,15 @@ class sn(object):
       if method == 'direct':
          res = bolometric.bolometric_direct(
                self, bands, EBVhost, Rv, redlaw, extrap_red,
-               interpolate, extrapolate, SED, Tmax, DM, cosmo, verbose)
+               interpolate, interp_all, extrapolate, SED, Tmax, DM, cosmo, 
+               verbose)
          limits = [(l.min(),l.max()) for l in res['lam_effs']]
 
       else:
          res = bolometric.bolometric_SED(
                self, bands, lam1, lam2, refband, EBVhost, Rv, redlaw,
-               extrap_red, Tmax, interpolate, extrapolate, mopts, SED,
+               extrap_red, Tmax, interpolate, interp_all, extrapolate, 
+               mopts, SED,
                DM, cosmo, use_stretch,verbose)
          if len(shape(res['boloflux'])) == 1:
             limits = [(l.min(),l.max()) for l in res['waves']]
