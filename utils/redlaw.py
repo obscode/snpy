@@ -81,6 +81,6 @@ def R_to_Rv(f1, f2, f3, R, EBV=0.01, day=0, redlaw='ccm', strict_ccm=0,
           version)-R
 
     # Use Brent's method to find the zero of the function:  Rv
-    result = scipy.optimize.brentq(f, 0, 10.0)
+    result = scipy.optimize.brentq(f, 0.01, 10.0)
     return(result)
 
