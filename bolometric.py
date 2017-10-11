@@ -108,13 +108,13 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
          for b in bands:
             if getattr(sn.data[b], 'interp', None) is None:
                raise ValueError, "You asked for spline interpolation, but "\
-                     "filter %s has not interpolator defined" % b
+                     "filter %s has no interpolator defined" % b
       else:
          if verbose: log("   Using model interpolation")
          for b in bands:
             if b not in sn.model._fbands:
                raise ValueError, "You asked for model interpolation, but "\
-                     "filter %f was not fit with the model" % b
+                     "filter %s was not fit with the model" % b
    else:
       if verbose: log("   Not using interpolation")
 
