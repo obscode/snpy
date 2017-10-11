@@ -412,7 +412,7 @@ class lc:
 
             lids = greater(x[sids], xmax)
             if sometrue(lids):
-               gids = greater(self.MJD, xmax)
+               gids = greater_equal(self.MJD, xmax)
                if verbose:
                   print "   using points at", self.MJD[gids]
                a,b = polyfit(self.MJD[gids], self.mag[gids], 1)
