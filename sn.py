@@ -1084,7 +1084,7 @@ class sn(object):
                                                        self.errors[param])
             if param in systs and systs[param] is not None:
                line += "  +/- %.3f (sys)" % systs[param]
-         print >> out, line
+            print >> out, line
 
    def dump_lc(self, epoch=0, tmin=-10, tmax=70, k_correct=0, 
                s_correct=False, mw_correct=0):
