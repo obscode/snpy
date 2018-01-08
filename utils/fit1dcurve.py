@@ -1082,7 +1082,7 @@ if pymc is not None:
          if xmin is None:  xmin = self.x.min()
          if xmax is None:  xmax = self.x.max()
          dx = min(self.scale*1.0/20, (xmax-xmin)/5.0)
-         xs = num.arange(xmin, xmax+dx, dx)
+         xs = num.arange(xmin, xmax, dx)
          #f = lambda x: self.__call__(x)[0]
          dys = self.deriv(xs, n=1)
          #dys = num.diff(self.__call__(xs)[0])
