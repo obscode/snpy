@@ -343,7 +343,7 @@ class sn(object):
          return(ret_data)
 
    def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0,
-         dokcorr=True, kcorr=None, B14=True):
+         dokcorr=True, kcorr=None, B14=False):
       '''Use the Lira Law to derive a color excess.  [Bband] and [Vband] 
       should be whichever observed bands corresponds to restframe B and V,
       respectively.  The color excess is estimated to be the median of the 
@@ -1853,7 +1853,8 @@ class sn(object):
       return plotmod.plot_kcorrs(self, colors, symbols)
 
    def bolometric(self, bands, method="direct", DM=None, EBVhost=None,
-         Rv=None, redlaw=None, outfile=None, extra_output=False, **args):
+         Rv=None, redlaw=None, outfile=None, extra_output=False, 
+         cosmo='LambdaCDM', **args):
       '''
       Produce a quasi-bolometric flux light-curve based on the input [bands]
       by integrating a template SED from \lambda=lam1 to \lambda=lam2.
