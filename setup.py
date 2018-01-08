@@ -58,7 +58,7 @@ def dosetup():
          name='snpy',
          description="SNooPy:  Supernova light-curve analysis tool",
          author='Chris Burns (Carnegie Observatories)',
-         author_email='cburns@.carnegiescience.edu',
+         author_email='cburns@carnegiescience.edu',
          url='http://csp.obs.carnegiescience.edu/data/snpy',
          license='MIT',
          classifiers=[
