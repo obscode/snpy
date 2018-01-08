@@ -24,6 +24,7 @@ import copy
 
 filts = fset
 debug=False
+default_method = 'bspline'
 
 class function:
    '''A function object that represents a way of making a smooth multiplication
@@ -403,10 +404,10 @@ class f_ccm(function):
       return m
 
 mangle_functions = {'spline':f_spline,
-                    'tspline':f_tspline,
                     'bspline':f_Bspline,
                     'ccm':f_ccm}
-
+if tspline is not None:
+   mangle_functions['tspline'] = f_tspline
 
 class mangler:
    '''Given a spectrum and spectrum object, find the best set of a function's 
@@ -420,7 +421,7 @@ class mangler:
                                 list for multiple spectra
             flux (float array): associated fluxes in arbitrary units
             method (str): The method used (should be a key of
-                             mangle_functions:  'tspline' or 'ccm'
+                             mangle_functions: 'tspline','bspline' or 'ccm'
             normfilter (str): the mangled function will be normalized
                               to the observed flux through this filter.
                               Defaut is to take the filter with the
@@ -743,7 +744,7 @@ messages = ['Bad input parameters','chi-square less than ftol',
 
 def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None, 
       normfilter=None, z=0, verbose=0, anchorwidth=100,
-      method='tspline', lstsq=True, xtol=1e-6, ftol=1e-6, gtol=1e-6, 
+      method=None, lstsq=True, xtol=1e-6, ftol=1e-6, gtol=1e-6, 
       init=None, **margs):
    '''Given an input spectrum, multiply by a smooth function (aka mangle)
    such that the synthetic colors match observed colors.
@@ -768,7 +769,7 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
                            the SED in Angstroms.
       method (str): specify the method (function form) with which to mangle
                     the spectrum. 'tspline' for tension spline or 'ccm' for
-                    the CCM reddening law.
+                    the CCM reddening law or 'bspline' for basis splines.
       lstsq (bool): If the method (mangling function) supports linear
                     basis representation and lstsq is True, use linear
                     least-squares to solve. MUCH faster.
@@ -786,6 +787,8 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
                 * state:  dictionary of the state of the manler.
                 * pars:   parameters of the mangle function
       '''
+   if method is None:
+      method = default_method
    m = mangler(wave, flux, method, z=z, verbose=verbose, 
          normfilter=normfilter, **margs)
    oned = len(num.shape(mags)) == 1

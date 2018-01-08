@@ -23,7 +23,7 @@ except ImportError:
                        'software_hardware/pyfits/\n')
       raise ImportError
 import filters
-from mangle_spectrum import mangle_spectrum2
+from mangle_spectrum import mangle_spectrum2, default_method
 
 base = os.path.dirname(globals()['__file__'])
 spec_base = os.path.join(base,'typeIa')
@@ -470,7 +470,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
    if 'method' in mopts:
       method = mopts['method']
    else:
-      method = 'tspline'
+      method = default_method
 
    if colorfilts is None:  colorfilts = filts
    for filter1 in filts + restfilts + colorfilts:
