@@ -47,6 +47,12 @@ Ia_w,Ia_f = getSED(0, 'H3')
 Vega = standards.Vega.VegaB
 BD17 = standards.Smith.bd17
 
+def myupdate(d1, d2):
+   '''Update keys in d1 based on keys in d2, but only if they exist in d1'''
+   for key in d1:
+      if key in d2:
+         d1[key] = d2[key]
+
 class dict_def:
    '''A class that acts like a dictionary, but if you ask for a key
    that is not in the dict, it returns the key instead of raising
@@ -1846,12 +1852,8 @@ class sn(object):
       '''
       return plotmod.plot_kcorrs(self, colors, symbols)
 
-   def bolometric(self, bands, method="direct", lam1=None, lam2=None, 
-         refband=None, EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ', 
-      Tmax=None, interpolate=None, interp_all=False, extrapolate=False, 
-      mopts={}, SED='H3', 
-      DM=None, cosmo='LambdaCDM', use_stretch=False, verbose=False, 
-      outfile=None, extra_output=False):
+   def bolometric(self, bands, method="direct", DM=None, EBVhost=None,
+         Rv=None, redlaw=None, outfile=None, extra_output=False, **args):
       '''
       Produce a quasi-bolometric flux light-curve based on the input [bands]
       by integrating a template SED from \lambda=lam1 to \lambda=lam2.
@@ -1932,18 +1934,38 @@ class sn(object):
          DM_computed = False
 
       if method == 'direct':
-         res = bolometric.bolometric_direct(
-               self, bands, EBVhost, Rv, redlaw, extrap_red,
-               interpolate, interp_all, extrapolate, SED, Tmax, DM, cosmo, 
-               verbose)
+         fargs = {'sn':self, 'bands':bands, 'DM':DM, 'EBVhost':EBVhost,
+               'Rv':Rv, 'redlaw':redlaw, 'extra_output':False}
+         for key in ['tmin','tmax','interpolate', 'SED','Tmax']:
+            fargs[key] = None
+         fargs['extrap_red'] = 'RJ'
+         fargs['extrapolate'] = False
+         fargs['interp_all'] = False
+         fargs['cosmo'] = 'LambdaCDM'
+         fargs['verbose'] = False
+         fargs['extra_output'] = False
+         myupdate(fargs,args)
+         res = bolometric.bolometric_direct(**fargs)
          limits = [(l.min(),l.max()) for l in res['lam_effs']]
 
       else:
-         res = bolometric.bolometric_SED(
-               self, bands, lam1, lam2, refband, EBVhost, Rv, redlaw,
-               extrap_red, Tmax, interpolate, interp_all, extrapolate, 
-               mopts, SED,
-               DM, cosmo, use_stretch,verbose)
+         fargs = {'sn':self, 'bands':bands, 'DM':DM, 'EBVhost':EBVhost,
+               'Rv':Rv, 'redlaw':redlaw, 'extra_output':False}
+         for key in ['lam1','lam2','refband','tmin','tmax',
+               'interpolate', 'SED','Tmax']:
+            fargs[key] = None
+         fargs['extrap_red'] = 'RJ'
+         fargs['extrapolate'] = False
+         fargs['mopts'] = {}
+         fargs['SED'] = 'H3'
+         fargs['interp_all'] = False
+         fargs['cosmo'] = 'LambdaCDM'
+         fargs['use_stretch'] = True
+         fargs['extrap_SED'] = True
+         fargs['verbose'] = False
+         fargs['extra_output'] = False
+         myupdate(fargs,args)
+         res = bolometric.bolometric_SED(**fargs)
          if len(shape(res['boloflux'])) == 1:
             limits = [(l.min(),l.max()) for l in res['waves']]
          else:
