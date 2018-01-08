@@ -17,30 +17,48 @@ import matplotlib.text as text
 from numpy import *
 from matplotlib import ticker
 from matplotlib import gridspec
-
 from matplotlib import rcParams
-rcParams['font.size'] = 18
-rcParams['font.family'] = 'serif'
-rcParams['xtick.major.size'] = 8
-rcParams['xtick.labelsize'] = 'large'
-rcParams['ytick.major.size'] = 8
-rcParams['ytick.labelsize'] = 'large'
-rcParams['xtick.minor.size'] = 4
-rcParams['ytick.minor.size'] = 4
-rcParams['xtick.major.pad'] = 10
-rcParams['ytick.major.pad'] = 10
-rcParams['legend.numpoints'] = 1
 
-def scale_fonts(factor):
-   rcParams['font.size'] *= factor
-   #rcParams['font.family'] *= factor
-   rcParams['xtick.major.size'] *=factor
-   rcParams['ytick.major.size'] *=factor
-   rcParams['xtick.minor.size'] *=factor
-   rcParams['ytick.minor.size'] *=factor
-   rcParams['xtick.major.pad'] *=factor
-   rcParams['ytick.major.pad'] *=factor
-   #rcParams['axes.labelsize'] *= factor
+def update_rcParams(key, val):
+    if key in rcParams:
+        rcParams[key] = val
+
+update_rcParams('font.size', 18)
+update_rcParams('font.family', 'serif')
+update_rcParams('xtick.major.size', 8)
+update_rcParams('xtick.labelsize', 'large')
+update_rcParams('xtick.direction', "in")
+update_rcParams('xtick.minor.visible', True)
+update_rcParams('xtick.top', True)
+update_rcParams('ytick.major.size', 8)
+update_rcParams('ytick.labelsize', 'large')
+update_rcParams('ytick.direction', "in")
+update_rcParams('ytick.minor.visible', True)
+update_rcParams('ytick.right', True)
+update_rcParams('xtick.minor.size', 4)
+update_rcParams('ytick.minor.size', 4)
+update_rcParams('xtick.major.pad', 10)
+update_rcParams('ytick.major.pad', 10)
+update_rcParams('legend.numpoints', 1)
+
+# Get a renderer. This seems to be required now for getting the 
+# bounding box correctly
+def get_renderer(fig):
+    if fig._cachedRenderer:
+        renderer = fig._cachedRenderer
+    else:
+        canvas = fig.canvas
+
+        if canvas and hasattr(canvas, "get_renderer"):
+            renderer = canvas.get_renderer()
+        else:
+            # not sure if this can happen
+            #warnings.warn("tight_layout : falling back to Agg renderer")
+            from matplotlib.backends.backend_agg import FigureCanvasAgg
+            canvas = FigureCanvasAgg(fig)
+            renderer = canvas.get_renderer()
+
+    return renderer
 
 def line_bbox(line):
    '''extract a bounding box from a line2D object.'''
@@ -141,6 +159,9 @@ class SimplePlot:
       for obj in self.axis.findobj(matplotlib.lines.Line2D):
          obj.set_linewidth(lw)
 
+   def get_renderer(self):
+      return get_renderer(self.fig)
+
    def get_xlabels(self):
       '''Get instances of the axis labels, being sure to omit any
       nonsensical labels (don't know where they're coming from.'''
@@ -196,7 +217,7 @@ class MultiPlot(object):
    '''A multi-plot with NXM panels each containing a SimplePlot.'''
 
    def __init__(self, N, M, fig=None, pwidths=None, pheights=None, 
-         nsubx=5, nsuby=5, **kwargs):
+         nsubx=5, nsuby=5, rect=(0,0,1,1), **kwargs):
       if fig is None:
          self.fig = plt.figure(**kwargs)
          self.fig.clear()
@@ -209,6 +230,8 @@ class MultiPlot(object):
       
       self.nsubx = 5
       self.nsuby = 5
+
+      self.rect = rect
 
       # Note gridspec counts grids from the *top*. It also gives dimensions
       #  as (columns X rows), whereas myplotlib is (rows X columns)
@@ -307,6 +330,9 @@ class MultiPlot(object):
    def ij(self, i):
       return (i%self.N, i/self.N)
 
+   def get_renderer(self):
+      return get_renderer(self.fig)
+
    def idx(self, i, j):
       return j*self.N + i
 
@@ -384,7 +410,7 @@ class MultiPlot(object):
       '''Draw the panel and everything in it.'''
       plt.draw()
       # Now that everything's been rendered, let's clean up shop:
-      self.fig.tight_layout()
+      self.fig.tight_layout(rect=self.rect)
 
       # Now, if our figure-wide xlabel, ylable or title are defined,
       # we may need to nudge them over half a panel
@@ -405,7 +431,7 @@ class MultiPlot(object):
 class PanelPlot(MultiPlot):
 
    def __init__(self, N, M, fig=None, pwidths=None, pheights=None, 
-         nsubx=5, nsuby=5, **kwargs):
+         nsubx=5, nsuby=5, rect=(0,0,1,1), **kwargs):
       if fig is None:
          self.fig = plt.figure(**kwargs)
          self.fig.clear()
@@ -418,6 +444,8 @@ class PanelPlot(MultiPlot):
 
       self.nsubx = nsubx
       self.nsuby = nsuby
+
+      self.rect = rect
 
       # Note gridspec counts grids from the *top*. It also gives dimensions
       #  as (columns X rows), whereas myplotlib is (rows X columns)
@@ -504,7 +532,7 @@ class PanelPlot(MultiPlot):
       '''Draw the panel and everything in it.'''
       plt.draw()
       # Now that everything's been rendered, let's clean up shop:
-      self.fig.tight_layout()
+      self.fig.tight_layout(rect=self.rect)
 
       # Now, if our figure-wide xlabel, ylable or title are defined,
       # we may need to nudge them over half a panel

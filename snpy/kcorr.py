@@ -23,7 +23,7 @@ except ImportError:
                        'software_hardware/pyfits/\n')
       raise ImportError
 import filters
-from mangle_spectrum import mangle_spectrum2
+from mangle_spectrum import mangle_spectrum2, default_method
 
 base = os.path.dirname(globals()['__file__'])
 spec_base = os.path.join(base,'typeIa')
@@ -217,8 +217,42 @@ def K(wave, spec, f1, f2, z, photons=1):
                zpt1 + zpt2
       return (kf1f2, 1)
 
+def S(wave, spec, f1, f2, z):
+   '''compute single S-correction based on a single spectrum and set of 
+   observed filters. This is like a K-correction, except we are transforming
+   from observer frame filters to observer frame filters, so the only 
+   redshifting involves is in the underlying SED.  The output S-correction
+   is in the sense that m(f2) = m(f1) + S
+
+   Args:
+      wave (float array): input wavelength in Angstroms
+      flux (float array): arbitrarily scaled flux
+      f1 (filter instance): Observed source filter.
+      f2 (filter instance): Observed destination filter.
+      z (float): redshift
+      photons (bool): If True, fluxes are computed in units of photons rather
+                      than energy (see Nugent+2002)
+   
+   Returns:
+      2-tuple: (S,flag)
+
+      * S: S-correction
+      * flag: 1 -> success, 0->failed
+   '''
+
+   # compute the magnitude through each filter
+   mag1 = f1.synth_mag(wave, spec, z=z)
+   mag2 = f2.synth_mag(wave, spec, z=z)
+
+   if num.isnan(mag1) or num.isnan(mag2):
+      # Something clearly went wrong
+      return (0.0, 0)
+   else:
+      S = mag2 - mag1 
+      return (S, 1)
+
 def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1, 
-      R_host=3.1, version="H3", photons=1):
+      R_host=3.1, version="H3", photons=1, Scorr=False):
    '''Find the cross-band k-correction for a series of type Ia SED from
    SNooPy's catalog. These can be thought of as "empirical" K-corrections.
    
@@ -240,6 +274,7 @@ def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1,
       photons (bool): If True, compute fluxes in units of photons rather
                       than energy. Default is true and should be used unless
                       filter definition is in energy units.
+      Scorr (bool):  If True, return an S-correction rather than a K-correction.
 
    Returns
       2-tuple:  (K,mask)
@@ -274,13 +309,16 @@ def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1,
 
       f1 = filters.fset[filter1]
       f2 = filters.fset[filter2]
-      k,f = K(spec_wav, sp_f, f1, f2, z, photons=photons)
+      if not Scorr:
+         k,f = K(spec_wav, sp_f, f1, f2, z)
+      else:
+         k,f = S(spec_wav, sp_f, f1, f2, z)
       kcorrs.append(k)
       mask.append(f)
    return(kcorrs,mask)
 
 def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z, 
-      colorfilts=None, full_output=0, **mopts): 
+      colorfilts=None, full_output=0, Scorr=False, **mopts): 
    '''Compute (cross-)band K-corrections with "mangling" using provided
    spectral SEDs. The SEDs are first multiplied by a smooth spline such that
    the synthetic colors match the observed colors.
@@ -301,6 +339,7 @@ def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z,
                               splines).
       full_output (bool):  If True, output more information than just the
                           K-corrections and mask.
+      Scorr (bool):  If True, compute S-corrections rather than K-corrections
       mopts (dict): All additional arguments to function are sent to 
                     :func:`snpy.mangle_spectrum.mangle_spectrum2`.
    
@@ -352,18 +391,21 @@ def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z,
          ms = num.compress(m_mask[j],mags[j])
  
          # Now we mangle the spectrum:
-         man_spec_f,man_waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,fs, 
+         man_spec_f,state,pars = mangle_spectrum2(spec_wav*(1+z),spec_f,fs, 
                ms, **mopts)
       if full_output:
-         waves_a.append(man_waves)
+         waves_a.append(state['ave_waves'])
          manf_a.append(man_spec_f)
-         factors_a.append(factors)
+         factors_a.append(pars)
  
       for i in range(len(filts)):
          f1 = filters.fset[restfilts[i]]
          f2 = filters.fset[filts[i]]
 
-         k,f = K(spec_wav, man_spec_f[0], f1, f2, z)
+         if Scorr:
+            k,f = S(spec_wav, man_spec_f[0], f1, f2, z)
+         else:
+            k,f = K(spec_wav, man_spec_f[0], f1, f2, z)
          if f == 1:
             kcorrs[-1].append(k)
             mask[-1].append(len(fs))
@@ -385,7 +427,7 @@ def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z,
          return(kcorrs,mask)
 
 def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H', 
-      colorfilts=None, full_output=0, mepoch=False, **mopts):
+      colorfilts=None, full_output=0, mepoch=False, Scorr=False, **mopts):
    '''Compute (cross-)band K-corrections with "mangling" using built-in library
    of spectral SEDs. The SEDs are first multiplied by a smooth spline such that
    the synthetic colors match the observed colors.
@@ -409,6 +451,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
                           K-corrections and mask.
       mepoch (bool): If True, a single mangling function is solved for
                      all epochs. EXPERIMENTAL.
+      Scorr (bool): If True, compute S-corrections rather than K-corrections
       mopts (dict): All additional arguments to function are sent to 
                     :func:`snpy.mangle_spectrum.mangle_spectrum2`.
    
@@ -418,16 +461,16 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
          * if not full_output: 2-tuple (K,mask):
             * K (flaot array):  K-corrections for filts
             * mask (bool array): mask of valid K-corrections
-         * if full_output: 5-tuple (K,mask,anchors,factors,funcs)
-            * anchors (float array): wavelengths of anchor points
-            * factors (float array): factors corresponding to anchors
-            * funcs (float array): mangling function evaluated at anchors
+         * if full_output: 4-tuple (K,mask,Rts,mopts)
+            * Rts (float array): The total-to-selective absorption ratio
+                                 based on filter functions and mangled SED
+            * mopts (dict): mangling function state dictionary
    '''
 
    if 'method' in mopts:
       method = mopts['method']
    else:
-      method = 'tspline'
+      method = default_method
 
    if colorfilts is None:  colorfilts = filts
    for filter1 in filts + restfilts + colorfilts:
@@ -463,6 +506,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
             if num.sometrue(m_mask[:,i])]
       if len(fs) <=1 :
          waves,man_spec_fs,factors = spec_wavs,spec_fs,spec_wavs*0.0+1.0
+         state,pars = None,None
       else:
          #cs = mags[:,:-1] - mags[:,1:]
          #gids = m_mask[:,:-1]*m_mask[:,1:]
@@ -470,7 +514,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
          #cs[-gids] = 99.9   # flag invalid value
          gids = m_mask*sids[:,num.newaxis]
          ms = where(gids, ms, 99.9)
-         man_spec_fs,waves,factors = mangle_spectrum2(spec_wavs*(1+z),
+         man_spec_fs,state,pars = mangle_spectrum2(spec_wavs*(1+z),
                spec_fs, fs, ms, **mopts)
 
 
@@ -484,7 +528,10 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
             m_opts.append(None)
             continue
          if full_output:
-            args = {'sw':waves, 'sf':factors}
+            args = {}
+            if state is not None:
+               args['state'] = state
+               args['pars'] = pars
             for key in mopts:
                args[key] = mopts[key]
             m_opts.append(args)
@@ -492,7 +539,10 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
          for i in range(len(filts)):
              f1 = filters.fset[restfilts[i]]
              f2 = filters.fset[filts[i]]
-             k,f = K(spec_wavs[j], man_spec_fs[j], f1, f2, z)
+             if Scorr:
+                k,f = S(spec_wavs[j], man_spec_fs[j], f1, f2, z)
+             else:
+                k,f = K(spec_wavs[j], man_spec_fs[j], f1, f2, z)
              kcorrs[-1].append(k)
              mask[-1].append(0)
          Rts.append(R_obs_spectrum(filts, spec_wavs[j], man_spec_fs[j], z, 
@@ -517,6 +567,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
             # only one filter, so no color information, leave the SED alone:
             waves,man_spec_f,factors = spec_wav,spec_f,spec_wav*0.0+1.0
             man_spec_f = [man_spec_f]
+            state,pars = None,None
          else:
             #cs = num.compress(m_mask[j],mags[j])[0:-1] - \
             #     num.compress(m_mask[j],mags[j])[1:]
@@ -528,7 +579,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
   
             # Now we mangle the spectrum.  Note, we are redshifting the spectrum
             # here, so do NOT set z in mangle_spectrum2.
-            man_spec_f,waves,factors = mangle_spectrum2(spec_wav*(1+z),spec_f,
+            man_spec_f,state,pars = mangle_spectrum2(spec_wav*(1+z),spec_f,
                   fs, ms, **mopts)
  
             if debug:  print "factors = ",factors
@@ -544,7 +595,10 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
                   print "  output color:  %f" % (col)
   
          if full_output:
-            args = {'sw':waves, 'sf':factors}
+            args = {}
+            if state is not None:
+               args['state'] = state
+               args['pars'] = pars
             for key in mopts:
                args[key] = mopts[key]
             m_opts.append(args)
@@ -552,7 +606,10 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
          for i in range(len(filts)):
             f1 = filters.fset[restfilts[i]]
             f2 = filters.fset[filts[i]]
-            k,f = K(spec_wav,man_spec_f[0], f1, f2, z)
+            if Scorr:
+               k,f = S(spec_wav,man_spec_f[0], f1, f2, z)
+            else:
+               k,f = K(spec_wav,man_spec_f[0], f1, f2, z)
             kcorrs[-1].append(k)
             mask[-1].append(f)
          Rts.append(R_obs_spectrum(filts, spec_wav, man_spec_f[0], z, 0.01, 

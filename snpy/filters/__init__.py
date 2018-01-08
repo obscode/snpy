@@ -180,6 +180,22 @@ class filter(spectrum):
       else:
          return(zpts)
 
+   def eval(self, wave):
+      '''evaluate the filter on the sequence of wavelengths.'''
+      if interp_method == "spline":
+         if self.tck is None:
+            self.tck = scipy.interpolate.splrep(self.wave, self.resp, k=1, s=0)
+         fresp_int = scipy.interpolate.splev(wave, self.tck)
+      else:
+         if self.mint is None:
+            self.mint = scipy.interpolate.interp1d(self.wave, self.resp, 
+                  kind=interp_method)
+         fresp_int = self.mint(trim_wave)
+
+      fresp_int = num.where(num.less(wave,self.wave.min()), num.nan, fresp_int)
+      fresp_int = num.where(num.greater(wave,self.wave.max()), num.nan, 
+                  fresp_int)
+      return(fresp_int)
 
    def response(self, specwave, flux=None, z=0, zeropad=0, photons=1):
       '''Get the response of this filter over the specified spectrum.  This
@@ -271,6 +287,13 @@ class filter(spectrum):
 
       return(result)
 
+   def ABoff(self):
+      '''Compute the AB offset for this filter. Due to the way SNooPy stores
+      the zero-points, this only depends on filter function shape.'''
+      return 65.4469-48.6-self.zp + \
+            2.5*num.log10(scipy.integrate.trapz(self.flux/self.wave,self.wave))
+
+
    def synth_mag(self, specwave, flux=None, z=0, zeropad=0):
       '''Compute the synthetic magnitude based on the input spectrum defined by
       (specwave) or (specwave,flux).  If z is supplied, first redshift the 
@@ -286,19 +309,49 @@ class filter(spectrum):
       (specwave) or (specwave, flux).  If z is supplied, first blueshift
       the filter by this amount (ie, you are observing a redshifed spectrum).'''
       numer = self.response(specwave, flux=flux, z=z, zeropad=zeropad,
-            photons=0)
+            photons=1)*ch
+      # numer is in erg*Angstrom/s/cm^2
       if numer <= 0:
          return(num.nan)
 
       if not isinstance(specwave, spectrum):
-         denom = self.response(specwave, 2.997925e18/num.power(specwave,2), 
-               photons=0)
+         # 3631 Jy*c --> erg*Angstrom/s/cm^2
+         denom = self.response(specwave, 3631*1.e-23*c/specwave, photons=0)
       else:
          wave = specwave.wave
-         denom = self.response(wave, 2.997925e18/num.power(wave,2), photons=0)
+         denom = self.response(wave, 3631*1.e-23*c/wave, photons=0)
 
-      result = -2.5*num.log10(numer/denom) - 48.6
+      result = -2.5*num.log10(numer/denom)# - 48.6
       return(result)
+
+   def mag2flux(self, mag, specwave=None, flux=None, z=0):
+      '''Convert a magnitude in this filter to the flux in erg/s/cm^2.'''
+      if len(num.shape(mag)) == 0:
+         scalar = True
+         mag = num.array([mag])
+      else:
+         scalar = False
+         mag = num.asarray(mag)
+      if specwave is None:
+         wave,flux = standards['Vega']['VegaB'].wave,\
+                     standards['Vega']['VegaB'].resp
+      elif isinstance(specwave, spectrum):
+         wave,flux = specwave.wave,specwave.flux
+      else:
+         if flux is None:
+            raise TypeError, "specwave must either be a spectrum instance or "\
+                  "an array of wavelengths and flux must be specified"
+         wave,flux = specwave,flux
+      flam = num.power(10, -0.4*(mag-self.zp))   # in photons/s/cm^2
+      flam = flam/self.response(wave, flux, z=z)  # now in ergs/s/cm^2
+      
+      # now weighted average over the filter
+      flam = flam * self.response(wave,flux,z=z,photons=0)
+      flam = flam / self.response(wave, wave*0+1, z=z, photons=0)
+
+      if scalar:
+         return flam[0]
+      return flam
 
    def eff_wave(self, specwave, flux=None, z=0, zeropad=0):
       '''Compute the effective wavelength for this filter, given the

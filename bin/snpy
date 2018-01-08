@@ -2,17 +2,25 @@
 import sys,os,glob
 
 if '-h' in sys.argv or '-help' in sys.argv:
+   from snpy.sqlmod import databases
    print '''
 SNooPy Startup Script.
 
-Usage:  snpy [lowz|csp2] [-gui gui]
+Usage:  snpy [-gui gui] [-nc] [database]
 
-        -lowz:  use the low-z (LCO) database for querying
         -gui gui:  select gui to use.  By default, 'tk' is
                    used on Linux and 'osx' on Macs.  You
                    can try 'tk' on Mac, but it tends to be 
                    less reliable
-        -nc:  Don't check for newer versions at startup'''
+        -nc:  Don't check for newer versions at startup. Speeds up
+              the startup time and good when no internet is available
+        database:  Choose a database to query via SQL. Options listed below
+
+Available Databases:
+'''
+   for key in databases:
+      print "   %-10s:      %s" % (key,databases[key][1])
+   sys.exit(0)
 
 gui = 'tk'
 if '-gui' in sys.argv:
@@ -64,12 +72,13 @@ except:
 ipshell=InteractiveShellEmbed(banner1='Welcome to SNooPy')
 ipshell.enable_pylab(gui=gui)
 from snpy import *
-if "lowz" in sys.argv:
-   del sys.argv[sys.argv.index("lowz")]
-   sqlmod.default_sql = sqlmod.sql_lowz()
-if "csp2" in sys.argv:
-   del sys.argv[sys.argv.index("csp2")]
-   sqlmod.default_sql = sqlmod.sql_csp2()
+
+for key in sqlmod.databases:
+   if key in sys.argv:
+      sqlmod.setSQL(key)
+      del sys.argv[sys.argv.index(key)]
+
+# Check for newer version
 if not nc:
    upgrade,message = check_version()
    if upgrade:

@@ -173,7 +173,7 @@ def finterp(band, t, p, param, gen, extrap=False):
       eZ = num.where(mask, eZ, -1)
    else:
       t1,t2 = get_t_lim(band, param, gen)
-      mask = -num.isnan(Z)
+      mask = num.logical_not(num.isnan(Z))
       # extrapolate lower with t^2 law
       if num.sometrue(num.less(t,t1)):
          Tp = bisplev(t1, p, f, dx=1)
@@ -284,6 +284,9 @@ class dm15_template:
       f,ef,mask = finterp(band, time, dm15, 'dm15', gen, extrap=extrap)
 
       return(num.where(mask,-2.5*num.log10(f),-1))
+
+   def domain(self, band, gen=1):
+      return get_t_lim(band, 'dm15', gen)
 
    def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
          extrap=False):
@@ -411,6 +414,9 @@ class st_template:
       f,ef,mask = finterp(band, time, st, 'st', gen, extrap=extrap)
 
       return(num.where(mask,-2.5*num.log10(f),-1))
+
+   def domain(self, band, gen=1):
+      return get_t_lim(band, 'st', gen)
 
    def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
          extrap=False):

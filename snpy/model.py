@@ -114,8 +114,9 @@ class model:
          mids = argmin(absolute(t[:,newaxis]-self.parent.data[band].MJD[newaxis,:]+\
                self.Tmax), axis=1)
          # mask based on original mask and limits of Hsiao spectrum
+         ks_st = getattr(self.parent, 'ks_s', 1.0)
          mask2 = self.parent.ks_mask[band][mids]*\
-               greater_equal(t, -19)*less_equal(t, 70)
+               greater_equal(t/ks_st, -19)*less_equal(t/ks_st, 70)
       else:
          K = 0*t
          mask2 = ones(t.shape, dtype=bool)
@@ -222,7 +223,7 @@ class model:
       # update errors and covariance matrix
       if C is None:
          raise RuntimeError, "Error:  Covariance Matrix is singular.  " + \
-               "Either two or more parameters are degenerate or the model" + \
+               "Either two or more parameters are degenerate or the model " + \
                "has become insensitive to one or more parameters."
       C = C*self.rchisquare    # the trick for underestimated errors.
       self.C = {}
@@ -390,13 +391,15 @@ class EBV_model(model):
       self.colors = {'u':-0.32, 'B':0.0, 'V':-0.02, 'g':0.05, 'r':-0.09, 'i':-0.63,
             'Y':-0.69, 'J':-0.65, 'H':-0.79, 'K':-0.61, 'J_K':-0.65, 'H_K':-0.79}
       self.dcolors = {'u':0.04, 'B':0, 'V':0.01, 'g':0.02, 'r':0.02, 'i':0.02,
-            'Y':0.03, 'J':0.02, 'H':0.03, 'K':0.05, 'J_K':0.02, 'H_K':0.03}
+            'Y':0.03, 'J':0.02, 'H':0.03, 'K':0.05, 'J_K':0.02, 'H_K':0.03,
+            'Bs':0, 'Vs':0, 'Rs':0, 'Is':0}
       self.color_slopes = {'u':-0.47, 'B':0.0, 'V':0.12, 'g':0.05, 'r':0.29,
                            'i':0.39, 'Y':0.63, 'J':0.67, 'H':0.66, 'K':0.26,
                            'J_K':0.67, 'H_K':0.66}
       self.dcolor_slopes = {'u':0.25, 'B':0, 'V':0.05, 'g':0.06, 'r':0.07,
                             'i':0.08, 'Y':0.17, 'J':0.10, 'H':0.11, 'K':0.18,
-                            'J_K':0.10, 'H_K':0.11}
+                            'J_K':0.10, 'H_K':0.11, 'Bs':0, 'Vs':0, 'Rs':0,
+                            'Is':0}
       self.do_Robs = 0
       self.Robs = {}
 
@@ -562,6 +565,7 @@ class EBV_model(model):
          systs['DM'] += power(2.17*0.1,2)     # assume 10% error in Ho
       systs['DM'] = sqrt(systs['DM'])
       systs['EBVhost'] = 0.06
+      systs['dm15'] = 0.06
       return(systs)
 
 def read_table(file):
@@ -786,6 +790,11 @@ class EBV_model2(model):
       if include_Ho:
          systs['DM'] += power(2.17*0.1,2)     # assume 10% error in Ho
       systs['DM'] = sqrt(systs['DM'])
+      systs['EBVhost'] = 0.06
+      if self.stype == 'dm15':
+         systs['dm15'] = 0.06
+      else:
+         systs['st'] = 0.03
       return(systs)
 
 
@@ -981,6 +990,13 @@ class max_model(model):
       id = argmax(absolute(t0 - days))
       return errors[parameter][id]
 
+   def systematics(self, calibration=1, include_Ho=False):
+      '''Returns the systematic errors in the paramters as a dictionary.  
+      If no estimate is available, return None for that parameter.'''
+      systs = dict.fromkeys(self.parameters.keys())
+      systs['st'] = 0.03
+      return(systs)
+
 class max_model2(model):
    '''Same as max_model, but here we let Tmax for each filter be a free parameter.'''
 
@@ -1127,6 +1143,13 @@ class max_model2(model):
          return self.__dict__[attr]
       else:
          raise AttributeError, "Attribute %s not found" % (attr)
+
+   def systematics(self, calibration=1, include_Ho=False):
+      '''Returns the systematic errors in the paramters as a dictionary.  
+      If no estimate is available, return None for that parameter.'''
+      systs = dict.fromkeys(self.parameters.keys())
+      systs['st'] = 0.03
+      return(systs)
 
 
 
@@ -1531,6 +1554,6 @@ class color_model(model):
       '''Returns the systematic errors in the paramters as a dictionary.  
       If no estimate is available, return None for that parameter.'''
       systs = dict.fromkeys(self.parameters.keys())
-      # DM contains systematics for Ho, plus average of calibration
-      #  uncertainties
+      systs['EBVhost'] = 0.06
+      systs['st'] = 0.03
       return(systs)

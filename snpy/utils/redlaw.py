@@ -72,13 +72,15 @@ def Rv_to_R(f1, f2, f3, Rv, EBV=0.01, day=0, redlaw='ccm',
    return(A1/(A2 - A3))
 
 
-def R_to_Rv(f1, f2, f3, R, EBV=0.01, day=0, strict_ccm=0, version='H3'):
+def R_to_Rv(f1, f2, f3, R, EBV=0.01, day=0, redlaw='ccm', strict_ccm=0, 
+      version='H3'):
     '''Same as Rv_toR, but work in reverse to find Rv, given R'''
 
     # A temporary function for which we want to find the zero
-    f = lambda x:  Rv_to_R(f1, f2, f3, x, EBV, day, strict_ccm, version)-R
+    f = lambda x:  Rv_to_R(f1, f2, f3, x, EBV, day, redlaw, strict_ccm, 
+          version)-R
 
     # Use Brent's method to find the zero of the function:  Rv
-    result = scipy.optimize.brentq(f, 0, 10.0)
+    result = scipy.optimize.brentq(f, 0.01, 10.0)
     return(result)
 

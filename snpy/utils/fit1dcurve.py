@@ -495,7 +495,7 @@ if polynomial is not None:
          roots = d1.roots()
          # Roots can be complex.  Want only the real ones
          gids = num.iscomplex(roots)
-         roots = num.real(roots[-gids])
+         roots = num.real(roots[num.logical_not(gids)])
          gids = num.greater_equal(roots, xmin)*num.less_equal(roots, xmax)
          roots = roots[gids]
          if len(roots) == 0:
@@ -936,14 +936,14 @@ if pymc is not None:
                'scale':None,
                'amp':None}
          for key in args:
-            if key not in self.pars:
+            if key not in self.pars and key != "mean":
                raise TypeError, \
                      "%s is an invalid keyword argument for this method" % key
-            self.pars[key] = args[key]
-         #if 'func' in args:
-         #   self.func = args['func']
-         #else:
-         #   self.func = lambda x:  x*0 + num.median(self.y)
+            if key != "mean": self.pars[key] = args[key]
+         if 'mean' in args:
+            self.mean = args['mean']
+         else:
+            self.mean = lambda x:  x*0 + num.median(self.y)
    
          # Make sure the data conform to the spine requirements
          self.median = num.median(self.y)
@@ -953,14 +953,15 @@ if pymc is not None:
       def __str__(sef):
          return "Gaussian Process"
 
-      def func(self, x):
-         return x*0 + self.median
+      #def func(self, x):
+      #   return x*0 + self.median
 
       def __getstate__(self):
          # we need to define this because Mean and Cov are not pickleable
          dict = self.__dict__.copy()
          if 'M' in dict:  del dict['M']
          if 'C' in dict:  del dict['C']
+         if 'mean' in dict: dict['mean'] = None
          # Setting setup to None will force re-generation of M and C
          #  when we are unpickled
          dict['setup'] = False
@@ -980,14 +981,14 @@ if pymc is not None:
             self.diff_degree = 3
    
          if self.amp is None:
-            self.amp = num.std(self.y)
+            self.amp = num.std(y - self.mean(x))
    
          if self.scale is None:
             #self.scale = (self.x.max() - self.x.min())/2
             self.scale = 30
             
    
-         self.M = GP.Mean(self.func)
+         self.M = GP.Mean(self.mean)
          self.C = GP.Covariance(GP.matern.euclidean, diff_degree=self.diff_degree,
                            amp=self.amp, scale=self.scale)
    
@@ -1042,6 +1043,8 @@ if pymc is not None:
    
       def draw(self):
          '''Generate a random realization of the spline, based on the data.'''
+         if not self.setup:
+            self._setup()
          self.realization = GP.Realization(self.M, self.C)
     
       def reset_mean(self):
@@ -1079,7 +1082,7 @@ if pymc is not None:
          if xmin is None:  xmin = self.x.min()
          if xmax is None:  xmax = self.x.max()
          dx = min(self.scale*1.0/20, (xmax-xmin)/5.0)
-         xs = num.arange(xmin, xmax+dx, dx)
+         xs = num.arange(xmin, xmax, dx)
          #f = lambda x: self.__call__(x)[0]
          dys = self.deriv(xs, n=1)
          #dys = num.diff(self.__call__(xs)[0])

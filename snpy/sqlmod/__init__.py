@@ -437,7 +437,7 @@ class sql_highz(sqlbase):
 
 class sql_lowz(sqlbase):
    host = "csp2.lco.cl"
-   user = "cburns"
+   user = "CSP"
    passwd = None
    PHOTO_DB = "Phot"
    port = 3306
@@ -461,7 +461,7 @@ class sql_lowz(sqlbase):
    PHOTO_COND = "and MNAT is not NULL and MNAT > 0"
    JD_OFFSET = 52999.5    # database is JD - 2453000, so +2999.5 gives MJD
 
-class sql_local(sqlbase):
+class sql_oldlocal(sqlbase):
    host = "kepler.obs.carnegiescience.edu"
    user = "CSP"
    passwd = None
@@ -506,10 +506,36 @@ class sql_csp2(sqlbase):
    PHOTO_JD = "MAGSN.JD"
    PHOTO_MAG = "MAGSN.mag"
    PHOTO_EMAG = "sqrt(MAGSN.err*MAGSN.err + MAGSN.fiterr*MAGSN.fiterr)"
-   PHOTO_FILT = "MAGSN.filt"
+   PHOTO_FILT = "CASE WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD < 2454846.0) THEN 'J' WHEN (ins='WI' and MAGSN.filt='Y') THEN 'Ydw' WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD >= 2454846.0) THEN 'Jrc2' ELSE MAGSN.filt END"
    PHOTO_K = None      # No K-corrections in the DB
    PHOTO_SNR = "CASE WHEN ins='WI' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/1.6)) WHEN ins='DC' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/3.0)) ELSE 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/2.0)) END"
    PHOTO_COND = "and MAGSN.obj=-1 and MAGSN.mag > 0 and MAGSN.fits=MAGINS.fits and MAGSN.obj=MAGINS.obj"
    JD_OFFSET = -2400000.5    # database is JD, JD-2400000.5 gives MJD
 
-default_sql = None
+class sql_SBS_csp2(sql_csp2):
+   host = 'kepler.obs.carnegiescience.edu'
+   user = 'CSP'
+
+class sql_csp2_pub(sql_csp2):
+   PHOTO_DB = "PubPhot"
+
+class sql_SBS_csp2_pub(sql_csp2):
+   host = 'kepler.obs.carnegiescience.edu'
+   user = 'CSP'
+   PHOTO_DB = "PubPhot"
+
+
+databases = \
+   {'default':(sql_csp2, "Working CSP2 database at LCO"),
+    'SBS':(sql_SBS_csp2, "Working CSP2 database at SBS"),
+    'LCOpub':(sql_csp2_pub, "Published CP2 database at LCO"),
+    'SBSpub':(sql_SBS_csp2_pub, "Published CSP2 database at SBS"),
+    'highz':(sql_highz, "Highz database at SBS")}
+
+default_sql = databases['default'][0]()
+
+def setSQL(name):
+   global default_sql
+   if name not in databases:
+      raise ValueError, "Error, unknown database %s" % name
+   default_sql = databases[name][0]()

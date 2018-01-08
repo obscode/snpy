@@ -618,10 +618,8 @@ def plot_sn(self, **kwargs):
    p.title(title)
    if kwargs.get('epoch', False):
       p.xlabel('Days after B maximum')
-   elif kwargs.get('JDoffset', False):
-      p.xlabel('JD - %d' % Toff)
    else:
-      p.xlabel('Date')
+      p.xlabel('JD - %d' % Toff)
    p.ylabel(ylabel)
    for ax in p.axes:
       if flip:  
@@ -771,7 +769,8 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
       for lc in self.parent.data.values():
          mp = getattr(lc, 'mp', None)
          if mp is not None:
-            mp.bc.disconnect()
+            if getattr(mp, 'bc',None) is not None:
+               mp.bc.disconnect()
    if flux: 
       flipaxis = 0
    else:
@@ -1000,8 +999,8 @@ def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
    bands = [bands[i] for i in ids]
       
    n_plots = len(bands)
-   p = myplotlib.PanelPlot(1, n_plots, num=112, figsize=(6,n_plots),
-        nymax=5, prunex=None)
+   p = myplotlib.PanelPlot(1, n_plots, num=112, figsize=(6,n_plots))
+        
    p.title("Use 'm' to plot mangled SED for any point")
    p.xlabel('Epoch (days)')
    p.ylabel('K-corrections')
@@ -1047,7 +1046,16 @@ def plot_mangled_SED(event):
    wave,flux = kcorr.get_SED(day, version='H3')
    ax.plot(wave,flux, label='Original SED', color='black')
    if band in self.ks_mopts:
-      man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][id])[0]
+      if 'state' in self.ks_mopts[band][id]:
+         man_flux = mangle_spectrum.apply_mangle(wave,flux, 
+               **self.ks_mopts[band][id])[0]
+      else:
+         args = {}
+         args['state'] = dict(ave_waves=self.ks_mopts[band][id]['sw'])
+         args['pars'] = self.ks_mopts[band][id]['sf']
+         man_flux = mangle_spectrum.apply_mangle(wave,flux,init=False,**args)[0]
+   else:
+      man_flux = flux
    ax.plot(wave, man_flux, label='Mangled SED', color='darkgreen')
    ax.plot(wave, man_flux/flux*ax.get_ylim()[1], color='orange')
 

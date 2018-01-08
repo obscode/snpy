@@ -4,9 +4,7 @@ import warnings
 have_sql = 1
 import sqlmod
 if 'SQLSERVER' in os.environ:
-   sqlmod.default_sql = sqlmod.__dict__['sql_'+os.environ['SQLSERVER']]()
-else:
-   sqlmod.default_sql = sqlmod.sql_local()
+   sqlmod.setSQL(os.environ['SQLSERVER'])
 have_sql = sqlmod.have_sql
 
 try:
@@ -15,7 +13,7 @@ except ImportError:
    snemcee = None
 
 try:
-   import triangle
+   import corner as triangle
 except ImportError:
    triangle=None
    
@@ -48,6 +46,12 @@ Robs = kcorr.R_obs
 Ia_w,Ia_f = getSED(0, 'H3')
 Vega = standards.Vega.VegaB
 BD17 = standards.Smith.bd17
+
+def myupdate(d1, d2):
+   '''Update keys in d1 based on keys in d2, but only if they exist in d1'''
+   for key in d1:
+      if key in d2:
+         d1[key] = d2[key]
 
 class dict_def:
    '''A class that acts like a dictionary, but if you ask for a key
@@ -125,7 +129,8 @@ class sn(object):
       self.EBVgal = 0.0
       self.fit_mag = False     # fit in magnitude space?
 
-      self.restbands = dict_def(self, {})   # the band to which we are fitting for each band
+      self.restbands = dict_def(self, {})   # the band to which we are fitting 
+                                            #  for each band
       self.ks = {}          # k-corrections
       self.ks_mask = {}     # mask for k-corrections
       self.ks_tck = {}      # spline rep of k-corrections
@@ -227,6 +232,9 @@ class sn(object):
       res = set(self.data.keys()) == set(other.data.keys())
       if not res:
          return False
+      res = res and (abs(self.ra - other.ra) < 1e-7)
+      res = res and (abs(self.decl - other.decl) < 1e-7)
+      res = res and (abs(self.z - other.z) < 1e-9)
       for f in self.data.keys():
          res = res and (self.data[f] == other.data[f])
       return res
@@ -335,7 +343,7 @@ class sn(object):
          return(ret_data)
 
    def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0,
-         dokcorr=True, kcorr=None):
+         dokcorr=True, kcorr=None, B14=False):
       '''Use the Lira Law to derive a color excess.  [Bband] and [Vband] 
       should be whichever observed bands corresponds to restframe B and V,
       respectively.  The color excess is estimated to be the median of the 
@@ -352,6 +360,7 @@ class sn(object):
          tmin/tmax (flaot): range over which to fit Lira Law
          plot (bool):  If True, produce a plot with the fit.
          dokcoor (bool):  If True, k-correct the data before fitting
+         B14 (bool):  If True, use Burns et al. (2014) rather than Lira (1996)
          
       Returns:
          4-tuple:  (EBV, error, slope, eslope)
@@ -398,12 +407,16 @@ class sn(object):
       rchisq = sum(power(BV2 - c[0] - c[1]*(t2-55.),2)*w)/(len(BV2) - 2)
       ec = ec*sqrt(rchisq)
 
-      lira_BV = 0.732 - 0.0095*(t2 - 55.0)
-      #lira_EBV = stats.median(BV2 - lira_BV)
-      #e_lira_EBV = 1.49*stats.median(absolute(BV2 - lira_BV - lira_EBV))
+      if B14:
+         st = getattr(self, 'st', 1.0)
+         lira_BV = 0.78 - (0.0097 - 0.004*(st-1))*(t2 - 45.)
+      else:
+         lira_BV = 0.732 - 0.0095*(t2 - 55.0)
       w = power(eBV2,-2)
       lira_EBV = sum((BV2 - lira_BV)*w)/sum(w)
       e_lira_EBV = power(sum(w), -0.5)
+      if B14:
+         e_lira_EBV = sqrt(power(e_lira_EBV,2) + 0.04**2)
 
       print "Vmax occurred at %f" % (t_maxes[0])
       print "Slope of (B-V) vs. t-Tvmax was %f(%f)" % (c[1], ec[1])
@@ -491,6 +504,68 @@ class sn(object):
          return (result[0][0],result[1][0],result[2][0],result[3][0])
       return result
 
+   def scorr(self, bands=None, SED='H3'):
+      '''Compute the S-corrections for the named filters. The underlying
+      SED is taken as the same that was used to compute k-corretions. If
+      k-corrections have not been computed, we simply used the SED
+      specified with no mangling.
+
+      Args:
+         bands (list or Noen): List of filter so S-correct or all if None
+                               (default: None)
+         SED (string):  If k-corrections have not been computed, we fall
+                        back on using the SED spedified here. See 
+                        kcorr.get_SED().
+
+         Returns:
+            None
+         
+         Effects:
+            Upon successful completion, the following member variables will
+            be populated:
+
+            * self.Ss:       dictionary of S-corrections indexed by filter
+            * self.Ss_mask:  dictionary indicating valid S-corrections
+      '''
+      if bands is None:
+         bands = self.data.keys()
+
+      self.Ss = {}
+      self.Ss_mask = {}
+      for band in bands:
+         if self.restbands[band] == band:
+            # No S-correction
+            self.Ss[band] = self.data[band].mag*0
+            self.Ss_mask[band] = less(self.Ss[band],1)
+            continue
+         st = getattr(self, 'ks_s', 1.0)
+         mopt = getattr(self, 'ks_mopts', {})
+         if band not in mopt:
+            # No k-corrections, we'll just use SED
+            x = self.data[band].MJD
+            # days since Bmax in the frame of the SN
+            days = (x - self.Tmax)/(1+self.z)/st
+            days = days.tolist()
+            self.Ss[band],self.Ss_mask[band] = map(array,kcorr.kcorr(days, 
+               self.restbands[band], band, self.z, self.EBVgal, 0.0,
+               version=self.k_version, Scorr=True))
+            self.Ss_mask[band] = self.Ss_mask[band].astype(bool)
+         else:
+            self.Ss[band] = []
+            self.Ss_mask[band] = []
+            for i in range(len(self.data[band].MJD)):
+               wave,flux,dum1,dum2 = self.get_mangled_SED(band,i)
+               if wave is None:
+                  S,f = 0,0
+               else:
+                  S,f = kcorr.S(wave,flux,fset[band],fset[self.restbands[band]],
+                        z=self.z)
+               self.Ss[band].append(S)
+               self.Ss_mask[band].append(f)
+            self.Ss[band] = array(self.Ss[band])
+            self.Ss_mask[band] = array(self.Ss_mask[band])
+         
+    
    def kcorr(self, bands=None, mbands=None, mangle=1, interp=1, use_model=0, 
          min_filter_sep=400, use_stretch=1, **mopts):
       '''Compute the k-corrections for the named filters.
@@ -672,9 +747,15 @@ class sn(object):
       
       if 'ks_mopts' not in self.__dict__:
          raise AttributeError, "Mangling info not found... try running self.kcorr()"
+      if self.ks_mopts[band][i] is None:
+         return(None,None,None,None)
       epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
       wave,flux = kcorr.get_SED(int(epoch), version=self.k_version)
-      man_flux = mangle_spectrum.apply_mangle(wave,flux, **self.ks_mopts[band][i])[0]
+      if self.ks_mopts[band][i]:
+         man_flux = mangle_spectrum.apply_mangle(wave,flux, 
+               **self.ks_mopts[band][i])[0]
+      else:
+         man_flux = flux
       if not normalize:
          return(wave*(1+self.z),man_flux,flux,man_flux/flux)
 
@@ -873,8 +954,8 @@ class sn(object):
             ids1 = searchsorted(self.data[band1].MJD, mjd)
             ids2 = searchsorted(self.data[band2].MJD, mjd)
             col = col - self.ks[band1][ids1] + self.ks[band2][ids2]
-            flags = flags + (-self.ks_mask[band1][ids1]*\
-                             -self.ks_mask[band2][ids2])*8
+            flags = flags + (logical_not(self.ks_mask[band1][ids1])*\
+                             logical_not(self.ks_mask[band2][ids2]))*8
          return (mjd,col,ecol,flags)
       elif use_model and mod1 and mod2:
          MJD,ms,ems,flags = self.interp_table([band1,band2], use_model=True,
@@ -982,7 +1063,10 @@ class sn(object):
       '''
       print >> out, '-'*80
       print >> out, "SN ",self.name
-      if self.z:  print >> out, "z = %.3f         " % (self.z),
+      if self.z:  
+         print >> out, "z = %.4f         " % (self.z),
+      if getattr(self, '_zcmb', None) is not None:
+         print >> out, "zcmb = %.4f         " % (self.zcmb),
       if self.ra:  print >> out, "ra=%9.5f        " % (self.ra),
       if self.decl:  print >> out, "dec=%9.5f" % (self.decl),
       print >> out, ""
@@ -991,14 +1075,19 @@ class sn(object):
       print >> out, ""
 
       print >> out, "Fit results (if any):"
-      for band in self.restbands:
-         print >> out, "   Observed %s fit to restbad %s" % (band, self.restbands[band])
+      #for band in self.restbands:
+      #   print >> out, "   Observed %s fit to restbad %s" % (band, self.restbands[band])
+      systs = self.systematics()
       for param in self.parameters:
          if self.parameters[param] is not None:
-            print >> out, "   %s = %.3f  +/-  %.3f" % (param, self.parameters[param],
+            line = "   %s = %.3f  +/-  %.3f" % (param, self.parameters[param],
                                                        self.errors[param])
+            if param in systs and systs[param] is not None:
+               line += "  +/- %.3f (sys)" % systs[param]
+         print >> out, line
 
-   def dump_lc(self, epoch=0, tmin=-10, tmax=70, k_correct=0, mw_correct=0):
+   def dump_lc(self, epoch=0, tmin=-10, tmax=70, k_correct=0, 
+               s_correct=False, mw_correct=0):
       '''Outputs several files that contain the lc information: the data,
       uncertainties, and the models themselves.
       
@@ -1007,6 +1096,7 @@ class sn(object):
          tmin/tmax (float): the time range over which to output the model
                             (default:  -10 days to 70 days after Tmax)
          k_correct (bool): If True, k-correct the data/models (default: False)
+         s_correct (bool): If True, s-correct the data/models (default: False)
          mw_correct (bool): If True, de-reddent the MW extintcion 
                             (default: False)
 
@@ -1036,7 +1126,10 @@ class sn(object):
          print >> f, "#  column 1:  time"
          print >> f, "#  column 2:  oberved magnitude"
          print >> f, "#  column 3:  error in observed magnitude"
-         print >> f, "#  column 4:  Flag:  0=OK  1=Invalid K-correction"
+         print >> f, "#  column 4:  Flag:  0=OK  1=Invalid S/K-correction"
+         if s_correct:
+            print >> f, "# NOTE  Data have been S-corrected from %s to %s" %\
+                  (filter, self.restbands[filter])
          if mw_correct:
             Ia_w,Ia_f = kcorr.get_SED(0, 'H3')
             Alamb = fset[filter].R(wave=Ia_w, flux=Ia_f, Rv=3.1)*self.EBVgal
@@ -1055,6 +1148,19 @@ class sn(object):
                      (self.data[filter].MJD[i]-toff, 
                      self.data[filter].mag[i] - ks - Alamb, 
                      self.data[filter].e_mag[i], flag)
+            elif s_correct:
+               flag = 0
+               if filter not in self.Ss:
+                  flag = 1
+                  Ss = 0
+               else:
+                  flag = (not self.Ss_mask[filter][i])
+                  Ss = self.Ss[filter][i]
+               print >> f, "%.2f  %.3f  %.3f  %d" % \
+                     (self.data[filter].MJD[i]-toff, 
+                     self.data[filter].mag[i] + Ss - Alamb, 
+                     self.data[filter].e_mag[i], flag)
+
             else:
                flag = (not self.data[filter].mask[i])
                print >> f, "%.2f  %.3f  %.3f  %d" % \
@@ -1177,6 +1283,9 @@ class sn(object):
                self.data[filter] = lc(self, filter, d['t'], d['m'], d['em'], K=K, SNR=SNR)
          finally:
             self.sql.close()
+
+   def set_restbands(self):
+      return self.get_restbands()
 
    def get_restbands(self):
       '''Automatically populates the restbands member data with one of 
@@ -1319,7 +1428,7 @@ class sn(object):
       for filter in bands:
          if self.restbands[filter] not in self.model.rbs:
             raise AttributeError, \
-                  "Error:  filter %s is not supported by this model" % filter+\
+                  "Error:  filter %s is not supported by this model" % self.restbands[filter] + \
                   ", set self.restbands accordingly"
 
       if reset_kcorrs:
@@ -1626,7 +1735,7 @@ class sn(object):
 
          w = m1 - R*(m2 - m3)
          ew = sqrt(em1**2 + R**2*(em2**2 + em3**2))
-         return mjd,w,ew,-isnan(w)
+         return mjd,w,ew,logical_not(isnan(w))
 
       # Here we need interpolation
       mjd,ms,ems,flags = self.interp_table([band1,band2,band3], 
@@ -1744,11 +1853,9 @@ class sn(object):
       '''
       return plotmod.plot_kcorrs(self, colors, symbols)
 
-   def bolometric(self, bands, method="direct", lam1=None, lam2=None, 
-         refband=None, EBVhost=None, Rv=None, redlaw=None, extrap_red='RJ', 
-      Tmax=None, interpolate=None, extrapolate=False, mopts={}, SED='H3', 
-      DM=None, cosmo='LambdaCDM', use_stretch=False, verbose=False, 
-      outfile=None, extra_output=False):
+   def bolometric(self, bands, method="direct", DM=None, EBVhost=None,
+         Rv=None, redlaw=None, outfile=None, extra_output=False, 
+         cosmo='LambdaCDM', **args):
       '''
       Produce a quasi-bolometric flux light-curve based on the input [bands]
       by integrating a template SED from \lambda=lam1 to \lambda=lam2.
@@ -1818,34 +1925,90 @@ class sn(object):
                  mfuncs: the mangling functions
                  mwave:  the wavelength vector or effective wavelenghts
                  mags:   the magnitudes to which we mangled the SED
-                 masks:  th
+                 masks:  the masks showing where interpolation was done
          
       '''
+
+      if DM is None:
+         DM_computed = True
+         DM = self.get_distmod(cosmo=cosmo)
+      else:
+         DM_computed = False
+
       if method == 'direct':
-         res = bolometric.bolometric_direct(
-               self, bands, EBVhost, Rv, redlaw, extrap_red,
-               interpolate, extrapolate, SED, Tmax, DM, cosmo, verbose)
+         fargs = {'sn':self, 'bands':bands, 'DM':DM, 'EBVhost':EBVhost,
+               'Rv':Rv, 'redlaw':redlaw, 'extra_output':False}
+         for key in ['tmin','tmax','interpolate', 'SED','Tmax']:
+            fargs[key] = None
+         fargs['extrap_red'] = 'RJ'
+         fargs['extrapolate'] = False
+         fargs['interp_all'] = False
+         fargs['cosmo'] = 'LambdaCDM'
+         fargs['verbose'] = False
+         fargs['extra_output'] = False
+         myupdate(fargs,args)
+         res = bolometric.bolometric_direct(**fargs)
          limits = [(l.min(),l.max()) for l in res['lam_effs']]
 
       else:
-         res = bolometric.bolometric_SED(
-               self, bands, lam1, lam2, refband, EBVhost, Rv, redlaw,
-               extrap_red, Tmax, interpolate, extrapolate, mopts, SED,
-               DM, cosmo, use_stretch,verbose)
-         limits = [(l.min(),l.max()) for l in res['waves']]
+         fargs = {'sn':self, 'bands':bands, 'DM':DM, 'EBVhost':EBVhost,
+               'Rv':Rv, 'redlaw':redlaw, 'extra_output':False}
+         for key in ['lam1','lam2','refband','tmin','tmax',
+               'interpolate', 'SED','Tmax']:
+            fargs[key] = None
+         fargs['extrap_red'] = 'RJ'
+         fargs['extrapolate'] = False
+         fargs['mopts'] = {}
+         fargs['SED'] = 'H3'
+         fargs['interp_all'] = False
+         fargs['cosmo'] = 'LambdaCDM'
+         fargs['use_stretch'] = True
+         fargs['extrap_SED'] = True
+         fargs['verbose'] = False
+         fargs['extra_output'] = False
+         myupdate(fargs,args)
+         res = bolometric.bolometric_SED(**fargs)
+         if len(shape(res['boloflux'])) == 1:
+            limits = [(l.min(),l.max()) for l in res['waves']]
+         else:
+            limits = []
+            for i in range(res['waves'].shape[0]):
+              limits.append([(l.min(),l.max()) for l in res['waves'][i]])
 
       if outfile is not None:
          fout = open(outfile, 'w')
          fout.write('# Bolometric luminosity for %s\n' % (self.name))
          fout.write('# Using %s method\n' % (method))
-         fout.write('# Luminosities in units of erg/s\n')
+         fout.write('# E(B-V) = %.2f, R_V = %.2f, redlaw=%s\n' % \
+               (EBVhost,Rv,redlaw))
+         if not DM_computed:
+            fout.write('# DM = %.2f\n' % (DM))
+         else:
+            fout.write(\
+                  '# DM = %.2f  (zcmb = %.4f, H0 = 74.3, and %s cosmo)\n' %\
+                  (DM, self.zcmb, cosmo))
+         fout.write('# Luminosities in units of 10^42 erg/s\n')
          fout.write('# Times are in *observed* frame\n')
-         fout.write('#\n# %6s  %9s  %8s %8s %s\n' % ('t','Lbol','lam1','lamb2',
-            'filters'))
-         for i in range(len(res['epochs'])):
-            fout.write('%7.2f  %9.3e  %8.1f %8.1f %s\n' % \
-                  (res['epochs'][i], res['boloflux'][i], limits[i][0],
-                   limits[i][1], "".join(res['filters_used'][i])))
+         if len(shape(res['boloflux'])) == 2:
+            fout.write('#\n#%6s ' % 't')
+            for j in range(res['boloflux'].shape[1]):
+               fout.write('%8s %8s %6s ' % ('lam1','lam2','L'))
+            fout.write('%s\n' % 'filters')
+            for i in range(res['epochs'].shape[0]):
+               fout.write("%7.2f " % res['epochs'][i])
+               for j in range(res['boloflux'].shape[1]):
+                  fout.write("%8.1f %8.1f %6.3f " %\
+                        (limits[i][j][0], limits[i][j][1],
+                         res['boloflux'][i,j]/1e42))
+               fout.write("%s\n" % ("".join(res['filters_used'][i])))
+         else:
+            fout.write('#\n#%6s  %9s  %8s %8s %s\n' % ('t','Lbol','lam1','lam2',
+               'filters'))
+            for i in range(len(res['epochs'])):
+               fout.write('%7.2f  %6.3f  %8.1f %8.1f %s\n' % \
+                     (res['epochs'][i], res['boloflux'][i]/1e42, 
+                      limits[i][0], limits[i][1],
+                      "".join(res['filters_used'][i])))
          fout.close()
       if not extra_output:
          return (res['epochs'],res['boloflux'],res['filters_used'],limits)
@@ -1855,7 +2018,7 @@ class sn(object):
       else:
          extra = dict(mflux=res['fluxes'], mwaves=res['waves'],
             mags=res['mags'], masks=res['masks'],
-            mfuncs=res['mfuncs'], pars=res['pars'])
+            mfuncs=res['mfuncs'], pars=res['pars'], refbands=res['refbands'])
       return (res['epochs'],res['boloflux'],res['filters_used'],limits,extra)
 
 
@@ -2024,6 +2187,12 @@ def get_sn(str, sql=None, **kw):
             s = import_lc(str)
          except RuntimeError:
             raise RuntimeError, "Could not load %s into SNPY" % str
+   elif str.find('http://') == 0 or str.find('https://') == 0:
+      import get_osc
+      s,message = get_osc.get_obj(str)
+      if s is None:
+         print message
+         return None
    else:
       s = sn(str, source=sql, **kw)
    return s

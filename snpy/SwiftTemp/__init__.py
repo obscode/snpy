@@ -74,6 +74,13 @@ class dm15_template:
       if band == 'UVM2':  return -0.2
       return 0
 
+   def domain(self, band):
+      '''returns the valid domain of the template'''
+      if band not in self.interp:
+         self.set_interpolators()
+      s = dm152s(self.dm15)
+      return (self.interp[band].x.min()*s, self.interp[band].x.max()*s)
+
    def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True):
       '''Evaluate the template in band [band] at epochs [times].  Optionally
       redshift by (1+[z]).  If [mag]=1, return in magnitudes, otherwise return
@@ -151,6 +158,13 @@ class st_template:
       if band == 'UVW2':  return -1.7
       if band == 'UVM2':  return -0.2
       return 0
+
+   def domain(self, band):
+      '''returns the valid domain of the template'''
+      s = dm152s(self.dm15)
+      if band not in self.interp:
+         self.set_interpolators()
+      return (self.interp[band].x.min()*s, self.interp[band].x.max()*s)
 
    def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True):
       '''Evaluate the template in band [band] at epochs [times].  Optionally

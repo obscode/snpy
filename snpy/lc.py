@@ -182,6 +182,17 @@ class lc:
       if '_flux' in odict: del odict['_flux']
       return odict
 
+   def __setstate__(self, state):
+      # We need this because GP's need mean function, but pickling a 
+      # member function is not supported. So if we unpickle a GP, set
+      # the mean accordingly.
+      self.__dict__.update(state)
+      if getattr(self, 'interp',None) is not None:
+         if isinstance(self.interp, fit1dcurve.GaussianProcess):
+            if getattr(self.interp, 'mean', None) is None:
+               self.interp.mean = self.mean
+               self.interp.setup = False
+
    def time_sort(self):
       ids = argsort(self.MJD)
       self.MJD = take(self.MJD, ids)
@@ -356,6 +367,68 @@ class lc:
       print "the following methods are available for constructing templates:"
       fit1dcurve.list_types()
 
+   def mean(self, x, flux=False, verbose=False):
+      '''A convenience function used with the GP interpolator. If a model
+      exists for the LC, use it where it is valid, otherwise, return
+      an extrapolation.'''
+      scalar = False
+      if len(shape(x)) == 0:
+         scalar = True
+      x = atleast_1d(x)
+      if x.shape[0] == 0:
+         '''empty array, just return some sensible value'''
+         if flux:
+            return x*0 + median(self.flux)
+         else:
+            return x*0 + median(self.mag)
+
+
+      if len(x.shape) == 2 and x.shape[1] == 1:
+         x = x[:,0]
+      if self.band in self.parent.model._fbands:
+         sids = argsort(x)
+         m,em,f = self.parent.model(self.band, x[sids], extrap=False)
+         if not alltrue(f):
+            # need to do linear interpolation between end of template and
+            # remaining points
+            m0,em0,f0 = self.parent.model(self.band, self.MJD)
+            # First valid point
+            mid = argmin(self.MJD[f0])
+            xmin = self.MJD[f0][mid]
+            if verbose:
+               print "extrapolating early data up to ",xmin
+            lids = less(x[sids], xmin)
+            if sometrue(lids):
+               m1,em1,f1 = self.parent.model(self.band, x[sids][lids],
+                     extrap=True)
+               m[lids] = m1
+            mid = argmax(self.MJD[f0])
+            # last valid point on the model
+            xmax = self.MJD[f0][mid]
+            ymax = m0[f0][mid]
+
+            if verbose:
+               print "extrapolating late data from (%f,%f)" % (xmax,ymax)
+
+            lids = greater(x[sids], xmax)
+            if sometrue(lids):
+               gids = greater_equal(self.MJD, xmax)
+               if verbose:
+                  print "   using points at", self.MJD[gids]
+               a,b = polyfit(self.MJD[gids], self.mag[gids], 1)
+               if verbose:
+                  print "   median slope: ", a
+               m[lids] = ymax + a*(x[sids][lids]-xmax)
+         y = x*0
+         put(y, sids, m)
+         if flux:
+            return power(10.0, -0.4*(y - self.filter.zp))
+         return y
+      # No model, so we'll just give a reasonable constant mean
+      if flux:
+         return x*0 + median(self.flux)
+      return x*0 + median(self.mag)
+
    def template(self, fitflux=False, do_sigma=True, Nboot=50, 
          method=default_method, compute_params=True, interactive=False, **args):
       '''A backwrd-compatibility alias for :meth:`.spline_fit`.'''
@@ -376,6 +449,8 @@ class lc:
       xx,yy,ee = fit1dcurve.regularize(x, y, ey)
       if len(xx) < 2:
          raise ValueError, "Cannot interpolate data with less than two distinct data points"
+      if method == 'gp':
+         args['mean'] = self.mean
       self.interp = fit1dcurve.Interpolator(method, x, y, ey, self.mask, **args)
       if interactive:
          self.mp = plotmod.launch_int_fit(self, fitflux=fitflux)

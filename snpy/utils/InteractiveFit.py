@@ -8,6 +8,15 @@ try:
 except:
    from snpy.utils import fit1dcurve
 
+def find_renderer(fig):
+   if hasattr(fig.canvas, 'get_renderer'):
+      renderer = fig.canvas.get_renderer()
+   else:
+      import io
+      fig.canvas.print_pdf(io.BytesIO())
+      renderer = fig._cachedRenderer
+   return renderer
+
 class InteractiveFit:
 
    def __init__(self, interp, title=None, figsize=None, fignum=None, draw=True,
@@ -68,7 +77,7 @@ class InteractiveFit:
    def setup_graph(self, draw=True):
 
       self.mp = PanelPlot(1,2, pheights=[0.2,0.6], pwidths=[0.8],
-            figsize=self.figsize, num=self.fignum)
+            figsize=self.figsize, num=self.fignum, rect=(0,0,0.8,1))
       self.mp.right_pad=0.20
 
       if self.title is None:
@@ -83,7 +92,8 @@ class InteractiveFit:
       self.mp.axes[1].errorbar(self.x, self.y, yerr=self.ey, capsize=0,
             fmt='o')
       if not num.alltrue(self.mask):
-         self._x1, = self.mp.axes[1].plot(self.x[-self.mask], self.y[-self.mask], 'x', 
+         m = num.logical_not(self.mask)
+         self._x1, = self.mp.axes[1].plot(self.x[m], self.y[m], 'x', 
                color='red', ms=16)
       else:
          self._x1 = None
@@ -96,7 +106,7 @@ class InteractiveFit:
       if isinstance(self.interp, fit1dcurve.Spline):
          tck = self.interp.tck
          self._knots, = self.mp.axes[1].plot(tck[0][4:-4], 
-               self.interp(tck[0][4:-4])[0], 'd', color='red')
+               self.interp(tck[0][4:-4])[0], 'd', color='red', zorder=1000)
       else:
          self._knots = None
 
@@ -106,8 +116,9 @@ class InteractiveFit:
       self._rp,dum,self._rl = self.mp.axes[0].errorbar(self.x, 
             resids, yerr=self.ey, capsize=0, fmt='o')
       if not num.alltrue(self.interp.mask):
-         self._x2, = self.mp.axes[0].plot(self.x[-self.mask], 
-               self.interp.residuals(mask=False)[-self.mask], 'x', ms=16, color='red')
+         self._x2, = self.mp.axes[0].plot(self.x[num.logical_not(self.mask)], 
+               self.interp.residuals(mask=False)[num.logical_not(self.mask)],
+               'x', ms=16, color='red')
       else:
          self._x2 = None
       self.mp.axes[0].axhline(0, color='black')
@@ -164,7 +175,7 @@ class InteractiveFit:
          tck = getattr(self.interp, 'tck', None)
          if tck:
             self._knots, = self.mp.axes[1].plot(tck[0][4:-4], 
-               self.interp(tck[0][4:-4])[0], 'd', color='red')
+               self.interp(tck[0][4:-4])[0], 'd', color='red', zorder=1000)
 
       # Update the residuals
       ys,m = self.interp(self.x)
@@ -191,15 +202,18 @@ class InteractiveFit:
       '''Redraw the little red X's if needed'''
       if not num.alltrue(self.mask):
          if self._x1 is not None:
-            self._x1.set_data((self.x[-self.mask], self.y[-self.mask]))
+            self._x1.set_data((self.x[num.logical_not(self.mask)], 
+               self.y[num.logical_not(self.mask)]))
          else:
-            self._x1, = self.mp.axes[1].plot(self.x[-self.mask], 
-                  self.y[-self.mask], 'x', color='red', ms=16)
+            self._x1, = self.mp.axes[1].plot(self.x[num.logical_not(self.mask)],
+                  self.y[num.logical_not(self.mask)], 'x', color='red', ms=16)
          if self._x2 is not None:
-            self._x2.set_data((self.x[-self.mask], self.interp.residuals(mask=False)[-self.mask]))
+            self._x2.set_data((self.x[num.logical_not(self.mask)], 
+               self.interp.residuals(mask=False)[num.logical_not(self.mask)]))
          else:
-            self._x2, = self.mp.axes[0].plot(self.x[-self.mask], 
-                  self.interp.residuals(mask=False)[-self.mask], 'x', color='red', ms=16)
+            self._x2, = self.mp.axes[0].plot(self.x[num.logical_not(self.mask)],
+               self.interp.residuals(mask=False)[num.logical_not(self.mask)], 
+               'x', color='red', ms=16)
       elif self._x1 is not None:
          self._x1.remove()
          self._x1 = None
@@ -214,10 +228,11 @@ class InteractiveFit:
       x,y = event.xdata,event.ydata
       ax = event.inaxes
       if ax is self.mp.axes[0]:
-         id = num.argmin(num.power(x-self.x,2) + num.power(y-self.interp.residuals(mask=False),2))
+         id = num.argmin(num.power(x-self.x,2) + \
+               num.power(y-self.interp.residuals(mask=False),2))
       else:
          id = num.argmin(num.power(x-self.x,2) + num.power(y-self.y,2))
-      self.mask[id] = -self.mask[id]
+      self.mask[id] = num.logical_not(self.mask[id])
       self.redraw_x()
 
    def _bind_r(self, event):
@@ -247,7 +262,7 @@ class InteractiveFit:
       id = getattr(self, '_statsid', None)
       ax = self.mp.axes[0]
       if id is None:
-         bbox = self._stats_labels.get_window_extent()
+         bbox = self._stats_labels.get_window_extent(find_renderer(self.mp.fig))
          bbox = bbox.inverse_transformed(ax.transAxes)
          self._statsid = ax.text(bbox.x1,0.95,label, va='top', ha='left',
               transform=ax.transAxes, fontdict={'size':10})
@@ -262,7 +277,7 @@ class InteractiveFit:
       id = getattr(self, '_parsid', None)
       ax = self.mp.axes[1]
       if id is None:
-         bbox = self._pars_labels.get_window_extent()
+         bbox = self._pars_labels.get_window_extent(find_renderer(self.mp.fig))
          bbox = bbox.inverse_transformed(ax.transAxes)
          self._parsid = ax.text(bbox.x1, 0.95, label, va='top', ha='left',
                transform=ax.transAxes, fontdict={'size':10})

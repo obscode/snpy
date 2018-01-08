@@ -67,6 +67,17 @@ class template:
       self.Ct.mktemplate(**args2)
       self.St.mktemplate(**args2)
 
+   def domain(self, band):
+      if band in ['Bs','Vs','Rs','Is']:
+         return self.Pt.domain(band)
+      elif band in ['u','B','V','g','r','i','Y','J','H','K','J_K','H_K']:
+         return self.Ct.domain(band)
+      elif band in ['UVW1','UVW2','UVM2']:
+         return self.St.domain(band)
+      else:
+         raise AttributeError, "Sorry, band %s not supported" % band
+
+
    def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
          extrap=False):
       if band in ['Bs','Vs','Rs','Is']:
@@ -110,6 +121,14 @@ class stemplate:
                'generate':generate}
       self.Ct.mktemplate(**args)
       self.St.mktemplate(**args)
+
+   def domain(self, band):
+      if band in ['u','B','V','g','r','i','Y','J','H','K','J_K','H_K']:
+         return self.Ct.domain(band)
+      elif band in ['UVW1','UVW2','UVM2']:
+         return self.St.domain(band)
+      else:
+         raise AttributeError, "Sorry, band %s not supported" % band
 
    def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
          extrap=False):

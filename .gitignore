@@ -13,3 +13,16 @@ dist
 .eggs
 MANIFEST
 snpy.egg-info
+dm15temp/*.pyc
+SwiftTemp/*.pyc
+filters/*.pyc
+lib/*.pyc
+lib/*.swp
+lib/err*.obj
+lib/kerror.py
+spline2/*.pyc
+sqlmod/*.pyc
+tspack/*.pyc
+utils/*.pyc
+__pycache__
+.cache
