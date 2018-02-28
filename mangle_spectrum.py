@@ -830,7 +830,7 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
 def apply_mangle(wave,flux, state, pars, lstsq=False, init=True, **margs):
 
    if 'method' not in margs:
-      margs['method'] = 'tspline'
+      margs['method'] = default_method
    m = mangler(wave, flux, **margs)
    m._setstate(state)
    if init:
