@@ -778,7 +778,10 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
    if self.interp is not None or self.band in self.parent.model._fbands:
       self.mp = myplotlib.PanelPlot(1,2,pheights=[0.2,0.8], num=111)
       self.mp.axes[0].set_ylabel('residuals')
-      self.mp.axes[1].set_ylabel('mag')
+      if flux:
+         self.mp.axes[1].set_ylabel('flux (photons/s/cm$^2$)')
+      else:
+         self.mp.axes[1].set_ylabel('mag')
       p = self.mp.axes[1]
       p2 = self.mp.axes[0]
       # some references so that we can get at the data from within callbacks
@@ -791,7 +794,10 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
          p2.invert_yaxis()
    else:
       self.mp = myplotlib.PanelPlot(1,1, num=111)
-      self.mp.axes[0].set_ylabel('mag')
+      if flux:
+         self.mp.axes[0].set_ylabel('flux (photons/s/cm$^2$)')
+      else:
+         self.mp.axes[0].set_ylabel('mag')
       p = self.mp.axes[0]
       p.lc_inst = self
       p.epoch = epoch
