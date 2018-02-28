@@ -566,6 +566,7 @@ class EBV_model(model):
       systs['DM'] = sqrt(systs['DM'])
       systs['EBVhost'] = 0.06
       systs['dm15'] = 0.06
+      systs['Tmax'] = 0.34
       return(systs)
 
 def read_table(file):
@@ -795,6 +796,7 @@ class EBV_model2(model):
          systs['dm15'] = 0.06
       else:
          systs['st'] = 0.03
+      systs['Tmax'] = 0.34
       return(systs)
 
 
@@ -993,8 +995,16 @@ class max_model(model):
    def systematics(self, calibration=1, include_Ho=False):
       '''Returns the systematic errors in the paramters as a dictionary.  
       If no estimate is available, return None for that parameter.'''
+      merrs = {'umax':0.03, 'gmax':0.014, 'rmax':0.022, 'imax':0.022, 
+               'Bmax':0.012, 'Vmax':0.019, 'Ymax':0.050, 'Jmax':0.044, 
+               'Hmax':0.055}
       systs = dict.fromkeys(self.parameters.keys())
+      for key in systs:
+         if key in merrs:
+            systs[key] = merrs[key]
       systs['st'] = 0.03
+      systs['Tmax'] = 0.34
+
       return(systs)
 
 class max_model2(model):
@@ -1147,8 +1157,15 @@ class max_model2(model):
    def systematics(self, calibration=1, include_Ho=False):
       '''Returns the systematic errors in the paramters as a dictionary.  
       If no estimate is available, return None for that parameter.'''
+      merrs = {'umax':0.03, 'gmax':0.014, 'rmax':0.022, 'imax':0.022, 
+               'Bmax':0.012, 'Vmax':0.019, 'Ymax':0.050, 'Jmax':0.044, 
+               'Hmax':0.055}
       systs = dict.fromkeys(self.parameters.keys())
+      for key in systs:
+         if key in merrs:
+            systs[key] = merrs[key]
       systs['st'] = 0.03
+      systs['Tmax'] = 0.34
       return(systs)
 
 
@@ -1556,4 +1573,6 @@ class color_model(model):
       systs = dict.fromkeys(self.parameters.keys())
       systs['EBVhost'] = 0.06
       systs['st'] = 0.03
+      systs['Tmax'] = 0.34
+      systs['Bmax'] = 0.012
       return(systs)
