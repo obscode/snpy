@@ -819,11 +819,12 @@ class max_model(model):
          raise ValueError, "This model only supports dm15 and st as shape parameters"
       self.stype = stype
       model.__init__(self, parent)
-      self.rbs = ['u','B','V','g','r','i','Y','J','H','K']
+      self.rbs = ['u','B','V','g','r','i','Y','J','H','K','UVM2','UVW2','UVW1']
       self.M0s = {'u':-18.82, 'B':-19.11, 'V':-19.12, 'g':-19.16, 'r':-19.03,
                   'i':-18.50, 'Y':-18.45, 'J':-18.44, 'H':-18.38, 'K':-18.42,
                   'J_K':-18.44, 'H_K':-18.38,
-                  'Bs':-19.319, 'Vs':-19.246, 'Rs':-19.248, 'Is':-18.981}
+                  'Bs':-19.319, 'Vs':-19.246, 'Rs':-19.248, 'Is':-18.981,
+                  'UVM2':-19, 'UVW2':-19, 'UVW1':-19}
       self.parameters = {stype:None, 'Tmax':None}
       self.errors = {stype:0, 'Tmax':0}
       if stype == 'dm15':
@@ -1017,7 +1018,7 @@ class max_model2(model):
       self.stype = stype
       model.__init__(self, parent)
       self.rbs = ['u','B','V','g','r','i','Y','J','H','K',
-            'H_K','J_K']
+            'H_K','J_K','UVM2','UVW1','UVW2']
       if self.stype == 'dm15':
          self.rbs = self.rbs + ['Bs','Vs','Rs','Is']
       self.M0s = {'u':-18.82, 'B':-19.11, 'V':-19.12, 'g':-19.16, 'r':-19.03,
