@@ -243,7 +243,7 @@ class sn(object):
       return not self.__eq__(other)
       
 
-   def choose_model(self, name, stype='dm15', **kwargs):
+   def choose_model(self, name, stype='st', **kwargs):
       '''A convenience function for selecting a model from the model module.
       [name] is the model to use.  The model will be used when self.fit() is 
       called and will contain all the parameters and errors. Refer to
