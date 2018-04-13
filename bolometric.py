@@ -172,7 +172,7 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    if not extrap_SED:
       gids = greater_equal(ts/s, -19)*less_equal(ts/s,70)
    else:
-      gids = -isnan(ts/s)
+      gids = ~isnan(ts/s)
    ts = ts[gids]
    mags = []
    masks = []
