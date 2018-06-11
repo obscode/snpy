@@ -6,6 +6,7 @@
 CSPtemp/*.pyc
 /build
 */build/
+/dist
 */_build/
 dm15temp/*.pyc
 SwiftTemp/*.pyc
@@ -20,3 +21,4 @@ tspack/*.pyc
 utils/*.pyc
 __pycache__
 .cache
+MANIFEST
