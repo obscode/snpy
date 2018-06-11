@@ -6,6 +6,7 @@
 /*.pylc
 /build
 */build/
+/dist
 */_build/
 tests/__pycache__
 *.cache/
@@ -26,3 +27,4 @@ tspack/*.pyc
 utils/*.pyc
 __pycache__
 .cache
+MANIFEST

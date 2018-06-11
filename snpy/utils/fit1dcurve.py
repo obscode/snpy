@@ -1095,12 +1095,13 @@ if pymc is not None:
             return (num.array([]), num.array([]), num.array([]))
          ret = []
          for i in range(len(inds)):
-            #try:
-            res = brentq(self.deriv, xs[inds[i]], xs[inds[i]+1])
-            #res = newton(self.deriv, xs[inds[i]])
-            ret.append(res)
-            #except:
-            #   continue
+            try:
+               res = brentq(self.deriv, xs[inds[i]], xs[inds[i]+1])
+               ret.append(res)
+            except:
+               continue
+         if len(ret) == 0:
+            return (num.array([]), num.array([]), num.array([]))
          ret = num.array(ret)
          vals = self.__call__(ret)[0]
          curvs = self.deriv(ret, n=2)

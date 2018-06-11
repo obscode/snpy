@@ -88,7 +88,7 @@ class sqlbase:
             if self.SPEC_DB is not None:
                if self.SPEC_DB != self.PHOTO_DB:
                   self.con2 = sql.connect(host=self.host, user=self.user, 
-                        passwd=passwd, db=SPEC_DB)
+                        passwd=passwd, db=self.SPEC_DB)
                else:
                   self.con2 = self.con
             else:
@@ -515,6 +515,15 @@ class sql_csp2(sqlbase):
 class sql_SBS_csp2(sql_csp2):
    host = 'kepler.obs.carnegiescience.edu'
    user = 'CSP'
+
+   SPEC_DB = "SPECTRA"
+   SPEC_TABLE = "spectra"
+   SPEC_INFO = "sp_info"
+   SPEC_JD = "JD"
+   SPEC_LAMB = "LAMBDA"
+   SPEC_FLUX = "FLUX"
+   SPEC_INDEX = "FILE"
+   SPEC_NAME = "SN"
 
 class sql_csp2_pub(sql_csp2):
    PHOTO_DB = "PubPhot"
