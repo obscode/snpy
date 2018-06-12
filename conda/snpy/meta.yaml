@@ -1,6 +1,6 @@
 package:
   name: snpy
-  version: 2.1.6
+  version: 2.1.8
 
 source:
    git_tag: pypi
