@@ -5,7 +5,7 @@ Module for SNooPy to download/parse data from the Open Supernova Catalog.
 import json
 import urllib
 from astropy.coordinates import Angle
-from snpy import sn,lc
+from snpy import sn,lc,fset
 from numpy import array,log10
 
 # telescope,band --> SNooPy filter database
@@ -43,6 +43,43 @@ for band in ["u'","g'","r'","i'","z'"]:
 for band in ["J","H","Ks"]:
    ftrans_standard[(band[0],'','','')] = band+"2m"
    standard_warnings[band[0]] = "2MASS "
+
+# Our own photometric systems:
+def CSP_systems(filt, MJD):
+   '''Given a filter name and MJD date, output the correct telescope and
+   system information.'''
+   if filt == "V":
+      if MJD < 53748.0:
+         return (dict(telescope='Swope',instrument='Site2',band='V-3014',
+            zeropoint="{:.4f}".format(fset['V0'].zp)))
+      elif MJD < 53759.0:
+         return (dict(telescope='Swope',instrument='Site2',band='V-3009',
+            zeropoint="{:.4f}".format(fset['V1'].zp)))
+      elif MJD < 56566.0:
+         return (dict(telescope='Swope',instrument='Site2',band='V-9844',
+            zeropoint="{:.4f}".format(fset['V'].zp)))
+      else:
+         return (dict(telescope='Swope',instrument='e2v',band='V-9844',
+            zeropoint="{:.4f}".format(fset['V2'].zp)))
+   if filt == "Jrc2":
+         return (dict(telescope='Swope',instrument='RetroCam',band='J',
+            zeropoint="{:.4f}".format(fset[filt].zp)))
+   if filt in ['u','g','r','i','B']:
+      if MJD < 56566.0:
+         return (dict(telescope='Swope',instrument='Site2',band=filt,
+            zeropoint="{:.4f}".format(fset[filt].zp)))
+      else:
+         return (dict(telescope='Swope',instrument='e2v',band=filt,
+            zeropoint="{:.4f}".format(fset[filt+'2'].zp)))
+   if filt in ['Y','J','H']:
+      if MJD < 55743.0:
+         return (dict(telescope='Swope',instrument='RetroCam',band=filt,
+            zeropoint="{:.4f}".format(fset[filt].zp)))
+      else:
+         return (dict(telescope='DuPont',instrument='RetroCam',band=filt,
+            zeropoint="{:.4f}".format(fset[filt+'d'].zp)))
+   return({})
+
 
 
 warning_message = {
@@ -192,3 +229,35 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
    if full_data:
       return(snobj, 'Success', d)
    return(snobj,'Success')
+
+def to_osc(s, ref=None, bibcode=None, source=1):
+   '''Given a supernova object, s, output to JSON format suitable for upload to
+   the OSC.'''
+   
+   data = {s.name:{"name":s.name}}
+
+   if ref or bibcode:
+      sources = [dict(bibcode=bibcode, name=ref, alias=str(source))]
+      data['sources'] = sources
+   phot = []
+   for filt in s.data:
+      for i in range(len(s.data[filt].MJD)):
+         datum = dict(survey='CSP', observatory='LCO')
+         datum.update(CSP_systems(filt, s.data[filt].MJD[i]))
+         datum['time'] = "{:.3f}".format(s.data[filt].MJD[i])
+         datum['u_time'] = "MJD"
+         datum['magnitude'] = "{:.3f}".format(s.data[filt].mag[i])
+         flux,eflux = s.data[filt].flux[i],s.data[filt].e_flux[i]
+         datum['flux'] = "{:.5f}".format(flux)
+         datum['u_flux'] = "s^-1 cm^-2"
+         datum['e_flux'] = "{:.5f}".format(eflux)
+         datum['e_upper_magnitude'] = "{:.3f}".format(
+               -2.5*log10((flux-eflux)/flux))
+         datum['e_lower_magnitude'] = "{:.3f}".format(
+               -2.5*log10(flux/(flux+eflux)))
+         datum['source'] = "{}".format(source)
+         phot.append(datum)
+   data['photometry'] = phot
+
+   return json.dumps(data, indent=4)
+
