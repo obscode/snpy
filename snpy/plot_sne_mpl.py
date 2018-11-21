@@ -675,6 +675,10 @@ def plot_sn(self, **kwargs):
          ids = argsort(eff_wavs)
          oobj.filter_order = [obands[i] for i in ids]
          obands = oobj.filter_order
+      if epoch and getattr(oobj,'Tmax', None) is not None:
+         oToff = oobj.Tmax
+      else:
+         oToff = Toff
       for filt in obands:
          # Figure out the pairing
          if filt in bands:
@@ -690,7 +694,7 @@ def plot_sn(self, **kwargs):
             i = -1
 
          if i < 0:  continue
-         plot_SN_panel(oobj, p.axes[i], bands[i], rel_off, 's', 'r', Toff,
+         plot_SN_panel(oobj, p.axes[i], bands[i], rel_off, 's', 'r', oToff,
                **kwargs)
    
    #p.draw()
