@@ -14,7 +14,7 @@ except ImportError:
 
 try:
    import corner as triangle
-except ImportError:
+except:
    triangle=None
    
 import types
@@ -343,7 +343,7 @@ class sn(object):
          return(ret_data)
 
    def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0,
-         dokcorr=True, kcorr=None, B14=False):
+         dokcorr=True, kcorr=None, B14=False, deredden=True):
       '''Use the Lira Law to derive a color excess.  [Bband] and [Vband] 
       should be whichever observed bands corresponds to restframe B and V,
       respectively.  The color excess is estimated to be the median of the 
@@ -361,6 +361,8 @@ class sn(object):
          plot (bool):  If True, produce a plot with the fit.
          dokcoor (bool):  If True, k-correct the data before fitting
          B14 (bool):  If True, use Burns et al. (2014) rather than Lira (1996)
+         deredden (bool): If True, remove Milky-Way reddening before computing
+                          Lira reddening and plotting
          
       Returns:
          4-tuple:  (EBV, error, slope, eslope)
@@ -382,6 +384,11 @@ class sn(object):
 
       t,BV,eBV,flag = self.get_color(Bband, Vband, dokcorr=dokcorr, 
             interp=interpolate)
+
+      if deredden:
+         A_B = fset[Bband].R()*self.EBVgal
+         A_V = fset[Vband].R()*self.EBVgal
+         BV = BV - (A_B - A_V)
 
       # find all points that have data in both bands
       gids = equal(flag, 0)
@@ -1223,6 +1230,25 @@ class sn(object):
                 self.data[filter].e_mag[i])
       f.close()
 
+   def to_json(self, filename, reference=None, bibcode=None, source=1):
+      import get_osc
+      '''Output a file with JSON format for this object. The format should
+      conform to the Open Supernova Catalog and be suitable for upload.
+
+      Args:
+         filename (str):  Output filename
+         reference (str): If specified, a string-based reference for this
+                          data (e.g., 'Smith et al. 2000')
+         bibcode (str): If specified, include the bibcode for this data
+                       (e.g., '2017AJ....154..211K')
+      Returns:
+         None'''
+
+      st = get_osc.to_osc(self, ref=reference, bibcode=bibcode, source=source)
+      fout = open(filename, 'w')
+      fout.write(st)
+      fout.close()
+
    def update_sql(self, attributes=None, dokcorr=1):
       '''Updates the current information in the SQL database, creating a new SN
       if needed.   
@@ -1285,12 +1311,6 @@ class sn(object):
             self.z = self.sql.get_SN_parameter('z')
             self.ra = self.sql.get_SN_parameter('ra')
             self.decl = self.sql.get_SN_parameter('decl')
-            #for param in self.parameters:
-            #   try:
-            #      self.parameters[param] = self.sql.get_SN_parameter(param)
-            #      self.errors[param] = self.sql.get_SN_parameter('e_'+param)
-            #   except:
-            #      pass
             data,source = self.sql.get_SN_photometry()
             self.sources = [source]
             for filter in data:
