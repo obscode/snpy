@@ -515,12 +515,13 @@ class sql_csp2(sqlbase):
    JD_OFFSET = -2400000.5    # database is JD, JD-2400000.5 gives MJD
 
 class sql_SBS_csp2(sql_csp2):
-   host = 'kepler.obs.carnegiescience.edu'
+   host = 'obsns09.obs.carnegiescience.edu'
    user = 'CSP'
 
-   SPEC_DB = "SPECTRA"
-   SPEC_TABLE = "spectra"
-   SPEC_INFO = "sp_info"
+   PHOTO_DB = "CSP"
+   SPEC_DB = "CSP"
+   SPEC_TABLE = "SPECTRA"
+   SPEC_INFO = "SP_INFO"
    SPEC_JD = "JD"
    SPEC_LAMB = "LAMBDA"
    SPEC_FLUX = "FLUX"
