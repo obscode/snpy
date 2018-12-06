@@ -16,6 +16,8 @@ ftrans_standard = {}
 for band in ['u','g','r','i','B','V','Y','J','H','K']:
    ftrans[(band,"CSP",'',"LCO")] = band
 for band in ['U','B','V','R','I']:
+   ftrans[(band,'','kait2','')] = band+'kait'
+for band in ['U','B','V','R','I']:
    ftrans[(band,'','kait3','')] = band+'kait'
 for band in ['J','H','Ks']:
    ftrans[(band,'','PAIRITEL','')] = band+'2m'
