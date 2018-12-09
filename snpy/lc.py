@@ -30,10 +30,11 @@ class lc:
                         of fitting.
       SNR (float array):  optional signal-to-noise of the data, if different
                           than 1.087/e_mag.
-
+      sids (int array): optional index array of into sources of photometry.
    '''
 
-   def __init__(self, parent, band, MJD, mag, e_mag, restband=None, K=None, SNR=None):
+   def __init__(self, parent, band, MJD, mag, e_mag, restband=None, K=None, 
+         SNR=None, sids=None):
       self.parent = parent     # pointer to the SN containing class
       self.band = band         # observed filter
       self.MJD = MJD           # time (in Modified Julian Day... or whatever)
@@ -54,6 +55,17 @@ class lc:
       # a way to mask out bad data from fitting
       self.mask = ones(self.mag.shape, dtype=bool) 
       self.filter = fset[self.band] # instance of filter object for this band
+
+      # A way to keep track of sources of photometry
+      if sids is None:
+         self.sids = zeros(self.mag.shape[0], dtype=int)
+      else:
+         try:
+            self.sids = asarray(sids, dtype=int)
+         except:
+            raise ValueError, "sids must be integer array or list"
+         if self.sids.shape != self.mag.shape:
+            raise ValueError, "sids must have the same shape as photometry"
 
       self.interp = None
       self.model_flux = 0       # is the model in flux-space?
@@ -188,7 +200,8 @@ class lc:
       # the mean accordingly.
       self.__dict__.update(state)
       if getattr(self, 'interp',None) is not None:
-         if isinstance(self.interp, fit1dcurve.GaussianProcess):
+         if fit1dcurve.GaussianProcess is not None and \
+            isinstance(self.interp, fit1dcurve.GaussianProcess):
             if getattr(self.interp, 'mean', None) is None:
                self.interp.mean = self.mean
                self.interp.setup = False
@@ -198,6 +211,7 @@ class lc:
       self.MJD = take(self.MJD, ids)
       self.magnitude = take(self.magnitude, ids)
       self.e_mag = take(self.e_mag, ids)
+      self.sids = take(self.sids, ids)
       if self.K is not None:
          self.K = take(self.K, ids)
 

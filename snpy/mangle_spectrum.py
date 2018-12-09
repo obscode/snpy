@@ -821,8 +821,10 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
       omag = num.array([mags[id]])
    else:
       omag = mags[id,:]
+   if verbose: print "OMAG = ", omag
    for i in range(len(mflux)):
       mmag = fset[m.normfilter].synth_mag(wave,mflux[i],z=z)
+      if verbose: print "MMAG = ",mmag,"factor=",num.power(10, -0.4*(omag[i]-mmag))
       mflux[i] = mflux[i]*num.power(10,-0.4*(omag[i]-mmag))
 
    return (mflux, m._getstate(), m.function.pars)

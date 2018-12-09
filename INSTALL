@@ -15,3 +15,5 @@ to install the following:
 Once you've got that installed, simply run the usual:
 
 python setup.py install
+
+Alternatively, you can try running 'pip install snpy'
