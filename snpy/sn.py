@@ -14,7 +14,7 @@ except ImportError:
 
 try:
    import corner as triangle
-except ImportError:
+except:
    triangle=None
    
 import types
@@ -343,7 +343,7 @@ class sn(object):
          return(ret_data)
 
    def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0,
-         dokcorr=True, kcorr=None, B14=False):
+         dokcorr=True, kcorr=None, B14=False, deredden=True):
       '''Use the Lira Law to derive a color excess.  [Bband] and [Vband] 
       should be whichever observed bands corresponds to restframe B and V,
       respectively.  The color excess is estimated to be the median of the 
@@ -361,6 +361,8 @@ class sn(object):
          plot (bool):  If True, produce a plot with the fit.
          dokcoor (bool):  If True, k-correct the data before fitting
          B14 (bool):  If True, use Burns et al. (2014) rather than Lira (1996)
+         deredden (bool): If True, remove Milky-Way reddening before computing
+                          Lira reddening and plotting
          
       Returns:
          4-tuple:  (EBV, error, slope, eslope)
@@ -382,6 +384,11 @@ class sn(object):
 
       t,BV,eBV,flag = self.get_color(Bband, Vband, dokcorr=dokcorr, 
             interp=interpolate)
+
+      if deredden:
+         A_B = fset[Bband].R()*self.EBVgal
+         A_V = fset[Vband].R()*self.EBVgal
+         BV = BV - (A_B - A_V)
 
       # find all points that have data in both bands
       gids = equal(flag, 0)
@@ -877,7 +884,7 @@ class sn(object):
             # IDs where valid extrapolation is done
             eids = mask & (less(data['MJD'],self.data[band].MJD.min())\
                    | greater(data['MJD'], self.data[band].MJD.max()))
-            flags.append(where(bids, iids*1+eids*2+(-mask)*4, bids)+kflag)
+            flags.append(where(bids, iids*1+eids*2+(~mask)*4, bids)+kflag)
          else:
             interp = getattr(self.data[band], 'interp', None)
             if interp is None:
@@ -887,7 +894,7 @@ class sn(object):
             ms.append(where(bids, temp, data[band])-k)
             ems.append(where(bids, etemp, data['e_'+band]))
             iids = mask
-            eids = -mask
+            eids = ~mask
             flags.append(where(bids, iids*1 + eids*4, bids)+kflag)
 
       return (data['MJD'], ms, ems, flags)
@@ -1201,6 +1208,47 @@ class sn(object):
                print >> f, "%.1f  %.3f" % (ts[i]-toff, m[i])
             f.close()
 
+   def to_txt(self, filename, mask=True):
+      '''Outputs the photometry to a .txt format the SNooPy can later import.
+      
+      Args:
+         filename (str): Filename to output.
+         mask (bool):    Mask out flagged data? default: True
+
+      Returns:
+         None
+      '''
+      f = open(filename, 'w')
+      print >> f, "%s %f %f %f" % (self.name, self.z, self.ra, self.decl)
+      for filter in self.data.keys():
+         print >> f, "filter %s" % (filter)
+         for i in range(len(self.data[filter].mag)):
+            # mask out bad data
+            if mask and not self.data[filter].mask[i]: continue
+            print >> f, "%.2f  %.3f  %.3f" % \
+               (self.data[filter].MJD[i], self.data[filter].mag[i],
+                self.data[filter].e_mag[i])
+      f.close()
+
+   def to_json(self, filename, reference=None, bibcode=None, source=1):
+      import get_osc
+      '''Output a file with JSON format for this object. The format should
+      conform to the Open Supernova Catalog and be suitable for upload.
+
+      Args:
+         filename (str):  Output filename
+         reference (str): If specified, a string-based reference for this
+                          data (e.g., 'Smith et al. 2000')
+         bibcode (str): If specified, include the bibcode for this data
+                       (e.g., '2017AJ....154..211K')
+      Returns:
+         None'''
+
+      st = get_osc.to_osc(self, ref=reference, bibcode=bibcode, source=source)
+      fout = open(filename, 'w')
+      fout.write(st)
+      fout.close()
+
    def update_sql(self, attributes=None, dokcorr=1):
       '''Updates the current information in the SQL database, creating a new SN
       if needed.   
@@ -1263,13 +1311,8 @@ class sn(object):
             self.z = self.sql.get_SN_parameter('z')
             self.ra = self.sql.get_SN_parameter('ra')
             self.decl = self.sql.get_SN_parameter('decl')
-            #for param in self.parameters:
-            #   try:
-            #      self.parameters[param] = self.sql.get_SN_parameter(param)
-            #      self.errors[param] = self.sql.get_SN_parameter('e_'+param)
-            #   except:
-            #      pass
-            data = self.sql.get_SN_photometry()
+            data,source = self.sql.get_SN_photometry()
+            self.sources = [source]
             for filter in data:
                d = data[filter]
                if 'K' in d:
@@ -1280,7 +1323,8 @@ class sn(object):
                   SNR = d['SNR']
                else:
                   SNR = None
-               self.data[filter] = lc(self, filter, d['t'], d['m'], d['em'], K=K, SNR=SNR)
+               self.data[filter] = lc(self, filter, d['t'], d['m'], d['em'], 
+                     K=K, SNR=SNR, sids=zeros(d['t'].shape, dtype=int))
          finally:
             self.sql.close()
 
@@ -1509,7 +1553,8 @@ class sn(object):
       '''
       if snemcee is None:
          print "Sorry, in order to fit with MCMC sampler, you need to install"
-         print "the emcee module (http://dan.iel.fm/emcee/current/)"
+         print "the emcee module. Try 'pip install emcee'  or get the source"
+         print " from http://dan.iel.fm/emcee/current/" 
          return None
 
       if len(self.model._fbands) == 0:
@@ -2140,14 +2185,29 @@ def import_lc(file):
    MJD = {}
    mags = {}
    emags = {}
+   sids = {}
+   sources = []
 
    for line in lines:
       if line[0] == "#":  continue
       if line.find('filter') >= 0:
-         this_filter = line.split()[1]
-         MJD[this_filter] = []
-         mags[this_filter] = []
-         emags[this_filter] = []
+         fields = line.split()
+         this_filter = fields[1]
+         if len(fields) == 2:
+            if this_filter in ['u','g','r','i','B','V','Y','J','H','K',
+                               'Ydw','Jrc2']:
+               source = 'CSP'
+            else:
+               source = "unknown"
+         else:
+            source = " ".join(fields[2:])
+         if source not in sources:
+            sources.append(source)
+         if this_filter not in MJD:
+            MJD[this_filter] = []
+            mags[this_filter] = []
+            emags[this_filter] = []
+            sids[this_filter] = []
       elif this_filter is not None:
          try:
             t,m,em = map(float, string.split(string.strip(line)))
@@ -2156,12 +2216,15 @@ def import_lc(file):
          MJD[this_filter].append(t)
          mags[this_filter].append(m)
          emags[this_filter].append(em)
-
+         sids[this_filter].append(sources.index(source))
+   # Save the sources of photometry
+   s.sources = sources
    for f in MJD:
       MJD[f] = array(MJD[f])
       mags[f] = array(mags[f])
       emags[f] = array(emags[f])
-      s.data[f] = lc(s, f, MJD[f], mags[f], emags[f])
+      sids[f] = array(sids[f])
+      s.data[f] = lc(s, f, MJD[f], mags[f], emags[f], sids=sids[f])
       s.data[f].time_sort()
 
    s.get_restbands()

@@ -4,7 +4,8 @@
 
 import os,sys, string
 from pkg_resources import parse_version
-from numpy.distutils.core import setup
+#from numpy.distutils.core import setup
+from setuptools import setup
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
 try:
@@ -39,6 +40,7 @@ def configuration(parent_package='', top_path=None):
    config.add_subpackage('snpy')
    config.add_scripts(['bin/snpy'])
    config.add_scripts(['bin/update-snpy'])
+#   config.add_data_files('ipythonrc-SN')
    return config
 
 
@@ -58,7 +60,7 @@ def dosetup():
          name='snpy',
          description="SNooPy:  Supernova light-curve analysis tool",
          author='Chris Burns (Carnegie Observatories)',
-         author_email='cburns@carnegiescience.edu',
+         author_email='cburns@.carnegiescience.edu',
          url='http://csp.obs.carnegiescience.edu/data/snpy',
          license='MIT',
          classifiers=[

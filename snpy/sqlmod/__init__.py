@@ -314,7 +314,8 @@ class sqlbase:
       for key in data:
          for key2 in data[key]:
             data[key][key2] = numpy.array(data[key][key2])
-      return(data)
+      
+      return(data,'CSP')
 
    def get_SN_spectra(self):
       '''Get the spectra form the SQL database.  Returns a tuple:
@@ -508,17 +509,19 @@ class sql_csp2(sqlbase):
    PHOTO_EMAG = "sqrt(MAGSN.err*MAGSN.err + MAGSN.fiterr*MAGSN.fiterr)"
    PHOTO_FILT = "CASE WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD < 2454846.0) THEN 'J' WHEN (ins='WI' and MAGSN.filt='Y') THEN 'Ydw' WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD >= 2454846.0) THEN 'Jrc2' ELSE MAGSN.filt END"
    PHOTO_K = None      # No K-corrections in the DB
-   PHOTO_SNR = "CASE WHEN ins='WI' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/1.6)) WHEN ins='DC' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/3.0)) ELSE 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/2.0)) END"
+   #PHOTO_SNR = "CASE WHEN ins='WI' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/1.6)) WHEN ins='DC' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/3.0)) ELSE 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/2.0)) END"
+   PHOTO_SNR = "MAGINS.flux/sqrt(MAGINS.flux + 200*MAGINS.sky)"
    PHOTO_COND = "and MAGSN.obj=-1 and MAGSN.mag > 0 and MAGSN.fits=MAGINS.fits and MAGSN.obj=MAGINS.obj"
    JD_OFFSET = -2400000.5    # database is JD, JD-2400000.5 gives MJD
 
 class sql_SBS_csp2(sql_csp2):
-   host = 'kepler.obs.carnegiescience.edu'
+   host = 'obsns09.obs.carnegiescience.edu'
    user = 'CSP'
 
-   SPEC_DB = "SPECTRA"
-   SPEC_TABLE = "spectra"
-   SPEC_INFO = "sp_info"
+   PHOTO_DB = "CSP"
+   SPEC_DB = "CSP"
+   SPEC_TABLE = "SPECTRA"
+   SPEC_INFO = "SP_INFO"
    SPEC_JD = "JD"
    SPEC_LAMB = "LAMBDA"
    SPEC_FLUX = "FLUX"

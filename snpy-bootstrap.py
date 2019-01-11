@@ -1511,7 +1511,9 @@ def after_install(options,home_dir):
    home_dir = os.path.realpath(home_dir)
    # Test for installed software
    if has_conda():
-      # we can use the conda package installer. Sweet!
+      # we can use the conda package installer. Sweet! Actually, more than
+      # sweet: necessary. Matplotlib and scipy seem to be seriously messed
+      # up if you try to install with pip in a conda venv.
       conda = join(home_dir, 'bin', 'conda')
       if not os.path.isfile(conda):
          sys.stderr.write('You seem to be using anaconda, but conda is not\n')

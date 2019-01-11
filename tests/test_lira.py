@@ -17,12 +17,12 @@ def snobj():
    return s
 
 def test_lira_noparams(snobj):
-   EBV,eEBV,slope,eslope = snobj.lira('B','V')
+   EBV,eEBV,slope,eslope = snobj.lira('B','V', deredden=False)
    assert (round(EBV,3) == round(0.0471892119,3) and
            round(eEBV,3) == round(0.004766264,3))
 
 def test_lira_interp_model(snobj, interpolate=True):
-   EBV,eEBV,slope,eslope = snobj.lira('B','V')
+   EBV,eEBV,slope,eslope = snobj.lira('B','V', deredden=False)
    assert (round(EBV,3) == round(0.047188195845567507,3) and
            round(eEBV,3) == round(0.00476626486707499,3))
 
