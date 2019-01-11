@@ -8,6 +8,36 @@ from astropy.coordinates import Angle
 from snpy import sn,lc,fset
 from numpy import array,log10
 
+def CfAbands(filt, MJD):
+   if MJD < 51913.0:
+      return filt[0]+'s'  # standard photometry
+   elif 51913.0 < MJD < 55058:
+      if filt[0] == 'U': return 'U4sh'
+      if filt[0] == 'I': return 'I4sh'
+      if filt[0] == 'R': return 'R4sh'
+      return filt[0]+'k1' # natural photometry CfA3 + CfA4 period 1
+   else:
+      if filt[0] == 'U': return 'U4sh'
+      if filt[0] == 'I': return 'I4sh'
+      if filt[0] == 'R': return 'R4sh'
+
+      return filt[0]+'k2' # natural photometry CfA4 period 2
+
+# Some well-known publications and their mappings:
+pubs = {
+   '1999AJ....117..707R':  # Riess et al. (1999) Standard Photometry
+      CfAbands,
+   '2006AJ....131..527J':  # Jha et al. (2006) Standard Photometry
+      CfAbands,
+   '2009ApJ...700..331H':  # Hicken et al. (2009) CfA3 Natural Photometry
+      CfAbands,
+   '2012ApJS..200...12H':  # Hicken et al. (2012) CfA4 Natural Photometry
+      CfAbands
+      }
+
+
+
+
 # telescope,band --> SNooPy filter database
 # We do this by matching (band,system,telescope,observatory) info from the 
 # database to SNooPy filters. 
@@ -16,6 +46,8 @@ ftrans_standard = {}
 standard_warnings = {}
 for band in ['u','g','r','i','B','V','Y','J','H','K']:
    ftrans[(band,"CSP",'',"LCO")] = band
+for band in ['U','B','V','R','I']:
+   ftrans[(band,'','kait2','')] = band+'kait'
 for band in ['U','B','V','R','I']:
    ftrans[(band,'','kait3','')] = band+'kait'
 for band in ['J','H','Ks']:
@@ -137,6 +169,8 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
    unknown_unknowns = []
    warnings = []
    for p in d['photometry']:
+      if p.get('upperlimit',False):
+         continue
       t = (p.get('band',''),p.get('system',''),p.get('telescope',''),
            p.get('observatory',''))
 
@@ -151,7 +185,10 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
          print "Warning:  no primary source, skipping"
          continue
 
-      if t in ftrans:
+      bibcode = this_source[0]
+      if bibcode in pubs:
+         b = pubs[bibcode](t[0],float(p['time']))
+      elif t in ftrans:
          b = ftrans[t]
       elif t in ftrans_standard:
          b = ftrans_standard[t]
@@ -181,12 +218,19 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
          emags[b] = []
          sids[b] = []
       if 'time' in p and 'magnitude' in p:
-         if not allow_no_errors and 'e_magnitude' not in p:
+         if not allow_no_errors and 'e_magnitude' not in p and\
+               'e_lower_magnitude' not in p and 'e_upper_magnitude' not in p:
             if 'upperlims' not in warnings: warnings.append('upperlims')
             continue
          MJD[b].append(float(p['time']))
          mags[b].append(float(p['magnitude']))
-         emags[b].append(float(p.get('e_magnitude',missing_error)))
+         if 'e_magnitude' in p:
+            emags[b].append(float(p['e_magnitude']))
+         elif 'e_lower_magnitude' in p and 'e_upper_magnitude' in p:
+            emags[b].append((float(p['e_lower_magnitude']) +\
+                  float(p['e_upper_magnitude']))/2)
+         else:
+            emags[b].append(missing_error)
       elif 'time' in p and 'countrate' in p and 'zeropoint' in p:
          if not allow_no_errors and 'e_countrate' not in p:
             if 'upperlims' not in warnings: warnings.append('upperlims')

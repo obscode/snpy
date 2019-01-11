@@ -12,8 +12,8 @@ Sorry, I can't find the SNooPy source.  I  expected to find it here:
 %s'''
 
 instructions = '''
-If you downloaded SNooPy with SVN:
-1) Go to the SNooPy *source* folder and type 'svn update'
+If you downloaded SNooPy with git:
+1) Go to the SNooPy *source* folder and type 'git pull '
 2) Type 'python setup.py install'
    NOTE:  make sure you use the correct python to do this.
 
