@@ -1251,7 +1251,23 @@ class sn(object):
 
    def to_mlcs(self, Tmax=None, spec_sample='hsiao', prior='rv19', 
          vector='rv19-early-smix'):
-      '''Output the LC data to formats suitable for fitting with MLCS2k2.'''
+      '''Output the LC data to formats suitable for fitting with MLCS2k2.
+      
+      Args:
+         Tmax (float or None): Time of maximum (initial guess for MLCS). If 
+                               None, try to get from fits or splines.
+         spec_sample (str): The spetroscopic sample to use for k-corrections.
+                            (See MLCS documentation)
+         prior (str):  Reddening prior for MLCS (see MLCS documentation)
+         vector (str):  Vector to use for MLCS (see MLCS documentation)
+      Returns:
+         None
+
+      Effects:
+         Creates (or appends to) an output file named sn.info with the SN
+         information needed by MLCS. Also creates a file named {SN}.dat
+         with the light-curve data. Both are used to fit in MLCS
+      '''
       if Tmax is None:
          if self.Tmax > 1.0:
             Tmax = self.Tmax
@@ -1275,7 +1291,18 @@ class sn(object):
       fout.close()
 
    def to_salt(self, outfile=None):
-      '''Output a LC file that can be fed into SALT.'''
+      '''Output a LC file that can be fed into SALT.
+      
+      Args:
+         outfile (str or None): Output file that SALT2 will input. If
+                                None, default to {SN}.list
+      
+      Returns:
+         None
+      
+      Effects: 
+         Creates output file with all SN info needed by SALT2 to fit.
+      '''
 
       if outfile is None:
          outfile = self.name+".list"
