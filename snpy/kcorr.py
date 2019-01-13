@@ -11,7 +11,7 @@ been moved to the :mod:`snpy.filter` module.
 import os,sys,string,re
 import numpy as num
 import scipy.interpolate
-from utils import deredden
+from .utils import deredden
 try:
    from astropy.io import fits as pyfits
 except ImportError:
@@ -22,8 +22,8 @@ except ImportError:
       sys.stderr.write('        from:  http://www.stsci.edu/resources/'+\
                        'software_hardware/pyfits/\n')
       raise ImportError
-import filters
-from mangle_spectrum import mangle_spectrum2, default_method
+from . import filters
+from .mangle_spectrum import mangle_spectrum2, default_method
 
 base = os.path.dirname(globals()['__file__'])
 spec_base = os.path.join(base,'typeIa')
@@ -71,7 +71,7 @@ def linterp(spec1, spec2, day1, day2, day):
    if day1 == day2:
       return spec1
    if day > day2 or day < day1:
-      raise ValueError, "day must be in interval (day1,day2)"
+      raise ValueError("day must be in interval (day1,day2)")
    if abs(day1-day) < 1e-9:
       return spec1
    if abs(day2 - day) < 1e-9:
@@ -140,7 +140,7 @@ def get_SED(day, version='H3', interpolate=True, extrapolate=False):
       return (n91_wav, 
             linterp(n91_sed[day1+13, :],n91_sed[day2+13,:],day1,day2,day))
    else:
-      raise AttributeError, "version %s not recognized" % version
+      raise AttributeError("version %s not recognized" % version)
 
 def redden(wave, flux, ebv_gal, ebv_host, z, R_gal=3.1, R_host=3.1,
       redlaw='ccm', strict_ccm=False):
@@ -285,9 +285,9 @@ def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1,
    '''
 
    if filter1 not in filters.fset:
-      raise AttributeError, "filter %s not defined in filters module" % filter1
+      raise AttributeError("filter %s not defined in filters module" % filter1)
    if filter2 not in filters.fset:
-      raise AttributeError, "filter %s not defined in filters module" % filter2
+      raise AttributeError("filter %s not defined in filters module" % filter2)
 
    kcorrs = []
    mask = []      # Masks the good values (1) and bad (not defined) values (0)
@@ -357,7 +357,7 @@ def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z,
    if colorfilts is None:  colorfilts = filts
    for filter1 in filts + restfilts + colorfilts:
       if filter1 not in filters.fset:
-         raise AttributeError, "filter %s not defined in filters module" % filter1
+         raise AttributeError("filter %s not defined in filters module" % filter1)
 
    if len(num.shape(waves)) < 2:
       scalar = 1
@@ -475,7 +475,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
    if colorfilts is None:  colorfilts = filts
    for filter1 in filts + restfilts + colorfilts:
       if filter1 not in filters.fset:
-         raise AttributeError, "filter %s not defined in filters module" % filter1
+         raise AttributeError("filter %s not defined in filters module" % filter1)
 
    kcorrs = []
    mask = []      # Masks the good values (1) and bad (not defined) values (0)
@@ -573,26 +573,26 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
             #     num.compress(m_mask[j],mags[j])[1:]
             ms = num.compress(m_mask[j], mags[j])
             if debug:
-               print "filters and colors for day %f:" % (days[j])
-               print fs
-               print ms[:-1]-ms[1:]
+               print("filters and colors for day %f:" % (days[j]))
+               print(fs)
+               print(ms[:-1]-ms[1:])
   
             # Now we mangle the spectrum.  Note, we are redshifting the spectrum
             # here, so do NOT set z in mangle_spectrum2.
             man_spec_f,state,pars = mangle_spectrum2(spec_wav*(1+z),spec_f,
                   fs, ms, **mopts)
  
-            if debug:  print "factors = ",factors
+            if debug:  print("factors = ",factors)
             if debug:
                # check the colors
                for i in range(len(fs)-1):
  
-                  print "input color:  %s-%s = %f" % (fs[i],fs[i+1], ms[i]-ms[i+1]),
+                  print("input color:  %s-%s = %f" % (fs[i],fs[i+1], ms[i]-ms[i+1]), end=' ')
                   f1 = filters.fset[fs[i]]
                   f2 = filters.fset[fs[i+1]]
                   col = f1.synth_mag(spec_wav*(1+z), man_spec_f[0]) - \
                         f2.synth_mag(spec_wav*(1+z), man_spec_f[0])
-                  print "  output color:  %f" % (col)
+                  print("  output color:  %f" % (col))
   
          if full_output:
             args = {}
@@ -676,7 +676,7 @@ def R_obs_abc(filter1, filter2, filter3, z, days, EBVhost, EBVgal,
             redlaw=redlaw, strict_ccm=strict_ccm)
       for filter in [filter1,filter2,filter3]:
          if filter not in filters.fset:
-            raise AttributeError, "filter %s not defined in filters module" % filter
+            raise AttributeError("filter %s not defined in filters module" % filter)
  
       # Now, we get the response across the filters:
       resp = {}
@@ -716,7 +716,7 @@ def A_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1,
       red_f = redden(spec_wav, spec_f, EBVgal, EBVhost, z, Rv_gal, Rv_host)
 
       if filter not in filters.fset:
-         raise AttributeError, "filter %s not defined in filters module" % filter
+         raise AttributeError("filter %s not defined in filters module" % filter)
  
       # Now, we get the response across the filters:
       resp = filters.fset[filter].response(spec_wav, spec_f, z=z, photons=1)
@@ -755,7 +755,7 @@ def R_obs(filter, z, days, EBVhost, EBVgal, Rv_host=3.1, Rv_gal=3.1,
             redlaw=redlaw, strict_ccm=strict_ccm)
 
       if filter not in filters.fset:
-         raise AttributeError, "filter %s not defined in filters module" % filter
+         raise AttributeError("filter %s not defined in filters module" % filter)
  
       # Now, we get the response across the filters:
       resp = filters.fset[filter].response(spec_wav, spec_f, z=z, photons=1)
@@ -788,7 +788,7 @@ def R_obs_spectrum(filts, wave, flux, z, EBVgal, EBVhost, Rv_gal=3.1,
    for filter in filts:
       # Redden the spectrum based on Cardelli et al. and assumed EBVgal + EBVhost
       if filter not in filters.fset:
-         raise AttributeError, "filter %s not defined in filters module" % filter
+         raise AttributeError("filter %s not defined in filters module" % filter)
  
       # Now, we get the response across the filters:
       resp = filters.fset[filter].response(wave, flux, z=z, photons=1)

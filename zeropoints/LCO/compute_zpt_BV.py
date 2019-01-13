@@ -52,18 +52,18 @@ zpts = {}
 for f in fs:
    zpts[f] = []
 for i,st in enumerate(stds):
-   print "Assuming standard and natural magnitudes for %s:" % (st)
+   print("Assuming standard and natural magnitudes for %s:" % (st))
    for j,f in enumerate(fs):
-      print "   %s  %6.3f    %6.3f +/- %5.3f" \
-            % (f, std_mags[i][j], nat_mags[i][j], d_nat_mags[i][j])
-   print "Zero-points:"
+      print("   %s  %6.3f    %6.3f +/- %5.3f" \
+            % (f, std_mags[i][j], nat_mags[i][j], d_nat_mags[i][j]))
+   print("Zero-points:")
    for j,f in enumerate(fs):
       zpt = fset[f].compute_zpt(standards[st], nat_mags[i][j],
             zeropad=True)
       zpts[f].append(zpt)
-      print "   %s  %7.4f +/- %6.4f" % (f, zpt, d_nat_mags[i][j])
+      print("   %s  %7.4f +/- %6.4f" % (f, zpt, d_nat_mags[i][j]))
 
 for f in fs:
-   print "std for %s:  %f" % (f, std(zpts[f]))
+   print("std for %s:  %f" % (f, std(zpts[f])))
 
 

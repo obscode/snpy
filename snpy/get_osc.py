@@ -3,7 +3,7 @@ Module for SNooPy to download/parse data from the Open Supernova Catalog.
 '''
 
 import json
-import urllib
+import urllib.request, urllib.parse, urllib.error
 from astropy.coordinates import Angle
 from snpy import sn,lc,fset
 from numpy import array,log10
@@ -92,7 +92,7 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
    URL.'''
 
    try:
-      u = urllib.urlopen(url)
+      u = urllib.request.urlopen(url)
    except:
       if full_data:
          return None, "Invalid URL", None
@@ -108,7 +108,7 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
       u.close()
    
    # We now have the JSON data. Get the info we need
-   d = d.values()[0]
+   d = list(d.values())[0]
    name = d['name']
    if 'redshift' not in d or 'ra' not in d or 'dec' not in d:
       if full_data:
@@ -148,7 +148,7 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
             this_source = all_sources[s]
             break
       if this_source is None:
-         print "Warning:  no primary source, skipping"
+         print("Warning:  no primary source, skipping")
          continue
 
       if t in ftrans:
@@ -157,22 +157,22 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
          b = ftrans_standard[t]
          if t not in known_unknowns:
             known_unknowns.append(t)
-            print "Warning:  no telescope/system info, assuming ", \
-                  standard_warnings[b[0]], b[0]
+            print("Warning:  no telescope/system info, assuming ", \
+                  standard_warnings[b[0]], b[0])
       elif (t[0],"","","") in ftrans_standard:
          b = ftrans_standard[(t[0],"","","")]
          if t not in known_unknowns:
             known_unknowns.append(t)
-            print "Warning: telescope/system defined by %s/%s/%s not "\
+            print("Warning: telescope/system defined by %s/%s/%s not "\
                   "recognized, assuming %s %s" %\
-                  (t[1],t[2],t[3],standard_warnings[t[0]],t[0])
+                  (t[1],t[2],t[3],standard_warnings[t[0]],t[0]))
       else:
          # No idea
          if t not in unknown_unknowns:
             unknown_unknowns.append(t)
-            print "Warning: telescope/system defined by %s/%s/%s not "\
+            print("Warning: telescope/system defined by %s/%s/%s not "\
                   "recognized and can't figure out the filter %s" % \
-                  (t[1],t[2],t[3],t[0])
+                  (t[1],t[2],t[3],t[0]))
          unknown_unknowns.append(t)
          continue
       if b not in MJD:  
@@ -219,13 +219,13 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
 
    if len(unknown_unknowns) > 0:
       unknown_unknowns = list(set(unknown_unknowns))
-      print "Warning:  the following photometry was not recognized by SNooPy"
-      print "and was not imported:"
+      print("Warning:  the following photometry was not recognized by SNooPy")
+      print("and was not imported:")
       for item in unknown_unknowns:
-         print item
+         print(item)
    if warnings:
       for warning in warnings:
-         print warning_message[warning]
+         print(warning_message[warning])
    if full_data:
       return(snobj, 'Success', d)
    return(snobj,'Success')

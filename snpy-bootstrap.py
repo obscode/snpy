@@ -23,7 +23,7 @@ try:
     import subprocess
 except ImportError:
     if sys.version_info <= (2, 3):
-        print('ERROR: %s' % sys.exc_info()[1])
+        print(('ERROR: %s' % sys.exc_info()[1]))
         print('ERROR: this script requires Python 2.4 or greater; or at least the subprocess module.')
         print('If you copy subprocess.py from a newer version of Python this script will probably work')
         sys.exit(101)
@@ -34,9 +34,9 @@ try:
 except NameError:
     from sets import Set as set
 try:
-    basestring
+    str
 except NameError:
-    basestring = str
+    str = str
 
 join = os.path.join
 py_version = 'python%s.%s' % (sys.version_info[0], sys.version_info[1])
@@ -769,8 +769,8 @@ def main():
         parser.print_help()
         sys.exit(2)
     if len(args) > 1:
-        print('There must be only one argument: DEST_DIR (you gave %s)' % (
-            ' '.join(args)))
+        print(('There must be only one argument: DEST_DIR (you gave %s)' % (
+            ' '.join(args))))
         parser.print_help()
         sys.exit(2)
 
@@ -914,7 +914,7 @@ def path_locations(home_dir):
             try:
                 import win32api
             except ImportError:
-                print('Error: the path "%s" has a space in it' % home_dir)
+                print(('Error: the path "%s" has a space in it' % home_dir))
                 print('To handle these kinds of paths, the win32api module must be installed:')
                 print('  http://sourceforge.net/projects/pywin32/')
                 sys.exit(3)
@@ -1235,7 +1235,7 @@ def install_activate(home_dir, bin_dir, prompt=None):
 
     files['activate_this.py'] = ACTIVATE_THIS
     vname = os.path.basename(os.path.abspath(home_dir))
-    for name, content in files.items():
+    for name, content in list(files.items()):
         content = content.replace('__VIRTUAL_PROMPT__', prompt or '')
         content = content.replace('__VIRTUAL_WINPROMPT__', prompt or '(%s)' % vname)
         content = content.replace('__VIRTUAL_ENV__', os.path.abspath(home_dir))
@@ -1260,8 +1260,8 @@ def fix_lib64(lib_dir):
     instead of lib/pythonX.Y.  If this is such a platform we'll just create a
     symlink so lib64 points to lib
     """
-    if [p for p in distutils.sysconfig.get_config_vars().values()
-        if isinstance(p, basestring) and 'lib64' in p]:
+    if [p for p in list(distutils.sysconfig.get_config_vars().values())
+        if isinstance(p, str) and 'lib64' in p]:
         logger.debug('This system uses lib64; symlinking lib64 to lib')
         assert os.path.basename(lib_dir) == 'python%s' % sys.version[:3], (
             "Unexpected python lib dir: %r" % lib_dir)
@@ -1519,7 +1519,7 @@ def after_install(options,home_dir):
          sys.stderr.write('You seem to be using anaconda, but conda is not\n')
          sys.stderr.write('where I expect it. Please fix your PATH.')
          sys.exit(1)
-      print "Using conda:", conda
+      print("Using conda:", conda)
    else:
       conda = None
    pip = join(home_dir, 'bin', 'pip')
@@ -1534,9 +1534,9 @@ def after_install(options,home_dir):
          sys.stderr.write("Can't find pip. Please install it before running")
          sys.stderr.write("snpy-bootstrap\n")
          sys.exit(1)
-   print 'Using pip:', pip
+   print('Using pip:', pip)
    # First, the absolutely necessary stuff
-   print "Now going to install the manditory software..."
+   print("Now going to install the manditory software...")
    man_packages = ['scipy','pymysql','pyfits','matplotlib',
                    'ipython','gnureadline']
    for package in man_packages:
@@ -1562,12 +1562,12 @@ def after_install(options,home_dir):
          p.wait()
          of.close()
       if p.returncode != 0:
-         print "\nNuts! There was a problem installing required package",package
-         print "Check %s.log for errors to see what went wrong" % package
+         print("\nNuts! There was a problem installing required package",package)
+         print("Check %s.log for errors to see what went wrong" % package)
          sys.exit(1)
       sys.stdout.write("Done\n")
    # Now, the optional stuff
-   print "Now going to try installing the optional software..."
+   print("Now going to try installing the optional software...")
    opt_packages = ['emcee','pymc','astropy']
    for package in opt_packages:
       sys.stdout.write("   Installing %s..." % package)
@@ -1578,13 +1578,13 @@ def after_install(options,home_dir):
       p.wait()
       of.close()
       if p.returncode != 0:
-         print "\nOh well, there was a problem installing package",package
-         print "Check %s.log for errors to see what went wrong" % package
+         print("\nOh well, there was a problem installing package",package)
+         print("Check %s.log for errors to see what went wrong" % package)
       else:
          sys.stdout.write("Done\n")
 
    # Now we install SNooPy proper
-   print "Now attempting to download/install SNooPy..."
+   print("Now attempting to download/install SNooPy...")
    os.chdir(home_dir)
    succeed = False
 
@@ -1593,18 +1593,18 @@ def after_install(options,home_dir):
    if os.path.isdir('snpy'):
       #okay, see if a git repo
       if os.path.isdir(os.path.join('snpy','.git')):
-         print "You already have a git clone of SNooPy, skipping download"
-         print "I suggest you run snpy-update"
+         print("You already have a git clone of SNooPy, skipping download")
+         print("I suggest you run snpy-update")
          succeed = True
       elif os.path.isdir(os.path.join('snpy','.svn')):
-         print "You already have an SVN working copy of SNooPy, skipping "\
-               "download"
-         print "I suggest you run snpy-update"
+         print("You already have an SVN working copy of SNooPy, skipping "\
+               "download")
+         print("I suggest you run snpy-update")
          succeed = True
       else:
-         print "You already have a static source of SNooPy at the following"
-         print "location:",os.path.join(home_dir,snpy)
-         print "Suggest you remove it and run snpy-bootstrap again"
+         print("You already have a static source of SNooPy at the following")
+         print("location:",os.path.join(home_dir,snpy))
+         print("Suggest you remove it and run snpy-bootstrap again")
          sys.exit(1)
    else:
       # First, we try to use git
@@ -1612,8 +1612,8 @@ def after_install(options,home_dir):
          'snpy'], stdout=of, stderr=subprocess.STDOUT)
       p.wait()
       if p.returncode != 0:
-         print "You do not seem to have git. I will try to use SVN instead, but"
-         print " SVN repository will be abandoned in the near future."
+         print("You do not seem to have git. I will try to use SVN instead, but")
+         print(" SVN repository will be abandoned in the near future.")
       else:
          succeed = True
  
@@ -1623,7 +1623,7 @@ def after_install(options,home_dir):
             stdout=of, stderr=subprocess.STDOUT)
       p.wait()
       if p.returncode != 0:
-         print "Failed to download from SVN, reverting to static source"
+         print("Failed to download from SVN, reverting to static source")
       else:
          succeed = True
 
@@ -1633,8 +1633,8 @@ def after_install(options,home_dir):
               stdout=of, stderr=subprocess.STDOUT)
       p.wait()
       if p.returncode != 0:
-         print "Failed to download/install SNooPy static source!"
-         print "Check SNooPy.log to see what went wrong"
+         print("Failed to download/install SNooPy static source!")
+         print("Check SNooPy.log to see what went wrong")
          of.close()
          sys.exit(1)
    else:
@@ -1643,13 +1643,13 @@ def after_install(options,home_dir):
          'install'], stdout=of, stderr=subprocess.STDOUT)
       p.wait()
       if p.returncode != 0:
-         print "Failed to install SNooPy from SVN working copy."
-         print "Check SNooPy.log to see what went wrong"
+         print("Failed to install SNooPy from SVN working copy.")
+         print("Check SNooPy.log to see what went wrong")
          of.close()
          sys.exit(1)
    of.close()
-   print "-"*75
-   print '''Done!  With any luck, SNooPy has been successfully installed into
+   print("-"*75)
+   print('''Done!  With any luck, SNooPy has been successfully installed into
 the virtual environment located in %s.  
 From now on, if you want to run SNooPy, run the following script:
    %s/bin/snpy
@@ -1657,8 +1657,8 @@ or put it in your PATH.  To keep SNooPy up-to-date, periodically run
    %s/bin/update-snpy
 If you want to write your own scripts using the snpy module, you will
 need to use the python in SNooPy's virtual environment to run your scripts:
-   %s/bin/python''' % (home_dir,home_dir,home_dir,home_dir)
-   print "-"*75
+   %s/bin/python''' % (home_dir,home_dir,home_dir,home_dir))
+   print("-"*75)
 
 
 def convert(s):
@@ -2134,22 +2134,22 @@ def check_environment():
    '''Look for the most common problems and warn the user if detected.'''
    if 'F77' in os.environ:
       if os.environ['F77'].find('iraf') >= 0:
-         print iraf_warning
+         print(iraf_warning)
          sys.exit(1)
    if sys.platform == 'darwin':
       # check for Xcode
       if not os.path.isfile('/usr/bin/gcc'):
-         print xcode_warning
+         print(xcode_warning)
          sys.exit(1)
 
 if __name__ == '__main__':
 
     # First check to see if we are in a virtualenv or venv already...
     if hasattr(sys, 'real_prefix'):
-       print "Warning:  you are already running in a virtual environment."
-       print "So I'm just going to install SNooPy in this virtualenv"
-       print "Should I proceed (Y/N)?"
-       res = raw_input()
+       print("Warning:  you are already running in a virtual environment.")
+       print("So I'm just going to install SNooPy in this virtualenv")
+       print("Should I proceed (Y/N)?")
+       res = input()
        if res == 'Y':
           rp = os.path.realpath(sys.prefix)
           after_install(None, rp)
@@ -2157,10 +2157,10 @@ if __name__ == '__main__':
        else:
           sys.exit(1)
     elif hasattr(sys, 'base_prefix'):
-       print "Warning:  you are already running in a venv virtual environment."
-       print "So I'm just going to install SNooPy in this venv."
-       print "Should I proceed (Y/N)?"
-       res = raw_input()
+       print("Warning:  you are already running in a venv virtual environment.")
+       print("So I'm just going to install SNooPy in this venv.")
+       print("Should I proceed (Y/N)?")
+       res = input()
        if res == 'Y':
           rp = os.path.realpath(sys.prefix)
           if not os.path.isfile(os.path.join(rp,'bin','pip')):
@@ -2170,11 +2170,11 @@ if __name__ == '__main__':
        else:
           sys.exit(1)
     elif has_conda():
-       print "Warning:  you are running within an anaconda environment"
-       print "so I'm just going to install SNooPy in this environment."
-       print "Just remember to activate it before using SNooPy in the future."
-       print "Should I proceed (Y/N)?"
-       res = raw_input()
+       print("Warning:  you are running within an anaconda environment")
+       print("so I'm just going to install SNooPy in this environment.")
+       print("Just remember to activate it before using SNooPy in the future.")
+       print("Should I proceed (Y/N)?")
+       res = input()
        if res == 'Y':
           rp = os.path.realpath(sys.prefix)
           after_install(None, rp)

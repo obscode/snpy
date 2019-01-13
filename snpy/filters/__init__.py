@@ -9,7 +9,7 @@ following funcionality:
       - several member variables for bookkeeping:
          o max/min wavelenghts
          o name, coment
-   filter:
+   filt:
       - everthing in spectrum, plus:
       - computation of effective wavelength for a given spectrum
       - compute zero-point of a filter based on reference spectrum
@@ -56,8 +56,9 @@ class spectrum:
       read():                   Read in the data and compute member data
    '''
    def __init__(self, name=None, file=None, comment=None, load=1):
-      '''Creates a filter instance.  Required parameters:  name and file.  Can also
-      specify the zero point (instead of using the comptute_zpt() function do do it).'''
+      '''Creates a spectrum instance.  Required parameters:  name and file.  
+      Can also specify the zero point (instead of using the comptute_zpt() 
+      function do do it).'''
       self.name = name
       self.file = file      # location of the filter response
       self.wave_data = None      # wavelength of response
@@ -75,9 +76,9 @@ class spectrum:
       if self.file is not None:
          f = open(self.file)
          lines = f.readlines()
-         self.wave_data = num.array([float(string.split(line)[0]) \
+         self.wave_data = num.array([float(line.split()[0]) \
                for line in lines if line[0] != "#"])
-         self.resp_data = num.array([float(string.split(line)[1]) \
+         self.resp_data = num.array([float(line.split()[1]) \
                for line in lines if line[0] != "#"])
          f.close()
 
@@ -109,10 +110,10 @@ class spectrum:
          else:
             return None
       else:
-         raise AttributeError, "Error:  attribute %s not defined" % (name)
+         raise AttributeError("Error:  attribute %s not defined" % (name))
 
 
-class filter(spectrum):
+class filt(spectrum):
    '''This class defines a filter.  It contains the response as Numeric arrays.  It has
    the following member data:
       name:      string describing the filter (eg. 'B')
@@ -157,7 +158,7 @@ class filter(spectrum):
       # get the response if needed:
       if self.wave is None: self.read()
 
-      if type(spectrum) is not types.ListType:
+      if type(spectrum) is not list:
          spectrum = [spectrum]
          only1 = 1
       else:
@@ -214,17 +215,14 @@ class filter(spectrum):
       if flux is None:
          # We must have a spectrum object:
          if not isinstance(specwave, spectrum):
-            raise TypeError, \
-                  "If specifying just specwave, it must be a spectrum object"
+            raise TypeError("If specifying just specwave, it must be a spectrum object")
          wave = specwave.wave
          spec = specwave.flux
       else:
          if type(specwave) is not num.ndarray or type(flux) is not num.ndarray:
-            raise TypeError, \
-                  "If specifying both specwave and flux, they must be arrays"
+            raise TypeError("If specifying both specwave and flux, they must be arrays")
          if len(num.shape(specwave)) != 1 or len(num.shape(flux)) != 1:
-            raise TypeError, \
-                  "specwave and flux must be 1D arrays"
+            raise TypeError("specwave and flux must be 1D arrays")
          wave = specwave
          spec = flux
 
@@ -339,8 +337,8 @@ class filter(spectrum):
          wave,flux = specwave.wave,specwave.flux
       else:
          if flux is None:
-            raise TypeError, "specwave must either be a spectrum instance or "\
-                  "an array of wavelengths and flux must be specified"
+            raise TypeError("specwave must either be a spectrum instance or "\
+                  "an array of wavelengths and flux must be specified")
          wave,flux = specwave,flux
       flam = num.power(10, -0.4*(mag-self.zp))   # in photons/s/cm^2
       flam = flam/self.response(wave, flux, z=z)  # now in ergs/s/cm^2
@@ -375,7 +373,7 @@ class filter(spectrum):
 
    def copy(self):
       '''Return a copy of this instance.'''
-      return(filter(self.name, self.file, self.zp, self.comment))
+      return(filt(self.name, self.file, self.zp, self.comment))
 
    def R(self, Rv=3.1, wave=None, flux=None, z=0.0, EBV=0.001, redlaw='ccm',
          strict_ccm=False):
@@ -411,18 +409,18 @@ class system:
 
    def add_SED(self, SED):
       if not isinstance(SED, spectrum):
-         raise ValueError, "SED must be a spectrum instance"
+         raise ValueError("SED must be a spectrum instance")
       self.SEDs[SED.name] = SED
 
    def list_SEDs(self):
       for SED in self.SEDs:
-         print "\t"+self.SEDs[SED].name
+         print("\t"+self.SEDs[SED].name)
 
    def keys(self):
-      return self.SEDs.keys()
+      return list(self.SEDs.keys())
 
    def values(self):
-      return self.SEDs.values()
+      return list(self.SEDs.values())
 
    def __contains__(self, item):
       return self.SEDs.__contains__(item)
@@ -467,19 +465,19 @@ class standard_set:
 
    def list_systems(self):
       for syst in self.systems:
-         print syst+": "+self.systems[syst].name
+         print(syst+": "+self.systems[syst].name)
 
    def list_SEDs(self):
       for syst in self.systems:
-         print self.systems[syst].name
+         print(self.systems[syst].name)
          self.systems[syst].list_SEDs()
 
    def cache_spectra(self):
-      for syst in self.systems.values():
-         for sed in syst.SEDs.values():
+      for syst in list(self.systems.values()):
+         for sed in list(syst.SEDs.values()):
             if sed.name in self.spectra:
-               print "Warning!  Encountered multiple filter IDs for %s" %\
-                        (sed)
+               print("Warning!  Encountered multiple filter IDs for %s" %\
+                        (sed))
             self.spectra[sed.name] = sed
 
    def __getattr__(self, attr):
@@ -496,7 +494,7 @@ class standard_set:
       elif key in self.systems:
          return self.systems[key]
       else:
-         raise KeyError, "spectrum ID %s not found" % (key)
+         raise KeyError("spectrum ID %s not found" % (key))
 
    def __setitem__(self, key, value):
       self.spectra[key] = value
@@ -524,27 +522,27 @@ class filter_set:
       self.observatories[name] = observatory(name)
 
    def cache_filters(self):
-      for obs in self.observatories.values():
-         for tel in obs.telescopes.values():
-            for filt in tel.filters.values():
+      for obs in list(self.observatories.values()):
+         for tel in list(obs.telescopes.values()):
+            for filt in list(tel.filters.values()):
                if filt.name in self.filters:
-                  print "Warning!  Encountered multiple filter IDs for %s" %\
-                        (filt)
+                  print("Warning!  Encountered multiple filter IDs for %s" %\
+                        (filt))
                self.filters[filt.name] = filt
 
       
    def list_observatories(self):
       for obs in self.observatories:
-         print self.observatories[obs].name
+         print(self.observatories[obs].name)
 
    def list_telescopes(self):
       for obs in self.observatories:
-         print self.observatories[obs].name
+         print(self.observatories[obs].name)
          self.observatories[obs].list_telescopes()
 
    def list_filters(self):
       for obs in self.observatories:
-         print self.observatories[obs].name
+         print(self.observatories[obs].name)
          self.observatories[obs].list_filters()
 
    def __getattr__(self, attr):
@@ -559,7 +557,7 @@ class filter_set:
       if key in self.filters:
          return self.filters[key]
       else:
-         raise KeyError, "filter ID %s not found" % (key)
+         raise KeyError("filter ID %s not found" % (key))
 
    def __setitem__(self, key, value):
       self.filters[key] = value
@@ -583,11 +581,11 @@ class observatory:
 
    def list_telescopes(self):
       for tel in self.telescopes:
-         print "\t"+self.telescopes[tel].name
+         print("\t"+self.telescopes[tel].name)
 
    def list_filters(self):
       for tel in self.telescopes:
-         print "\t"+self.telescopes[tel].name
+         print("\t"+self.telescopes[tel].name)
          self.telescopes[tel].list_filters()
 
    def __getattr__(self, attr):
@@ -613,13 +611,13 @@ class telescope:
       self.filters = {}
 
    def add_filter(self, filter_object):
-      if not isinstance(filter_object, filter):
-         raise TypeError, "Error: filter_object must be a filter type"
+      if not isinstance(filter_object, filt):
+         raise TypeError("Error: filter_object must be a filter type")
       self.filters[filter_object.name] = filter_object
 
    def list_filters(self):
       for f in self.filters:
-         print "\t\t'%s':  %s" % (f, self.filters[f].comment)
+         print("\t\t'%s':  %s" % (f, self.filters[f].comment))
 
    def __getattr__(self, attr):
       if attr in self.__dict__['filters']:
@@ -629,7 +627,7 @@ class telescope:
 
    def __str__(self):
       ret = "telescope %s with filters: " % (self.name)
-      for k in self.filters.keys():
+      for k in list(self.filters.keys()):
          ret += "%s, " % (k)
       return ret
 
@@ -652,13 +650,14 @@ for dir in dirs:
    for line in lines:
       if line[0] == "#":  continue
       l = line.split()
-      standards[sname].add_SED(spectrum(l[0], os.path.join(stand_base,sname,l[1]),
-                             string.join(l[3:]), load=0))
+      standards[sname].add_SED(spectrum(l[0], 
+         os.path.join(stand_base,sname,l[1]), "".join(l[3:]), load=0))
       standard_mags[sname][l[0]] = {}
       if os.path.isfile(os.path.join(stand_base,sname,l[2])):
          f2 = open(os.path.join(stand_base,sname,l[2]))
-         lines2 = f2.readlines()
-         lines2 = map(string.split, lines2)
+         #lines2 = f2.readlines()
+         #lines2 = list(map(string.split, lines2))
+         lines2 = [line.split() for line in f2.readlines()]
          for i in range(len(lines2)):
             if lines2[i][0] == "#":  continue
             standard_mags[sname][l[0]][lines2[i][0]] = float(lines2[i][1])
@@ -692,33 +691,34 @@ for obs in obsdirs:
          l = line.split()
          if l[2].find('=') >= 0:
             # We have a std=mag format
-            std,mag = map(string.strip, l[2].split('='))
+            std,mag = [item.strip() for item in l[2].split('=')]
+            #std,mag = list(map(string.strip, l[2].split('=')))
             if std  in standards:
                try:
                   m = float(mag)
                except:
-                  raise ValueError, \
-                        "Could not convert standard magnitude for filter %s" %\
-                        l[0]
-               newf = filter(l[0], os.path.join(dir,l[1]), 0.0, string.join(l[3:]))
+                  raise ValueError("Could not convert standard magnitude for filter %s" %\
+                        l[0])
+               newf = filt(l[0], os.path.join(dir,l[1]), 0.0, 
+                  "".join(l[3:]))
                newf.zp = newf.compute_zpt(standards[std], m)
                fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
             else:
-               raise ValueError, \
-                     "Could not find standard %s for filter %s" % (std,l[0])
+               raise ValueError("Could not find standard %s for filter %s" % (std,l[0]))
 
 
          elif l[2] == 'AB':
             # We have an AB system, so in principle there is no standard. The
             # zero-point is derived from the filter function alone. See
             # documentation.
-            newf = filter(l[0], os.path.join(dir,l[1]), 0.0, string.join(l[3:]))
+            newf = filt(l[0], os.path.join(dir,l[1]), 0.0, 
+               "".join(l[3:]))
             newf.zp = 16.84692 + 2.5*num.log10(
                   scipy.integrate.trapz(newf.resp/newf.wave, x=newf.wave))
             fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
          else:
             fset.observatories[obs_name].telescopes[tel_name].add_filter(
-                         filter(l[0], os.path.join(dir,l[1]),
-                             float(l[2]), string.join(l[3:])))
+                         filt(l[0], os.path.join(dir,l[1]),
+                             float(l[2]), " ".join(l[3:])))
       f.close()
 fset.cache_filters()

@@ -23,11 +23,11 @@ v_bd17 = fset['Vk'].synth_mag(BD17)
 r_nat = v_bd17 - 1.0684*(V_bd17 - sloan_mags['bd17']['r_40'])
 i_nat = v_bd17 - 1.0239*(V_bd17 - sloan_mags['bd17']['i_40'])
 
-print "Assuming natural magnitdes for BD+17:"
-print "   V_nat = ", v_bd17
-print "   r_nat = ", r_nat
-print "   i_nat = ", i_nat
+print("Assuming natural magnitdes for BD+17:")
+print("   V_nat = ", v_bd17)
+print("   r_nat = ", r_nat)
+print("   i_nat = ", i_nat)
 
-print "Zero-points:"
-print "zp(r_nat) = ", fset['rk'].compute_zpt(BD17, r_nat)
-print "zp(i_nat) = ", fset['ik'].compute_zpt(BD17, i_nat)
+print("Zero-points:")
+print("zp(r_nat) = ", fset['rk'].compute_zpt(BD17, r_nat))
+print("zp(i_nat) = ", fset['ik'].compute_zpt(BD17, i_nat))

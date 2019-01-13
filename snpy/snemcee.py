@@ -12,16 +12,16 @@ gconst = -0.5*np.log(2*np.pi)
 def builtin_priors(x, st):
    '''Some built-in priors that are simple strings that we parse.'''
    if st[0] not in ['U','G','E']:
-      raise ValueError, "I don't understand the prior code %s" % st
+      raise ValueError("I don't understand the prior code %s" % st)
    if st[0] == 'U':
       '''uniform prior:  U,l,u'''
-      u,l = map(float, st.split(',')[1:])
+      u,l = list(map(float, st.split(',')[1:]))
       if not u < x < l:
          return -np.inf
       return 0
    elif st[0] == 'G':
       '''Gaussian prior, G(mu,sigma) = 1/sigma/sqrt(2*pi)*exp((x-mu)^2/2/sigma^2)'''
-      mu,sigma = map(float, st.split(',')[1:])
+      mu,sigma = list(map(float, st.split(',')[1:]))
       return gconst - 0.5*np.power(x - mu,2)/sigma**2 - np.log(sigma)
    elif st[0] == 'E':
       '''exponential prior, E(x,tau) = 1/tau*exp(-x/tau).'''
@@ -42,7 +42,7 @@ def guess(varinfo, snobj):
          ep[varinfo[var]['index']] = snobj.model.enparameters[var]
       else:
          if snobj.model.parameters[var] is None:
-            raise ValueError, "model parameters not set, run initial fit() first"
+            raise ValueError("model parameters not set, run initial fit() first")
          p[varinfo[var]['index']] = snobj.model.parameters[var]
          #ep[varinfo[var]['index']] = max(0.001,snobj.model.errors[var])
          ep[varinfo[var]['index']] = 1e-4
@@ -53,16 +53,16 @@ def guess(varinfo, snobj):
 def setup_varinfo(snobj, args):
    '''Given a sn object and its associated model, setup the varinfo.'''
    varinfo = {}
-   varinfo['varlist'] = snobj.model.parameters.keys()
+   varinfo['varlist'] = list(snobj.model.parameters.keys())
    # Nuissance parameters
-   varinfo['varlist'] = varinfo['varlist'] + snobj.model.nparameters.keys()
+   varinfo['varlist'] = varinfo['varlist'] + list(snobj.model.nparameters.keys())
    varinfo['fitflux'] = args.get('fitflux',True)
    i  = 0
    varinfo['free'] = []
    for var in varinfo['varlist']:
       varinfo[var] = {}
       if var in args:
-         if type(args[var]) is types.StringType:
+         if type(args[var]) is bytes:
             varinfo[var]['fixed'] = False
             varinfo[var]['index'] = i
             varinfo['free'].append(var)
@@ -220,7 +220,7 @@ def generateSampler(snobj, bands, nwalkers, threads=1, tracefile=None, **args):
          tp0 = [data[ids,:] for ids in endids]
 
    if not snobj.model._fbands:
-      raise ValueError, "You need to do an initial fit to the SN first"
+      raise ValueError("You need to do an initial fit to the SN first")
    vinfo = setup_varinfo(snobj, args)
    p,ep = guess(vinfo, snobj)
 
@@ -237,8 +237,8 @@ def generateSampler(snobj, bands, nwalkers, threads=1, tracefile=None, **args):
       else:
          fail += 1
    if len(p0) < nwalkers:
-      raise RuntimeError, "Could not establish an initial set of MCMC walkers.\n" +\
-            "Make sure your priors are consistent with your intial fit solution"
+      raise RuntimeError("Could not establish an initial set of MCMC walkers.\n" +\
+            "Make sure your priors are consistent with your intial fit solution")
    if tp0 is not None:
       for i in range(len(p0)):
          for ii,par in enumerate(tpars):

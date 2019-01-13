@@ -48,8 +48,8 @@ def plot_filters(self, bands=None, day=0):
    p.z = self.z
 
    # Next, for each filter, plot the response and rest band closest to it:
-   if bands is None:  bands = self.data.keys()
-   if type(bands) is types.StringType:
+   if bands is None:  bands = list(self.data.keys())
+   if type(bands) is bytes:
       bands = [bands]
 
    for band in bands:
@@ -126,7 +126,7 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
    if self.filter_order is not None:
       bands = self.filter_order
    else:
-      bands = self.data.keys()
+      bands = list(self.data.keys())
       if not single:
          eff_wavs = []
          for filter in bands:
@@ -405,17 +405,17 @@ def add_knot(x, y, key, inst):
    '''Add a knot point to the spline.  This is called through the interactive interface).'''
    self = inst.lc_inst
    if self.model_type is None or self.model_type != 'spline':
-      print "Adding knots not supported for this model"
+      print("Adding knots not supported for this model")
       return
    x,y = lc_data_conv(inst, x, y)
    if x <= self.tck[0][0] or x >= self.tck[0][-1]:
-      print "Error, can't add knots outside the current range."
+      print("Error, can't add knots outside the current range.")
    old_knots = self.tck[0]
-   print old_knots
+   print(old_knots)
    knots = concatenate([[x],self.tck[0]])
    knots = sort(knots)
    self.tck = (knots, self.tck[1], self.tck[2])
-   print knots
+   print(knots)
    try:
       update_plot(self, task=-1)
    except:
@@ -426,7 +426,7 @@ def move_knot(x, y, key, inst):
    '''Move the point closest to x to a new location.'''
    self = inst.lc_inst
    if self.model_type is None or self.model_type != 'spline':
-      print "Moving knots not supported for this model"
+      print("Moving knots not supported for this model")
       return
    x,y = lc_data_conv(inst, x, y)
    old_knots = self.tck[0]
@@ -443,7 +443,7 @@ def move_knot(x, y, key, inst):
 def delete_knot(x, y, key, inst):
    self = inst.lc_inst
    if self.model_type is None or self.model_type != 'spline':
-      print "Deleting knots not supported for this model"
+      print("Deleting knots not supported for this model")
       return
    x,y = lc_data_conv(inst, x, y)
    old_knots = self.tck[0]
@@ -461,7 +461,7 @@ def delete_knot(x, y, key, inst):
 def change_s(x, y, key, inst):
    self = inst.lc_inst
    if self.model_type is None or self.model_type != 'spline':
-      print "Changing s not supported for this model"
+      print("Changing s not supported for this model")
       return
    if self.tck is not None:
       if key == 's':
@@ -678,7 +678,7 @@ def plot_lc(self, device='/XSERVE', interactive=0, epoch=1, flux=0, gloes=0,
 def plot_kcorrs(self, device='13/XW', colors=None, symbols=None):
    '''Plot the k-corrections, both mangled and un-mangled.'''
    # See  what filters we're going to use:
-   bands = self.ks.keys()
+   bands = list(self.ks.keys())
    if len(bands) == 0:
       return
 
@@ -708,8 +708,8 @@ def plot_kcorrs(self, device='13/XW', colors=None, symbols=None):
       x = self.data[b].MJD - self.Tmax
       days = arange(int(x[0]), int(x[-1]), 1)
       rest_days = days/(1+self.z)/self.ks_s
-      k,k_m = map(array, kcorr.kcorr(rest_days.tolist(), self.restbands[b], b, 
-         self.z, self.EBVgal, 0.0, version=self.k_version))
+      k,k_m = list(map(array, kcorr.kcorr(rest_days.tolist(), self.restbands[b], b, 
+         self.z, self.EBVgal, 0.0, version=self.k_version)))
       k_m = equal(k_m, 1)
       pp = pygplot.Plot(fsize=1, font=2, xlabel='Epoch (days)',
             leftpad=0.1, rotylab=1, xrange=[minx,maxx])

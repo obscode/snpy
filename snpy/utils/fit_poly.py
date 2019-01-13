@@ -87,7 +87,7 @@ def legendre(x, y, u):
    '''Given the length of x and y, determine the legendre interpolating
    polynomial and evaluate at u'''
    if len(x) != len(y):
-      raise ValueError, "Error:  x and y must be of equal size"
+      raise ValueError("Error:  x and y must be of equal size")
    scalar = 0
    if len(shape(u)) == 0:
       scalar = 1

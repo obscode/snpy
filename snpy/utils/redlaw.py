@@ -16,16 +16,16 @@ the following correction:
 
 from snpy.filters import fset
 from snpy import kcorr
-import deredden
+from . import deredden
 import numpy as np
 import scipy
 import os
 import pickle
 
 base = os.path.dirname(__file__)
-if os.path.isfile(os.path.join(base,'Ia_R_splines.pickle')):
-   f = open(os.path.join(base,'Ia_R_splines.pickle'))
-   Bspls = pickle.load(f)
+if os.path.isfile(os.path.join(base,'Ia_R_splines.pkl')):
+   f = open(os.path.join(base,'Ia_R_splines.pkl'), 'rb')
+   Bspls = pickle.load(f, encoding='iso-8859-1')
    f.close()
 
 def R_lambda(f, Rv, EBV, redlaw='ccm'):

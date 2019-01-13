@@ -26,7 +26,7 @@ except:
    pymc = None
 
 try:
-   import InteractiveFit
+   from . import InteractiveFit
 except:
    InteractiveFit = None
 
@@ -93,11 +93,11 @@ class oneDcurve:
       ey = num.atleast_1d(ey)
 
       if not len(x.shape) == 1:
-         raise ValueError, "x, y, ey must be 1D arrays"
+         raise ValueError("x, y, ey must be 1D arrays")
       if not x.shape == y.shape:
-         raise ValueError, "x, y must have same shape"
+         raise ValueError("x, y must have same shape")
       if not y.shape == ey.shape:
-         raise ValueError, "y, ey must have same shape"
+         raise ValueError("y, ey must have same shape")
 
       self.xdata = x
       self.ydata = y
@@ -109,7 +109,7 @@ class oneDcurve:
          self.mask = mask
 
       if len(self.xdata[self.mask]) < 2:
-         raise ValueError, "(masked) data must have more than one point!"
+         raise ValueError("(masked) data must have more than one point!")
 
       self.realization = None
       self.realizations = []
@@ -131,7 +131,7 @@ class oneDcurve:
          return self.eydata[self.mask]
       if key == 'var':
          return self.vardata[self.mask]
-      raise AttributeError, "Instance has not attribute %s" % (key)
+      raise AttributeError("Instance has not attribute %s" % (key))
 
    def __setattr__(self, key, value):
       if 'pars' in self.__dict__:
@@ -369,7 +369,7 @@ class oneDcurve:
       if InteractiveFit is not None:
          return InteractiveFit.InteractiveFit(self)
       else:
-         print "Sorry, you need to have matplotlib installed to use this feature"
+         print("Sorry, you need to have matplotlib installed to use this feature")
          return None
 
    def help(self):
@@ -399,8 +399,7 @@ if polynomial is not None:
                'xmax':None}
          for key in args:
             if key not in self.pars:
-               raise TypeError, \
-                     "%s is an invalid keyword argument for this method" % key
+               raise TypeError("%s is an invalid keyword argument for this method" % key)
             self.pars[key] = args[key]
    
          if self.xmin is None:
@@ -413,9 +412,9 @@ if polynomial is not None:
          self.realization = None
 
       def help(self):
-         print 'n:        order of the polynomial'
-         print 'xmin:     lower bound on data to interpolate'
-         print 'xmax:     upper bound on data to interpolate'
+         print('n:        order of the polynomial')
+         print('xmin:     lower bound on data to interpolate')
+         print('xmax:     upper bound on data to interpolate')
    
       def __str__(self):
          return self.type + " polynomial"
@@ -426,8 +425,8 @@ if polynomial is not None:
                num.less_equal(self.xdata, self.xmax)
    
          if self.type not in polytypes:
-            raise ValueError, "Error:  the polynomial type must be one of " +\
-                  ",".join(polytypes.keys())
+            raise ValueError("Error:  the polynomial type must be one of " +\
+                  ",".join(list(polytypes.keys())))
          self.poly = polytypes[self.type].fit(self.xdata[mask], self.ydata[mask],
                deg=self.n, w=num.power(self.eydata[mask],-1))
          self.setup = True
@@ -554,8 +553,7 @@ if spline2 is not None:
                'xlog':0}
          for key in args:
             if key not in self.pars:
-               raise TypeError, \
-                     "%s is an invalid keyword argument for this method" % key
+               raise TypeError("%s is an invalid keyword argument for this method" % key)
             self.pars[key] = args[key]
    
          # Make sure the data conform to the spine requirements
@@ -567,18 +565,18 @@ if spline2 is not None:
          return "Hyperspline"
 
       def help(self):
-         print "xrange:      tuple of (xmin,xmax) over which to fit"
-         print "lopt:        Force knot optimization to start with lopt knots"
-         print "degree:      order of the spline (default 3)"
-         print "xlog:        0/1, apply log10() to the x values before fitting?"
-         print "rejlev:      Use rejection level on statistical tests of rejlev"
-         print "allownonopt: 0/1 Allow splines with non-optimized breakpoints?"
-         print "acfsearch:   0/1, weather to search for auto-correlation"
-         print "acffunc:     functional form of autocorrelation (default exp)"
-         print "ksi:         specify auto-correlation length"
-         print "n:           only search for autocorrelation on index scale n"
-         print
-         print "see help(spline2) for info on these parameters"
+         print("xrange:      tuple of (xmin,xmax) over which to fit")
+         print("lopt:        Force knot optimization to start with lopt knots")
+         print("degree:      order of the spline (default 3)")
+         print("xlog:        0/1, apply log10() to the x values before fitting?")
+         print("rejlev:      Use rejection level on statistical tests of rejlev")
+         print("allownonopt: 0/1 Allow splines with non-optimized breakpoints?")
+         print("acfsearch:   0/1, weather to search for auto-correlation")
+         print("acffunc:     functional form of autocorrelation (default exp)")
+         print("ksi:         specify auto-correlation length")
+         print("n:           only search for autocorrelation on index scale n")
+         print()
+         print("see help(spline2) for info on these parameters")
 
       def _setup(self):
          '''Given the current set of params, setup the interpolator.'''
@@ -699,8 +697,7 @@ class Spline(oneDcurve):
             'task':0}
       for key in args:
          if key not in self.pars:
-            raise TypeError, \
-                  "%s is an invalid keyword argument for this method" % key
+            raise TypeError("%s is an invalid keyword argument for this method" % key)
          self.pars[key] = args[key]
 
       # Make sure the data conform to the spine requirements
@@ -712,12 +709,12 @@ class Spline(oneDcurve):
       return "Spline"
 
    def help(self):
-      print "k:      order of the spline (default 3)"
-      print "task:   0,1,-1  (see scipy.interpolate.splrep)"
-      print "s:      Smoothing length"
-      print "t:      specify array of knots (task=-1)"
-      print "xb      lower bound on x for fitting"
-      print "xe      upper bound on x for fitting"
+      print("k:      order of the spline (default 3)")
+      print("task:   0,1,-1  (see scipy.interpolate.splrep)")
+      print("s:      Smoothing length")
+      print("t:      specify array of knots (task=-1)")
+      print("xb      lower bound on x for fitting")
+      print("xe      upper bound on x for fitting")
 
    def _regularize(self):
       # x-values need to be strictly ascending.
@@ -748,7 +745,7 @@ class Spline(oneDcurve):
       self.tck = splrep(self.x, self.y, 1.0/self.ey, **self.pars)
       # Check for NaN's in the tck.
       if num.sometrue(num.isnan(self.tck[1])):
-         raise ValueError, "The Spline is invalid.  It is possible the data are too noisy, or smoothing is too low.  Try increasing 's' or fixing your errors"
+         raise ValueError("The Spline is invalid.  It is possible the data are too noisy, or smoothing is too low.  Try increasing 's' or fixing your errors")
       self.setup = True
       self.realization = None
 
@@ -766,7 +763,7 @@ class Spline(oneDcurve):
       try:
          self._setup()
       except:
-         print "Adding knot failed, reverting to old knots"
+         print("Adding knot failed, reverting to old knots")
          self.pars['t'] = old_knots
          self.setup = False
       return
@@ -785,7 +782,7 @@ class Spline(oneDcurve):
       try:
          self._setup()
       except:
-         print "Deleting knot failed, reverting to old knots"
+         print("Deleting knot failed, reverting to old knots")
          self.pars['t'] = old_knots
          self.setup = False
       return
@@ -937,8 +934,7 @@ if pymc is not None:
                'amp':None}
          for key in args:
             if key not in self.pars and key != "mean":
-               raise TypeError, \
-                     "%s is an invalid keyword argument for this method" % key
+               raise TypeError("%s is an invalid keyword argument for this method" % key)
             if key != "mean": self.pars[key] = args[key]
          if 'mean' in args:
             self.mean = args['mean']
@@ -968,9 +964,9 @@ if pymc is not None:
          return dict
 
       def help(self):
-         print "scale:       Scale over which the function varies"
-         print "amp:         Amplitude of typical function variations"
-         print "diff_degree: Roughly, the degree of differentiability"
+         print("scale:       Scale over which the function varies")
+         print("amp:         Amplitude of typical function variations")
+         print("diff_degree: Roughly, the degree of differentiability")
 
    
       def _setup(self):
@@ -1135,9 +1131,9 @@ else:
 def Interpolator(type, x, y, dy, mask=None, **args):
    '''Convenience function that returns a 1D interpolator of the given [type]
    if possible.'''
-   if type not in functions.keys():
-      raise ValueError,"Error:  the type %s is not defined.  Try list_types()" %\
-            type
+   if type not in list(functions.keys()):
+      raise ValueError("Error:  the type %s is not defined.  Try list_types()" %\
+            type)
    else:
       interp = functions[type][0]
       if type in polytypes:
@@ -1146,8 +1142,8 @@ def Interpolator(type, x, y, dy, mask=None, **args):
 
 def list_types():
    '''Returns a list of 1D interpolators that are defined at load-time.'''
-   l = functions.keys()
+   l = list(functions.keys())
    l.sort()
    for t in l:
-      print "%-15s%s" % (t+":",functions[t][1])
+      print("%-15s%s" % (t+":",functions[t][1]))
 

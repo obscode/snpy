@@ -255,14 +255,14 @@ class MultiPlot(object):
                if i < 0: i += self.N
                if j < 0: j += self.M
                return self.axes[self.idx(i,j)]
-      raise TypeError, "index must be an integer or 2-tuple of integers"
+      raise TypeError("index must be an integer or 2-tuple of integers")
 
 
    def title(self, string, **kws):
       '''Set a title for the Multi plots.  kws can be any
       arguments recognized by figure.text()'''
 
-      t_ax = self.N/2    # always right, even when odd/even
+      t_ax = self.N//2    # always right, even when odd/even
       idx = self.idx(t_ax,self.M-1)
 
       # This will give us space using tight_layout()
@@ -273,7 +273,7 @@ class MultiPlot(object):
       '''Set an x-label for the Panel plots.  kws can be any
       arguments recognized by figure.text()'''
 
-      l_ax = self.N/2    # always right, even when odd/even
+      l_ax = self.N//2    # always right, even when odd/even
       self._xlabel = self.axes[l_ax].set_xlabel(string, **kws)
       return self._xlabel
 
@@ -281,7 +281,7 @@ class MultiPlot(object):
       '''Set an x-label for the Panel plots.  kws can be any
       arguments recognized by figure.text()'''
 
-      j_ax = self.M/2    # j coordinate of left-hand middle row
+      j_ax = self.M//2    # j coordinate of left-hand middle row
       self._ylabel = self.axes[self.idx(0,j_ax)].set_ylabel(string, **kws)
       return self._ylabel
 
@@ -328,7 +328,7 @@ class MultiPlot(object):
          obj.set_linewidth(lw)
 
    def ij(self, i):
-      return (i%self.N, i/self.N)
+      return (i%self.N, i//self.N)
 
    def get_renderer(self):
       return get_renderer(self.fig)

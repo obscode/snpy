@@ -28,12 +28,12 @@ else:
 def get_package(package, url, setup=1, test=1, verbose=1, options=''):
    '''Retrieve a python package from the source url, unpack it, 
    and install it'''
-   from urllib import urlopen
+   from urllib.request import urlopen
    import tarfile
-   from StringIO import StringIO
+   from io import StringIO
    import tempfile
 
-   if verbose:  print "Downloading %s..." % (package) 
+   if verbose:  print("Downloading %s..." % (package)) 
    u = urlopen(url)
    t = StringIO(u.read())
    if not setup:
@@ -41,7 +41,7 @@ def get_package(package, url, setup=1, test=1, verbose=1, options=''):
       f.write(u.read())
       return 1,"Package saved as %s" % (os.path.basename(url))
 
-   if verbose:  print "Extracting..."
+   if verbose:  print("Extracting...")
    # extract the package and run the old python setup install
    try:
       tar = tarfile.open('blah',fileobj=t)
@@ -59,15 +59,15 @@ def get_package(package, url, setup=1, test=1, verbose=1, options=''):
       os.chdir(os.path.join(tmp,files[0]))
 
    if verbose:  
-      print "Running python setup.py install %s (this may take a while)..." %\
-            (options)
+      print("Running python setup.py install %s (this may take a while)..." %\
+            (options))
    logfile = os.path.join(cwd, package+".log")
    res = os.system('%s setup.py install %s > %s 2> %s' % \
          (sys.executable, options, logfile, logfile))
    if res != 0:
       return 0,"Sorry, package %s failed to install, see %s.log" % (package,package)
    os.chdir(cwd)
-   if verbose:  print "Cleaning up..."
+   if verbose:  print("Cleaning up...")
    os.system('rm -rf %s' % tmp)
    
    if not test:
@@ -103,13 +103,13 @@ if __name__ == '__main__':
    try:
       from numpy.distutils.core import setup
    except ImportError:
-      print "You don't have numpy installed.  Would you like me to try to"
-      print "install it?  (y/n)"
+      print("You don't have numpy installed.  Would you like me to try to")
+      print("install it?  (y/n)")
       answer = ""
       while answer != 'n' and answer != 'y':
-         answer = raw_input()
+         answer = input()
       if answer == 'n':
-         print "Okay, but you'll need to install Numpy before installing SNPY"
+         print("Okay, but you'll need to install Numpy before installing SNPY")
          sys.exit(1)
       
       # So, at this point, we're going to try to install numpy:
@@ -117,7 +117,7 @@ if __name__ == '__main__':
             'http://sourceforge.net/projects/numpy/files/NumPy/1.2.1/numpy-1.2.1.tar.gz/download',
             options=extra_options)
       if flag != 1:
-         print mesg
+         print(mesg)
          sys.exit(1)
    from numpy.distutils.core import setup
    from numpy.distutils.misc_util import Configuration
@@ -137,40 +137,40 @@ if __name__ == '__main__':
                pass
 
 
-         print "Package %s does not appear to be installed.  Would you" % \
-               (package)
-         print "like me to install it now?  (y/n)"
+         print("Package %s does not appear to be installed.  Would you" % \
+               (package))
+         print("like me to install it now?  (y/n)")
          answer = ""
          while answer != 'y' and answer != 'n':
-            answer = raw_input()
+            answer = input()
          if answer == 'n':
-            print "Okay, but you'll need to install %s before installing SNPY"\
-                  % (package)
-            print "You can find it here:"
-            print url
+            print("Okay, but you'll need to install %s before installing SNPY"\
+                  % (package))
+            print("You can find it here:")
+            print(url)
             sys.exit(1)
 
          flag,mesg = get_package(package, url, options=extra_options)
          if flag != 1:
-            print mesg
+            print(mesg)
             sys.exit(1)
-         print mesg
+         print(mesg)
 
    # Now, see if optional packages are there
    for package,url in optional_packages:
       try:
          res = __import__(package)
       except ImportError:
-         print "Package %s is does not appear to be installed.  It is optional" %\
-               (package)
-         print "Would you like me to try installing it now?  (y/n)"
+         print("Package %s is does not appear to be installed.  It is optional" %\
+               (package))
+         print("Would you like me to try installing it now?  (y/n)")
          answer = ""
          while answer != 'y' and answer != 'n':
-            answer = raw_input()
+            answer = input()
          if answer == 'n':
             continue
          flag,mesg = get_package(package, url, options=extra_options)
-         print mesg
+         print(mesg)
    setup(version='0.5.0',
          author='Chris Burns (Carnegie Observatories)',
          author_email='cburns@ociw.edu',

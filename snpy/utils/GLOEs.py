@@ -22,8 +22,8 @@ For a 2D surface, you use an elliptical Gaussian window function and fit a
 from numpy import *
 from numpy import isinf,divide
 import sys
-from fit_poly import fit2Dpoly
-from fit_poly import fitpoly
+from .fit_poly import fit2Dpoly
+from .fit_poly import fitpoly
 #from pygplot import *
 
 debug=0
@@ -33,7 +33,7 @@ def smooth(x, y, weight, xeval, sigma=None, N=None):
    by erry, find a smothing esimate of the data using Barry's GLOEs 
    algorithm evaluated at the points in xeval.  The Gaussian window function 
    will have a sigma=sigma.  '''
-   x,y,weight,xeval = map(asarray, [x,y,weight,xeval])
+   x,y,weight,xeval = list(map(asarray, [x,y,weight,xeval]))
 
    if len(x) == 1:
       # only one point?  Just return it' value
@@ -42,7 +42,7 @@ def smooth(x, y, weight, xeval, sigma=None, N=None):
       # Two points?  do a linear interpolation
       sl = divide(y[1] - y[0], x[1] - x[0])
       if isinf(sl):
-         raise ValueError, "slope is infinite"
+         raise ValueError("slope is infinite")
       err2 = power(((xeval-x[0])/(x[1]-x[0])+1)/weight[0],2) + \
              power((xeval-x[0])/(x[1]-x[0])/weight[1],2)
       return y[0] + (xeval-x[0])*sl, sqrt(err2), xeval*0+sl, xeval*0
@@ -67,7 +67,7 @@ def smooth(x, y, weight, xeval, sigma=None, N=None):
          elif len(sorts2) >= N:
             FWHMs.append(sorts2[N-1])
          else:
-            raise RuntimeError, "Error:  N too large for this many points"
+            raise RuntimeError("Error:  N too large for this many points")
       sigmas = 10*array(FWHMs)
 
    # now weight these distances with a Gaussian
@@ -93,7 +93,7 @@ def smooth(x, y, weight, xeval, sigma=None, N=None):
       cs.append(params[2])
 
    # Convert the lists arrays
-   interps,e_interps,bs,cs = map(array, [interps,e_interps,bs,cs])
+   interps,e_interps,bs,cs = list(map(array, [interps,e_interps,bs,cs]))
    return(interps, e_interps, bs, cs)
 
 
@@ -105,7 +105,7 @@ def smooth2d(x, y, z, wt, xeval, yeval, sigmax=None, sigmay=None,
    function will have a sigma=sigmax in the x-direction and sigmay in the
    y-direction.'''
 
-   x,y,z,wt,xeval,yeval = map(asarray, [x,y,z,wt,xeval,yeval])
+   x,y,z,wt,xeval,yeval = list(map(asarray, [x,y,z,wt,xeval,yeval]))
    # We re-scale the problem to   0 < x 1 and 0 < y < 1
    x0 = min(x);  x1 = max(x)
    y0 = min(y);  y1 = max(y)
@@ -197,8 +197,8 @@ def smooth2d(x, y, z, wt, xeval, yeval, sigmax=None, sigmay=None,
       fxys.append(params[4])
       fyys.append(params[5])
 
-   interps,e_interps,fxs,fys,fxxs,fyys,fxys,sigmaxs,sigmays = map(array,
-         [interps,e_interps,fxs,fys,fxxs,fyys,fxys,sigmaxs,sigmays])
+   interps,e_interps,fxs,fys,fxxs,fyys,fxys,sigmaxs,sigmays = list(map(array,
+         [interps,e_interps,fxs,fys,fxxs,fyys,fxys,sigmaxs,sigmays]))
 
    return(interps,e_interps,fxs,fys,fxxs,fyys,fxys,sigmaxs,sigmays)
 
@@ -208,10 +208,10 @@ class line:
    allow the user to interpolate on the line.'''
    
    def __init__(self, x,y,dy,sigma=None, N=None):
-      self.xdata,self.ydata,self.dydata = map(asarray, [x,y,dy])
+      self.xdata,self.ydata,self.dydata = list(map(asarray, [x,y,dy]))
 
       if not (len(self.xdata) == len(self.ydata) == len(self.dydata)):
-         raise AttributeError, "x,y,dy must all have same length"
+         raise AttributeError("x,y,dy must all have same length")
 
       self.sigma = sigma
       self.N = N
@@ -222,7 +222,7 @@ class line:
          if self.sigma is None:
             if N is None:
                if self.N is None:
-                  raise AttributeError, "Must specify a smoothing length"
+                  raise AttributeError("Must specify a smoothing length")
                else:
                   N = self.N
          else:
@@ -245,10 +245,10 @@ class line:
       the smoothing length that gives rchisq closest to 1.'''
       max_N = len(self.xdata)/2+1
       if low > max_N:
-         raise ValueError, "Error, low must be less than %d" % (max_N)
+         raise ValueError("Error, low must be less than %d" % (max_N))
       if high > max_N:
          high = max_N
-      Ns = range(int(low), int(high)+1)
+      Ns = list(range(int(low), int(high)+1))
       chisqs = array([self.chisq(N=N) for N in Ns])
       id = argsort(absolute(chisqs - 1))[0]
       return(Ns[id])
@@ -266,7 +266,7 @@ class line:
          if self.sigma is None:
             if N is None:
                if self.N is None:
-                  raise AttributeError, "Must specify a smoothing length"
+                  raise AttributeError("Must specify a smoothing length")
                else:
                   N = self.N
          else:
@@ -292,11 +292,11 @@ class surface:
    
    def __init__(self, x,y,z,dz,sigmax=None,sigmay=None, Nx=None, Ny=None):
 
-      self.xdata,self.ydata,self.zdata,self.dzdata = map(asarray, [x,y,z,dz])
+      self.xdata,self.ydata,self.zdata,self.dzdata = list(map(asarray, [x,y,z,dz]))
 
       if not (len(self.xdata) == len(self.ydata) == len(self.zdata) == \
             len(self.dzdata)):
-         raise AttributeError, "x,y,dy must all have same length"
+         raise AttributeError("x,y,dy must all have same length")
 
       self.sigmax = sigmax
       self.sigmay = sigmay
@@ -321,13 +321,13 @@ class surface:
       x = asarray(x)
       y = asarray(y)
       if not (len(x) == len(y)):
-         raise RuntimeError, "x and y must have same length"
+         raise RuntimeError("x and y must have same length")
 
       if sigmax is None:
          if self.sigmax is None:
             if Nx is None:
                if self.Nx is None:
-                  raise AttributeError, "Must specify a x smoothing length"
+                  raise AttributeError("Must specify a x smoothing length")
                else:
                   Nx = self.Nx
          else:
@@ -337,7 +337,7 @@ class surface:
          if self.sigmay is None:
             if Ny is None:
                if self.Ny is None:
-                  raise AttributeError, "Must specify a y smoothing length"
+                  raise AttributeError("Must specify a y smoothing length")
                else:
                   Ny = self.Ny
          else:

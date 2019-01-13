@@ -10,7 +10,7 @@ def get_gsl_info(path=''):
    p = os.popen('%s --libs' % (os.path.join(path, 'gsl-config')))
    libs = p.readline();  p.close()
    if libs == '':
-      print "Warning.  Could not run gsl-config!"
+      print("Warning.  Could not run gsl-config!")
       return None,None,None
    libs = libs.split()
    for item in libs:
@@ -26,10 +26,10 @@ def get_gsl_info(path=''):
    return(inc_dirs, lib_dirs, libraries)
 
 def get_temp_GSL():
-   import urllib, tarfile, StringIO,tempfile
+   import urllib.request, urllib.parse, urllib.error, tarfile, io,tempfile
    global tdir
-   u = urllib.urlopen('ftp://ftp.gnu.org/gnu/gsl/gsl-1.8.tar.gz')
-   f = StringIO.StringIO(u.read())
+   u = urllib.request.urlopen('ftp://ftp.gnu.org/gnu/gsl/gsl-1.8.tar.gz')
+   f = io.StringIO(u.read())
    tar = tarfile.open(fileobj=f)
    tdir = tempfile.mkdtemp()
    cwd = os.pwd()
@@ -59,21 +59,21 @@ def configuration(parent_package='', top_path=None):
    tdir = None    # if we need a temporary dir, this will be it
 
    if incdirs is None:
-      print "I couldn't run the GNU Scientific Library (GSL) gsl-config script."
-      print "Would you like me to download/install it temporarily? (y/n)"
+      print("I couldn't run the GNU Scientific Library (GSL) gsl-config script.")
+      print("Would you like me to download/install it temporarily? (y/n)")
       answer = ""
       while answer not in ['y','n']:
-         answer = raw_input()
+         answer = input()
       if answer == 'n':
-         print "Okay, you'll have to install it yourself, then.  When you've"
-         print "done so, please make sure the gsl-config script is in your"
-         print "PATH."
+         print("Okay, you'll have to install it yourself, then.  When you've")
+         print("done so, please make sure the gsl-config script is in your")
+         print("PATH.")
          sys.exit(1)
       else:
          stat = get_temp_GSL()
          if stat == 0:
-            print "Sorry, the automatic download/build failed.  You're going"
-            print "to have to install GSL yourself."
+            print("Sorry, the automatic download/build failed.  You're going")
+            print("to have to install GSL yourself.")
             if tdir is not None:  os.system('rm -rf %s' % tdir)
             sys.exit(1)
          incdirs,libdirs,libs = get_gsl_info(path=os.path.join(tdir,'bin'))

@@ -1,7 +1,7 @@
 '''
 Module for SNooPy to download/parse data from the Open Supernova Catalog.
 '''
-import urllib
+import urllib.request, urllib.parse, urllib.error
 from snpy import lc
 from numpy import array
 
@@ -10,9 +10,9 @@ SWIFT_URL = '''http://people.physics.tamu.edu/pbrown/SwiftSN/{}_uvotB15.1.dat'''
 def load_lcs(obj):
 
    try:
-      u = urllib.urlopen(SWIFT_URL.format(obj.name))
+      u = urllib.request.urlopen(SWIFT_URL.format(obj.name))
    except:
-      raise ValueError, "Object not found in SWIFT database"
+      raise ValueError("Object not found in SWIFT database")
    
    lines = u.readlines()
    lines = [line.strip().split() for line in lines if line[0] != '#']

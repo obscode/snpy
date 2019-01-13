@@ -21,14 +21,14 @@ sloan_mags['bd+174708']['z_40'] = 9.22
 
 # Smith et al. system is based on bd+174708, so just do that one, plus the
 #   modified version that Mark came up with.
-print "Here are the zero-points with the original bd+174708 spectrum:"
+print("Here are the zero-points with the original bd+174708 spectrum:")
 for f in fs:
    zpt = fset[f].compute_zpt(sloan_standards['bd+174708'], 
          sloan_mags['bd+174708'][f], zeropad=1)
-   print f, zpt
+   print(f, zpt)
 
-print "here are the zero-points with Mark's adjusted bd+174708 spectrum:"
+print("here are the zero-points with Mark's adjusted bd+174708 spectrum:")
 for f in fs:
    zpt = fset[f].compute_zpt(sloan_standards['bd+174708adj'], 
          sloan_mags['bd+174708adj'][f], zeropad=1)
-   print f, zpt
+   print(f, zpt)

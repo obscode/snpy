@@ -156,7 +156,7 @@ def make_spline2(t, m, e_m, k=3, fitflux=0, zpt=0, tmin=-10, tmax=100,
    if 'lopt' in args:  del args['lopt']
    Ks = []
    chisqs = []
-   lopts = range(2, int(0.8*len(tt) - 1))
+   lopts = list(range(2, int(0.8*len(tt) - 1)))
    for l in lopts:
       tck = spline2.spline2(tt, mm, w=1.0/ee_m, degree=k, lopt=l, **args)
       fp = num.sum(num.power((mm - spline2.evalsp(tt, tck))/ee_m, 2))

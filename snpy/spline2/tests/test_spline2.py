@@ -27,6 +27,6 @@ def test_extrema(spdata):
 
 def test_root(spdata):
    roots = spline2.eval_x(0, tck)
-   print roots
+   print(roots)
    assert len(xe) == 3
 

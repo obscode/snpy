@@ -35,7 +35,7 @@ flux.shape = (ny,nx)
 of = FITS.FITS(outfile, create=1)
 of.newhead("T", -32, 2, [nx,ny])
 of.putdata(flux)
-print 1, x0, dx, 1, y0, dy
+print(1, x0, dx, 1, y0, dy)
 of.inskey("NAXIS2","CRPIX1",1)
 of.inskey("CRPIX1","CRVAL1",x0)
 of.inskey("CRVAL1","CDELT1",dx)

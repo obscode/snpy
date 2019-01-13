@@ -43,29 +43,29 @@ class timespec:
       p.close()
       return(p)
 
-   def synth_mag(self, filter, days, z=0):
+   def synth_mag(self, filt, days, z=0):
       '''Produce a synthetic magnitude for filter on the days specified, with an
       optional redshift (ie, the filter is redshifted).'''
-      if type(filter) is type(""):
-         filter = fset[filter]
-      elif type(filter) is not type(fset['Bs']):
-         raise TypeError, "Error:  filter must be a string or filter object"
+      if type(filt) is type(""):
+         filt = fset[filt]
+      elif type(filt) is not type(fset['Bs']):
+         raise TypeError("Error:  filter must be a string or filter object")
       mags = []
       for day in days:
          id = self.dayindex(day)
-         mags.append(filter.synth_mag(self.waves[id], self.spectra[id],z))
+         mags.append(filt.synth_mag(self.waves[id], self.spectra[id],z))
       mags = array(mags)
       return(array(mags))
 
-   def synth_emag(self, filter, days, z=0):
+   def synth_emag(self, filt, days, z=0):
       '''Produce the error in a synthetic magnitude based on errors in the spectra.
       This assumes errors in the spectra are not correlated... probably not right.'''
-      if type(filter) is type(""):
-         filter = fset[filter]
-      elif type(filter) is not type(fset['Bs']):
-         raise TypeError, "Error:  filter must be a string or filter object"
-      fwave = filter.wave/(1.0 + z)
-      fresp = filter.resp
+      if type(filt) is type(""):
+         filt = fset[filt]
+      elif type(filt) is not type(fset['Bs']):
+         raise TypeError("Error:  filter must be a string or filter object")
+      fwave = filt.wave/(1.0 + z)
+      fresp = filt.resp
 
       emags = []
       for day in days:
@@ -74,18 +74,18 @@ class timespec:
          tck = scipy.interpolate.splrep(fwave,fresp,0*fwave+1, k=1, s=0)
          fresp2 = scipy.interpolate.splev(self.waves[id], tck)
          delta_wave = average(self.waves[id][1:] - self.waves[id][:-1])
-         F = filter.response(self.waves[id], self.spectra[id], z)
-         varF = filter.response(self.waves[id], 
+         F = filt.response(self.waves[id], self.spectra[id], z)
+         varF = filt.response(self.waves[id], 
                power(self.errors[id],2)*fresp2*self.waves[id]/ch*delta_wave, 
                photons=1)
          em = 1.086*sqrt(varF)/F
          emags.append(em)
       return(array(emags))
 
-   def synth_lc(self, filter, z=0):
+   def synth_lc(self, filt, z=0):
       '''Produce a synthetic light-curve for the filter using all the days in the
       spectrum object.  Returns (days,mags)'''
-      mags = self.synth_mag(filter, self.days, z)
-      emags = self.synth_emag(filter, self.days, z)
+      mags = self.synth_mag(filt, self.days, z)
+      emags = self.synth_emag(filt, self.days, z)
       return(self.days, mags, emags)
 

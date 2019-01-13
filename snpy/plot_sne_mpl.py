@@ -223,7 +223,7 @@ class ButtonClick:
 
    def connect(self):
       self.id = self.figure.canvas.mpl_connect('key_press_event', self.keypress)
-      if len(self.mouse_bindings.keys()) > 0:
+      if len(list(self.mouse_bindings.keys())) > 0:
          self.id2 = self.figure.canvas.mpl_connect('button_press_event', self.buttonpress)
       return self.id
 
@@ -237,7 +237,7 @@ class ButtonClick:
       if event.inaxes is None:  return
       if self.pending_key is not None:  return
       if 'mouse'+str(event.button) in self.mouse_bindings:
-         return apply(self.mouse_bindings['mouse'+str(event.button)], (event,))
+         return self.mouse_bindings['mouse'+str(event.button)](*(event,))
       #elif event.button == 1:
       #   print "%f %f" % (event.xdata, event.ydata)
 
@@ -246,7 +246,7 @@ class ButtonClick:
       #print "key press event:", event.inaxes,event.key
       if event.inaxes is None:  return
       if event.key in self.bindings:
-         return apply(self.bindings[event.key], (event,))
+         return self.bindings[event.key](*(event,))
 
       if self.pending_key is not None:
          if self.pending_key != event.key:  return
@@ -356,8 +356,8 @@ def plot_filters(self, bands=None, day=0, fill=0, outfile=None):
    p.z = self.z
 
    # Next, for each filt, plot the response and rest band closest to it:
-   if bands is None:  bands = self.data.keys()
-   if type(bands) is types.StringType:
+   if bands is None:  bands = list(self.data.keys())
+   if type(bands) is bytes:
       bands = [bands]
 
    minw = 1e12
@@ -546,7 +546,7 @@ def plot_sn(self, **kwargs):
    if self.filter_order is not None:
       bands = self.filter_order
    else:
-      bands = self.data.keys()
+      bands = list(self.data.keys())
       eff_wavs = []
       for filt in bands:
          eff_wavs.append(fset[filt].ave_wave)
@@ -566,13 +566,13 @@ def plot_sn(self, **kwargs):
       Toff = Tmax
    elif JDoff:
       if JDoff is True or JDoff == 'auto':
-         Toff = int(min(concatenate([l.MJD for l in self.data.values()]))/10.0)
+         Toff = int(min(concatenate([l.MJD for l in list(self.data.values())]))/10.0)
          Toff = Toff*10
       else:
          try:
             Toff = float(JDoff)
          except:
-            raise ValueError, "JDOffset must be Boolean, 'auto', or number"
+            raise ValueError("JDOffset must be Boolean, 'auto', or number")
    #else:
    #   Toff = 0
 
@@ -602,14 +602,14 @@ def plot_sn(self, **kwargs):
    if not single:
       if cols is None and rows is None:
          cols = int(round(sqrt(n_plots)))
-         rows = (n_plots / cols)
+         rows = (n_plots // cols)
       elif cols is None:
-         cols = n_plots / rows
+         cols = n_plots // rows
       else:
-         rows = n_plots / cols
+         rows = n_plots // cols
       if n_plots % cols:  rows += 1
       figwidth = min(8*dpi,max_width)*1.0/dpi
-      figheight = min(8.*rows/cols*dpi, max_height)*1.0/dpi
+      figheight = min(8.*rows//cols*dpi, max_height)*1.0/dpi
       p = myplotlib.PanelPlot(cols, rows, num=110, figsize=(figwidth,figheight))
    else:
       p = myplotlib.SimplePlot(num=110, figsize=(8,8))
@@ -661,13 +661,13 @@ def plot_sn(self, **kwargs):
 
    if oobj is not None:
       if single:
-         raise RuntimeError, "Ploting multple objects in a single panel is not supported"
+         raise RuntimeError("Ploting multple objects in a single panel is not supported")
       # PLotting a second object on top of this one.
       # See  what filters we're going to use:
       if oobj.filter_order is not None:
          obands = oobj.filter_order
       else:
-         obands = oobj.data.keys()
+         obands = list(oobj.data.keys())
          eff_wavs = []
          for filt in obands:
             eff_wavs.append(fset[filt].ave_wave)
@@ -684,7 +684,7 @@ def plot_sn(self, **kwargs):
          if filt in bands:
             # one-to-one
             i = bands.index(filt)
-         elif filt in self.restbands.dict.values():
+         elif filt in list(self.restbands.dict.values()):
             i = -1
             for band in self.restbands:
                if self.restbands[band] == filt and band in bands:
@@ -770,7 +770,7 @@ def plot_color(self, f1, f2, epoch=True, deredden=True, interp=False,
 def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
    # clear out any previous bindings...  gotta be a better way to do this...
    if pyplot.fignum_exists(111):
-      for lc in self.parent.data.values():
+      for lc in list(self.parent.data.values()):
          mp = getattr(lc, 'mp', None)
          if mp is not None:
             if getattr(mp, 'bc',None) is not None:
@@ -994,7 +994,7 @@ def replot_lc(self):
 def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
    '''Plot the k-corrections, both mangled and un-mangled.'''
    # See  what filters we're going to use:
-   bands = self.ks.keys()
+   bands = list(self.ks.keys())
    if len(bands) == 0:
       return
 
@@ -1021,8 +1021,8 @@ def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
       x = self.data[b].MJD - self.Tmax
       days = (arange(int(x[0]), int(x[-1]), 1)) #/(1+self.z)/self.ks_s
       rest_days = days/(1+self.z)/self.ks_s
-      k,k_m = map(array, kcorr.kcorr(rest_days.tolist(), self.restbands[b], 
-         b, self.z, self.EBVgal, 0.0, version=self.k_version))
+      k,k_m = list(map(array, kcorr.kcorr(rest_days.tolist(), self.restbands[b], 
+         b, self.z, self.EBVgal, 0.0, version=self.k_version)))
       k_m = equal(k_m, 1)
       p.axes[i].filt = b
       p.axes[i].inst = self

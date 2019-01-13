@@ -1,9 +1,9 @@
 from numpy import *
-from filters import fset
+from .filters import fset
 import numpy.random as RA
-from utils import fit1dcurve
-from utils import InteractiveFit
-import plotmod
+from .utils import fit1dcurve
+from .utils import InteractiveFit
+from . import plotmod
 from scipy.optimize import brentq
 
 if 'gp' in fit1dcurve.functions:
@@ -44,8 +44,8 @@ class lc:
       self.e_mag = e_mag       # error in magnitude
       self._SNR = SNR           # Signal-to-noise ratio
       if sometrue(equal(self.e_mag,0)):
-         print "Warning:  you have errors that are zero:  setting them to 0.001 mag."
-         print "If you don't like that, fix your errors."
+         print("Warning:  you have errors that are zero:  setting them to 0.001 mag.")
+         print("If you don't like that, fix your errors.")
          self.e_mag = where(equal(self.e_mag, 0), 0.001, self.e_mag)
       self.covar = None        # full error matrix (if errors are correlated)
       self.restband = restband # the observed band in the frame of the SN
@@ -63,9 +63,9 @@ class lc:
          try:
             self.sids = asarray(sids, dtype=int)
          except:
-            raise ValueError, "sids must be integer array or list"
+            raise ValueError("sids must be integer array or list")
          if self.sids.shape != self.mag.shape:
-            raise ValueError, "sids must have the same shape as photometry"
+            raise ValueError("sids must have the same shape as photometry")
 
       self.interp = None
       self.model_flux = 0       # is the model in flux-space?
@@ -160,11 +160,11 @@ class lc:
             try:
                return(self.magnitude - self.K)
             except:
-               raise AttributeError, "Error:  k-corrections and magnitudes incompatible"
+               raise AttributeError("Error:  k-corrections and magnitudes incompatible")
       elif 'interp' in self.__dict__ and self.__dict__['interp'] is not None:
          if name in self.__dict__['interp'].pars:
             return getattr(self.__dict__['interp'],name)
-      raise AttributeError, "Error:  attribute %s not defined" % (name)
+      raise AttributeError("Error:  attribute %s not defined" % (name))
 
    def __setattr__(self, name, value):
       if 'interp' in self.__dict__:
@@ -180,8 +180,8 @@ class lc:
                #self.replot()
                return
       if name == 'mask':
-         if 'mask' in self.__dict__.keys():
-            raise TypeError, "lc instance's mask attribute must be modifed in-place"
+         if 'mask' in list(self.__dict__.keys()):
+            raise TypeError("lc instance's mask attribute must be modifed in-place")
       self.__dict__[name] = value
 
    def __getstate__(self):
@@ -280,8 +280,7 @@ class lc:
 
       if self.interp is None:
          # Try to use a model
-         if self.band not in self.parent.model._fbands: raise AttributeError, \
-               "Error.  To interpolate, you need to fit a template or model first."
+         if self.band not in self.parent.model._fbands: raise AttributeError("Error.  To interpolate, you need to fit a template or model first.")
          
       times = atleast_1d(times) 
       if epoch: times = times + self.parent.Tmax
@@ -378,7 +377,7 @@ class lc:
 
 
    def list_types(self):
-      print "the following methods are available for constructing templates:"
+      print("the following methods are available for constructing templates:")
       fit1dcurve.list_types()
 
    def mean(self, x, flux=False, verbose=False):
@@ -410,7 +409,7 @@ class lc:
             mid = argmin(self.MJD[f0])
             xmin = self.MJD[f0][mid]
             if verbose:
-               print "extrapolating early data up to ",xmin
+               print("extrapolating early data up to ",xmin)
             lids = less(x[sids], xmin)
             if sometrue(lids):
                m1,em1,f1 = self.parent.model(self.band, x[sids][lids],
@@ -422,16 +421,16 @@ class lc:
             ymax = m0[f0][mid]
 
             if verbose:
-               print "extrapolating late data from (%f,%f)" % (xmax,ymax)
+               print("extrapolating late data from (%f,%f)" % (xmax,ymax))
 
             lids = greater(x[sids], xmax)
             if sometrue(lids):
                gids = greater_equal(self.MJD, xmax)
                if verbose:
-                  print "   using points at", self.MJD[gids]
+                  print("   using points at", self.MJD[gids])
                a,b = polyfit(self.MJD[gids], self.mag[gids], 1)
                if verbose:
-                  print "   median slope: ", a
+                  print("   median slope: ", a)
                m[lids] = ymax + a*(x[sids][lids]-xmax)
          y = x*0
          put(y, sids, m)
@@ -462,7 +461,7 @@ class lc:
 
       xx,yy,ee = fit1dcurve.regularize(x, y, ey)
       if len(xx) < 2:
-         raise ValueError, "Cannot interpolate data with less than two distinct data points"
+         raise ValueError("Cannot interpolate data with less than two distinct data points")
       if method == 'gp':
          args['mean'] = self.mean
       self.interp = fit1dcurve.Interpolator(method, x, y, ey, self.mask, **args)
@@ -553,21 +552,21 @@ class lc:
                   dm15s.append(-1)
       #Now compute stats
       inter.reset_mean()
-      Tmaxs,Mmaxs,dm15s = map(array, [Tmaxs, Mmaxs, dm15s])
+      Tmaxs,Mmaxs,dm15s = list(map(array, [Tmaxs, Mmaxs, dm15s]))
 
       Tgids = greater(Tmaxs, 0)
       goodfrac = sum(Tgids)*1.0/len(Tgids)
       if sum(Tgids)*1.0/len(Tgids) < 0.8:
-         print "Warning!  %f%% of MC realizations had good Tmax" % \
-               (sum(Tgids)*100.0/len(Tgids),)
+         print("Warning!  %f%% of MC realizations had good Tmax" % \
+               (sum(Tgids)*100.0/len(Tgids),))
       Mgids = greater(Mmaxs, 0)
       if sum(Mgids)*1.0/len(Mgids) < 0.8:
-         print "Warning!  %f%% of MC realizations had good Mmax" %\
-               (sum(Mgids)*100.0/len(Mgids),)
+         print("Warning!  %f%% of MC realizations had good Mmax" %\
+               (sum(Mgids)*100.0/len(Mgids),))
       dgids = greater(dm15s, 0)
       if sum(dgids)*1.0/len(dgids) < 0.8:
-         print "Warning!  %f%% of MC realizations had good dm15" %\
-               (sum(dgids)*100.0/len(dgids),)
+         print("Warning!  %f%% of MC realizations had good dm15" %\
+               (sum(dgids)*100.0/len(dgids),))
       if sometrue(Tgids):
          self.Tmax = Tmaxs[0]
          self.e_Tmax = std(Tmaxs[Tgids]) 

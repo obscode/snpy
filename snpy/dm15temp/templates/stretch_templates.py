@@ -25,6 +25,6 @@ for name in sys.argv[1:]:
    gids = num
    s.fit(['B'], dm15=1.1, EBVhost=0, Tmax=0)
    
-   print >>f, name, s.s
+   print(name, s.s, file=f)
 
 f.close()

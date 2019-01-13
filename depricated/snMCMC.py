@@ -15,7 +15,7 @@ class MCMC_generator(pymc.MCMC):
 
       self.sn = snobj
       if filters is None:
-         filters = self.sn.data.keys()
+         filters = list(self.sn.data.keys())
 
 
       self.model = snobj.model
@@ -23,7 +23,7 @@ class MCMC_generator(pymc.MCMC):
       self.model._fbands = filters
       self.model.setup()
       params = []
-      paramnames = self.model.parameters.keys()
+      paramnames = list(self.model.parameters.keys())
       # First, setup stochastics for our parameters
       for param in paramnames:
          if param in args:
@@ -45,7 +45,7 @@ class MCMC_generator(pymc.MCMC):
          elif param.find('max') > 0:
             params.append(pymc.Uniform(str(param), 10., 30.))
          else:
-            raise AttributeError, "Error, parameter %s not recognized. Update MCMC package" % (param)
+            raise AttributeError("Error, parameter %s not recognized. Update MCMC package" % (param))
          if self.model.parameters[param] is None:
             params[-1].value = self.model.guess(param)
          else:
@@ -67,7 +67,7 @@ class MCMC_generator(pymc.MCMC):
          # Set the parameters in the model
          for i,param in enumerate(paramnames):
             if debug:
-               print "setting ",param, " to ",params[i]
+               print("setting ",param, " to ",params[i])
             self.model.parameters[param] = params[i]
 
          logp = 0

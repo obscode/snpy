@@ -15,12 +15,12 @@ There are serveral steps:
 '''
 
 from snpy.filters import fset, ch, standards
-from kcorr import get_SED
-import kcorr
-from filters import standards
+from .kcorr import get_SED
+from . import kcorr
+from .filters import standards
 Vega = standards['VegaB']
-from utils import deredden
-from mangle_spectrum import mangle_spectrum2
+from .utils import deredden
+from .mangle_spectrum import mangle_spectrum2
 from scipy.integrate import trapz
 from scipy.interpolate import splrep,splev
 from numpy import *
@@ -43,27 +43,27 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
    if EBVhost is None:
       EBVhost = getattr(sn, 'EBVhost', None)
       if EBVhost is None:
-         raise AttributeError, "Error:  you must either specify E(B-V) or "\
-                               "fit a model that has EBVhost as a parameter"
+         raise AttributeError("Error:  you must either specify E(B-V) or "\
+                               "fit a model that has EBVhost as a parameter")
    if Rv is None:
       Rv = getattr(sn, 'Rv', None)
       if Rv is None:
-         raise AttributeError, "Error:  you must either specify Rv or "\
-                               "fit a model that has Rv as a parameter"
+         raise AttributeError("Error:  you must either specify Rv or "\
+                               "fit a model that has Rv as a parameter")
 
    if redlaw is None:
       redlaw = getattr(sn, 'redlaw', None)
       if redlaw is None:
-         raise AttributeError, "Error:  you must either specify redlaw or "\
-                               "fit a model that has redlaw is defined"
+         raise AttributeError("Error:  you must either specify redlaw or "\
+                               "fit a model that has redlaw is defined")
 
    if bands is None:
       bands = getattr(sn.model, '_fbands', None)
       if bands is None:
-         bands = sn.data.keys()
+         bands = list(sn.data.keys())
    for b in bands:
       if b not in sn.data:
-         raise AttributeError, "band %s not defined in data set" % (b)
+         raise AttributeError("band %s not defined in data set" % (b))
    # Bands must be increasing in wavelength
    eff_waves = array([fset[b].eff_wave(w,f) for b in bands])
    sids = argsort(eff_waves)
@@ -90,16 +90,16 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
 
    if refband is not None:
       if refband not in bands:
-         raise ValueError, "refband %s is not one of your observed filters" % \
-               refband
+         raise ValueError("refband %s is not one of your observed filters" % \
+               refband)
 
 
    # We need a time of maximum to set the scale of the Hsiao templates
    if Tmax is None:
       Tmax = getattr(sn, 'Tmax', None)
       if Tmax is None:
-         raise ValueError, "You must supply a time of B maximum or fit a "\
-               "model that has Tmax as a parameter"
+         raise ValueError("You must supply a time of B maximum or fit a "\
+               "model that has Tmax as a parameter")
 
    # Now check that we can interpolate if needed
    if interpolate is not None:
@@ -107,14 +107,14 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
          if verbose: log("   Using spline interpolation")
          for b in bands:
             if getattr(sn.data[b], 'interp', None) is None:
-               raise ValueError, "You asked for spline interpolation, but "\
-                     "filter %s has no interpolator defined" % b
+               raise ValueError("You asked for spline interpolation, but "\
+                     "filter %s has no interpolator defined" % b)
       else:
          if verbose: log("   Using model interpolation")
          for b in bands:
             if b not in sn.model._fbands:
-               raise ValueError, "You asked for model interpolation, but "\
-                     "filter %s was not fit with the model" % b
+               raise ValueError("You asked for model interpolation, but "\
+                     "filter %s was not fit with the model" % b)
    else:
       if verbose: log("   Not using interpolation")
 
@@ -127,20 +127,20 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
          fSED = lambda x: (standards[SED].wave,standards[SED].flux)
          if verbose: log("   Using standards['%s'] to compute effective wavelengths" % (SED))
       else:
-         raise KeyError, "SED '%s' not found in standards database" % SED
-   elif type(SED) in [types.ListType,types.TupleType]:
+         raise KeyError("SED '%s' not found in standards database" % SED)
+   elif type(SED) in [list,tuple]:
       if len(SED) != 2:
-         raise ValueError, "SED must be tuple or list of length 2"
+         raise ValueError("SED must be tuple or list of length 2")
       fSED = lambda x: SED
    elif type(SED) is types.FunctionType:
       try:
          w,f = SED(0)
       except:
-         raise ValueError, "If SED is a function, it must take single" \
-               " argument (epoch) and return (wave,flux) tuple"
+         raise ValueError("If SED is a function, it must take single" \
+               " argument (epoch) and return (wave,flux) tuple")
       fSED = SED
    else:
-      raise ValueError, "Unrecognized type (%s) for SED" % (type(SED))
+      raise ValueError("Unrecognized type (%s) for SED" % (type(SED)))
 
 
    s = 1.0
@@ -149,8 +149,8 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
       dm15 = getattr(sn, 'dm15', None)
       if s is None:
          if dm15 is None:
-            raise ValueError, "If you want to apply a stretch to the SED's, "\
-                  "you must fit a model that uses dm15 or st as a parameter"
+            raise ValueError("If you want to apply a stretch to the SED's, "\
+                  "you must fit a model that uses dm15 or st as a parameter")
          if dm15 > 1.7:
             if verbose: log("Warning:  dm15 > 1.7. Hsiao template is not "
                   "compatible with fast decliners. Proceed a your own risk")
@@ -230,9 +230,9 @@ def bolometric_SED(sn, bands=None, lam1=None, lam2=None, refband=None,
       wave,flux = fSED(t/s)
       # Check limits of integration (in rest frame of SN)
       if min(lam1) < wave.min() or (max(lam2) > wave.max() and not extrap_red):
-         raise RuntimeError, "Error: your limits of integration (%.3f,%.3f) "\
+         raise RuntimeError("Error: your limits of integration (%.3f,%.3f) "\
                              "are outside the limits of the SED (%.3f,%.3f)" %\
-                             (min(lam1),max(lam2),wave.min(), wave.max())
+                             (min(lam1),max(lam2),wave.min(), wave.max()))
 
       # integration limits
       i1 = [searchsorted(wave, lam) for lam in lam1]
@@ -342,19 +342,19 @@ def bolometric_direct(sn, bands=None, tmin=None, tmax=None,
    if EBVhost is None:
       EBVhost = getattr(sn, 'EBVhost', None)
       if EBVhost is None:
-         raise AttributeError, "Error:  you must either specify E(B-V) or "\
-                               "fit a model that has EBVhost as a parameter"
+         raise AttributeError("Error:  you must either specify E(B-V) or "\
+                               "fit a model that has EBVhost as a parameter")
    if Rv is None:
       Rv = getattr(sn, 'Rv', None)
       if Rv is None:
-         raise AttributeError, "Error:  you must either specify Rv or "\
-                               "fit a model that has Rv as a parameter"
+         raise AttributeError("Error:  you must either specify Rv or "\
+                               "fit a model that has Rv as a parameter")
 
    if redlaw is None:
       redlaw = getattr(sn, 'redlaw', None)
       if redlaw is None:
-         raise AttributeError, "Error:  you must either specify redlaw or "\
-                               "fit a model that has redlaw is defined"
+         raise AttributeError("Error:  you must either specify redlaw or "\
+                               "fit a model that has redlaw is defined")
 
    # We need a time of maximum to set the scale of the Hsiao templates
    if Tmax is None:
@@ -372,28 +372,28 @@ def bolometric_direct(sn, bands=None, tmin=None, tmax=None,
          fSED = lambda x: (standards[SED].wave,standards[SED].flux)
          if verbose: log("   Using standards['%s'] to compute effective wavelengths" % (SED))
       else:
-         raise KeyError, "SED '%s' not found in standards database" % SED
-   elif type(SED) in [types.ListType,types.TupleType]:
+         raise KeyError("SED '%s' not found in standards database" % SED)
+   elif type(SED) in [list,tuple]:
       if len(SED) != 2:
-         raise ValueError, "SED must be tuple or list of length 2"
+         raise ValueError("SED must be tuple or list of length 2")
       fSED = lambda x: SED
    elif type(SED) is types.FunctionType:
       try:
          w,f = SED(0)
       except:
-         raise ValueError, "If SED is a function, it must take single" \
-               " argument (epoch) and return (wave,flux) tuple"
+         raise ValueError("If SED is a function, it must take single" \
+               " argument (epoch) and return (wave,flux) tuple")
       fSED = SED
    else:
-      raise ValueError, "Unrecognized type (%s) for SED" % (type(SED))
+      raise ValueError("Unrecognized type (%s) for SED" % (type(SED)))
 
    if bands is None:
       bands = getattr(sn.model, '_fbands', None)
       if bands is None:
-         bands = sn.data.keys()
+         bands = list(sn.data.keys())
    for b in bands:
       if b not in sn.data:
-         raise AttributeError, "band %s not defined in data set" % (b)
+         raise AttributeError("band %s not defined in data set" % (b))
 
    # Bands must be increasing in wavelength
    eff_waves = array([fset[b].eff_wave(Vega) for b in bands])
@@ -406,14 +406,14 @@ def bolometric_direct(sn, bands=None, tmin=None, tmax=None,
          if verbose: log("   Using spline interpolation")
          for b in bands:
             if getattr(sn.data[b], 'interp', None) is None:
-               raise ValueError, "You asked for spline interpolation, but "\
-                     "filter %f has not interpolator defined" % b
+               raise ValueError("You asked for spline interpolation, but "\
+                     "filter %f has not interpolator defined" % b)
       else:
          if verbose: log("   Using model interpolation")
          for b in bands:
             if b not in sn.model._fbands:
-               raise ValueError, "You asked for model interpolation, but "\
-                     "filter %f was not fit with the model" % b
+               raise ValueError("You asked for model interpolation, but "\
+                     "filter %f was not fit with the model" % b)
    else:
       if verbose: log("   Not using interpolation")
 

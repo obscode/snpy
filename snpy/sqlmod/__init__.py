@@ -121,8 +121,8 @@ class sqlbase:
          if N == 0:
             return 0
          if N > 1:
-            print "Warning!  %s is not unique in the database, taking first" %\
-                  (self.name)
+            print("Warning!  %s is not unique in the database, taking first" %\
+                  (self.name))
             return N
          if self.SN_ID2 is not None:
             l = self.c.fetchall()[0]
@@ -140,7 +140,7 @@ class sqlbase:
                    'default': default value,
                    'extra': extra info}, ..., } '''
       if not self.connected:
-         raise RuntimeError, "Not connected to SQL database."
+         raise RuntimeError("Not connected to SQL database.")
       if type(table) is not type([]):
          tables = [table]
       else:
@@ -180,7 +180,7 @@ class sqlbase:
    def create_SN(self, ra, decl, z):
       '''Create a new SN with values for ra, decl, and z'''
       if not self.connected:
-         raise RuntimeError, "Not connected to SQL database."
+         raise RuntimeError("Not connected to SQL database.")
       insrt = '''INSERT INTO %s (%s,%s,%s,%s) VALUES (%%s,%%s,%%s,%%s)''' % \
             (self.SN_TABLE, self.SN_ID, self.sql_field('ra'), self.sql_field('decl'), 
                   self.sql_field('z'))
@@ -190,10 +190,10 @@ class sqlbase:
       '''Insert the photomtery data into the database.  See get_SN_photometry
       for an explanation of data'''
       if not self.connected:
-         raise RuntimeError, "Not connected to SQL database."
-      filters = data.keys()
+         raise RuntimeError("Not connected to SQL database.")
+      filters = list(data.keys())
       if type(PHOTO_TABLE) is type([]):
-         raise TypeError, "function not supported for table joins"
+         raise TypeError("function not supported for table joins")
       insrt = '''INSERT INTO %s (%s,%s,%s,%s,%s,%s) VALUES (%%s,%%s,%%s,%%s,%%s,%%s)''' %\
             (self.PHOTO_TABLE,self.PHOTO_ID,self.PHOTO_FILT,self.PHOTO_JD,
              self.PHOTO_MAG, self.PHOTO_EMAG, self.PHOTO_K)
@@ -217,36 +217,36 @@ class sqlbase:
    def get_SN_parameter(self, attr, verbose=0):
       '''Gets a single attribute of a SN in the database.'''
       if not self.connected:
-         raise RuntimeError, "Not connected to SQL database."
+         raise RuntimeError("Not connected to SQL database.")
 
       if attr not in self.SN_table_info and attr not in self.ATTR_KEYS:
-         raise AttributeError, "SN table does not have this attribute: %s" % \
-               attr
+         raise AttributeError("SN table does not have this attribute: %s" % \
+               attr)
       field = self.sql_field(attr)
 
       slct = '''SELECT %s from %s where %s = %%s %s''' % (field, self.SN_TABLE, 
             self.SN_ID, self.SN_COND)
       if verbose:
-         print "executing...  ",slct % (self.name)
+         print("executing...  ",slct % (self.name))
       N = self.c.execute(slct, (self.name))
       if N == 0:
-         raise AttributeError, "Attribute %s(%s) not found in SQL db" % \
-               (attr,field)
+         raise AttributeError("Attribute %s(%s) not found in SQL db" % \
+               (attr,field))
       return(self.c.fetchall()[0][0])
 
    def set_SN_parameter(self, attr, value):
       '''Sets a single attribute of a SN in the datase.'''
       if self.readonly:
-         raise ValueError, "Database is read-only"
+         raise ValueError("Database is read-only")
       if not self.connected:
-         raise RuntimeError, "Not connected to SQL database."
-      if attr not in self.SN_table_info.keys() and attr not in self.ATTR_KEYS:
-         raise AttributeError, "SN table does not have this attribute: %s" % \
-               attr
+         raise RuntimeError("Not connected to SQL database.")
+      if attr not in list(self.SN_table_info.keys()) and attr not in self.ATTR_KEYS:
+         raise AttributeError("SN table does not have this attribute: %s" % \
+               attr)
       field = self.sql_field(attr)
       if field not in self.SN_table_info:
-         raise AttributeError, "SN table does not have this attribute: %s" % \
-               field
+         raise AttributeError("SN table does not have this attribute: %s" % \
+               field)
 
       updt = '''UPDATE %s SET %s = %%s where %s = %%s''' % \
             (self.SN_TABLE, field, self.SN_ID)
@@ -257,7 +257,7 @@ class sqlbase:
       indexed by filter name.  Each element is a 5-tuple of arrays:
       (MJD, mag, e_mag, K).'''
       if not self.connected:
-         raise RuntimeError, "Not connected to SQL database."
+         raise RuntimeError("Not connected to SQL database.")
       if self.name2 is not None:
          name_where = '(%s="%s" or %s="%s")' % (self.PHOTO_ID,self.name,
                                                 self.PHOTO_ID,self.name2)
@@ -279,11 +279,11 @@ class sqlbase:
 
       slct += " from %s where %s %s ORDER by %s" % \
             (phot_table, name_where, self.PHOTO_COND, self.PHOTO_JD)
-      if verbose:  print "executing... ",slct
+      if verbose:  print("executing... ",slct)
       N = self.c.execute(slct)
       if N == 0:
-         raise ValueError, "No photometry for %s found" % \
-                  (self.name)
+         raise ValueError("No photometry for %s found" % \
+                  (self.name))
       list = self.c.fetchall()
 
       data = {}
@@ -324,7 +324,7 @@ class sqlbase:
       waves is a list of 1D arrays of wavelengths
       fluxes is a list of 1D arrays of fluxes.'''
       if not self.connected:
-         raise RuntimeError, "Not connected to SQL database."
+         raise RuntimeError("Not connected to SQL database.")
       slct1 = '''SELECT %s,%s from %s where %s=%%s''' % \
             (self.SPEC_JD,self.SPEC_INDEX,self.SPEC_INFO,self.SPEC_NAME)
       slct2 = '''SELECT %s,%s from %s where %s=%%s and %s=%%s''' % \
@@ -332,8 +332,8 @@ class sqlbase:
              self.SPEC_INDEX)
       N = self.c2.execute(slct1, (self.name))
       if N == 0:
-         raise ValueError, "No spectroscopy for %s found" % \
-                  (self.name)
+         raise ValueError("No spectroscopy for %s found" % \
+                  (self.name))
       list = self.c2.fetchall()
 
       JDs = []
@@ -353,13 +353,13 @@ class sqlbase:
       tol from the values in the table.  attr for row i is changed to
       values[i]'''
       if type(self.PHOTO_TABLE) is type([]):
-         raise TypeError, "This function is not available on table joins"
+         raise TypeError("This function is not available on table joins")
 
       if not self.connected:
-         raise RuntimeError, "Not connected to SQL database."
+         raise RuntimeError("Not connected to SQL database.")
 
       if not numpy.shape(times) == numpy.shape(values):
-         raise ValueError, "shapes of times and values must agree"
+         raise ValueError("shapes of times and values must agree")
       if len(numpy.shape(times)) == 0:
          times = numpy.array([times])
          values = numpy.array([values])
@@ -370,7 +370,7 @@ class sqlbase:
          field = attr
       
       if field not in self.PHOTO_table_info:
-         raise AttributeError, "Photometry table has no field %s"
+         raise AttributeError("Photometry table has no field %s")
 
       # First, find the primary key for the PHOTO_TABLE:
       PRI = None
@@ -394,14 +394,14 @@ class sqlbase:
             bids = numpy.nonzero(numpy.equal(num_match, 0))[0]
             btimes = ""
             for i in range(len(bids)):  btimes += " %.1f " % (times[bids[i]])
-            raise AttributeError, "No photometry entry for %s" % btimes
+            raise AttributeError("No photometry entry for %s" % btimes)
 
          # check if multiple matches:
          if numpy.sometrue(numpy.greater(num_match,1)):
             bids = numpy.nonzero(numpy.greater(num_match,1))[0]
             btimes = ""
             for i in range(len(bids)):  btimes += " %.1f " % (times[bids[i]])
-            raise AttributeError, "Multiple time matches for %s" % btimes
+            raise AttributeError("Multiple time matches for %s" % btimes)
 
          # Should be all clear now
          match_ids = (ids[numpy.newaxis,:]*numpy.ones(numpy.shape(times))[:,numpy.newaxis])[con]
@@ -549,5 +549,5 @@ default_sql = databases['default'][0]()
 def setSQL(name):
    global default_sql
    if name not in databases:
-      raise ValueError, "Error, unknown database %s" % name
+      raise ValueError("Error, unknown database %s" % name)
    default_sql = databases[name][0]()

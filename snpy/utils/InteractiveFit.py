@@ -4,7 +4,7 @@ import numpy as num
 from snpy.myplotlib import PanelPlot
 from matplotlib import pyplot as plt
 try:
-   import fit1dcurve
+   from . import fit1dcurve
 except:
    from snpy.utils import fit1dcurve
 
@@ -63,7 +63,7 @@ class InteractiveFit:
       if 'interp' in self.__dict__:
          if key in self.interp.pars:
             return self.interp.pars[key]
-      raise AttributeError, "no such attribute %s" % key
+      raise AttributeError("no such attribute %s" % key)
 
    def __setattr__(self, key, value):
       if 'interp' in self.__dict__:
@@ -191,11 +191,11 @@ class InteractiveFit:
       self.redraw_x()
 
    def help(self):
-      print "The following key bindings are in effect:"
+      print("The following key bindings are in effect:")
       for key,help in self.bind_help:
-         print key+":   "+help
-      print
-      print "You can also vary the following member variables:"
+         print(key+":   "+help)
+      print()
+      print("You can also vary the following member variables:")
       self.interp.help()
 
    def redraw_x(self):
@@ -390,7 +390,7 @@ class InteractiveFit:
    def set_bindings(self):
       '''Sets the bindings to the figure canvas.'''
       # First clear out the default ones
-      ids = self.mp.fig.canvas.callbacks.callbacks['key_press_event'].keys()
+      ids = list(self.mp.fig.canvas.callbacks.callbacks['key_press_event'].keys())
       for id in ids:
          self.mp.fig.canvas.mpl_disconnect(id)
       self.mp.fig.canvas.mpl_connect('key_press_event',self._bind_x)

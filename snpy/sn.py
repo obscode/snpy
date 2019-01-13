@@ -2,13 +2,13 @@
 import sys,string,os
 import warnings
 have_sql = 1
-import sqlmod
+from . import sqlmod
 if 'SQLSERVER' in os.environ:
    sqlmod.setSQL(os.environ['SQLSERVER'])
 have_sql = sqlmod.have_sql
 
 try:
-   import snemcee
+   from . import snemcee
 except ImportError:
    snemcee = None
 
@@ -19,26 +19,26 @@ except:
    
 import types
 import time
-import plot_sne_mpl as plotmod
-from lc import lc           # the light-curve class
+from . import plot_sne_mpl as plotmod
+from .lc import lc           # the light-curve class
 from numpy import *       # Vectors
-import ubertemp             # a template class that contains these two
-import kcorr                # Code for generating k-corrections
-import bolometric
-import utils.IRSA_dust_getval as dust_getval
+from . import ubertemp             # a template class that contains these two
+from . import kcorr                # Code for generating k-corrections
+from . import bolometric
+from .utils import IRSA_dust_getval as dust_getval
 
-from utils import fit_poly  # polynomial fitter
+from .utils import fit_poly  # polynomial fitter
 import scipy                # Scientific python routines
 linalg = scipy.linalg       # Several linear algebra routines
 from scipy.interpolate import interp1d
-from utils import fit_spline # My Spline fitting routines
-from filters import fset    # filter definitions.
-from filters import standards # standard SEDs
-import mangle_spectrum      # SN SED mangling routines
+from .utils import fit_spline # My Spline fitting routines
+from .filters import fset    # filter definitions.
+from .filters import standards # standard SEDs
+from . import mangle_spectrum      # SN SED mangling routines
 import pickle
-import model
-from utils.fit1dcurve import list_types,regularize
-from version import __version__
+from . import model
+from .utils.fit1dcurve import list_types,regularize
+from .version import __version__
 
 # Some useful functions in other modules which the interactive user may want:
 getSED = kcorr.get_SED
@@ -81,14 +81,14 @@ class dict_def:
 
    def __str__(self):
       ret = ""
-      for key in self.parent.data.keys():
+      for key in list(self.parent.data.keys()):
          ret += "%s -> %s, " % (key, self.__getitem__(key))
       return ret
    def __repr__(self):
       return self.__str__()
 
    def keys(self):
-      return self.dict.keys()
+      return list(self.dict.keys())
 
 class sn(object):
    '''This class is the heart of SNooPy.  Create a supernova object by 
@@ -147,8 +147,8 @@ class sn(object):
                self.read_sql(self.name)
                self._sql_read_time = time.gmtime()
             else:
-               print "Warning:  ra and/or decl not specified and no source specified."
-               print "   setting ra, decl and z = 0" 
+               print("Warning:  ra and/or decl not specified and no source specified.")
+               print("   setting ra, decl and z = 0") 
                self.ra = 0;  self.decl = 0;
          else:
             self.ra = ra
@@ -196,12 +196,12 @@ class sn(object):
          if 'model' in self.__dict__:
             return self.__dict__['model'].parameters
          else:
-            raise AttributeError, "Error, model not defined, so no paramters"
+            raise AttributeError("Error, model not defined, so no paramters")
       if name == 'errors':
          if 'model' in self.__dict__:
             return self.__dict__['model'].errors
          else:
-            raise AttributeError, "Error, model not defined, so no errors"
+            raise AttributeError("Error, model not defined, so no errors")
       if name in self.parameters:
             return self.parameters[name]
       if name.replace('e_','') in self.errors:
@@ -216,7 +216,7 @@ class sn(object):
 
       if name == 'redlaw':
          return 'ccm'
-      raise AttributeError, "Error:  attribute %s not defined" % (name)
+      raise AttributeError("Error:  attribute %s not defined" % (name))
 
    def __setattr__(self, name, value):
       if 'model' in self.__dict__:
@@ -235,7 +235,7 @@ class sn(object):
       res = res and (abs(self.ra - other.ra) < 1e-7)
       res = res and (abs(self.decl - other.decl) < 1e-7)
       res = res and (abs(self.z - other.z) < 1e-9)
-      for f in self.data.keys():
+      for f in list(self.data.keys()):
          res = res and (self.data[f] == other.data[f])
       return res
 
@@ -260,12 +260,12 @@ class sn(object):
       models = []
       for item in model.__dict__:
          obj = model.__dict__[item]
-         if type(obj) is types.ClassType:
+         if type(obj) is type:
             if issubclass(obj, model.model):
                models.append(item)
       if name not in models:
          st = "Not a valid model.  Choose one of:  "+str(models)
-         raise ValueError, st
+         raise ValueError(st)
 
       self.model = model.__dict__[name](self, stype=stype, **kwargs)
       self.template_bands = [b for b in self.model.rbs \
@@ -294,7 +294,7 @@ class sn(object):
          TypeError: the outfile is an incorrect type.
       '''
 
-      if bands is None:  bands = self.data.keys()
+      if bands is None:  bands = list(self.data.keys())
 
       ret_data = {}
       # First, we make a list of observation dates from all the bands.
@@ -322,21 +322,21 @@ class sn(object):
          ret_data["e_"+band] = temp2
 
       if outfile is not None:
-         if type(outfile) in types.StringTypes:
+         if type(outfile) in str:
             fp = open(outfile, 'w')
          elif type(outfile) is types.FileType:
             fp = outfile
          else:
-            raise TypeError, "outfile must be a file name or file handle"
+            raise TypeError("outfile must be a file name or file handle")
          JDlen = len(str(int(ret_data['MJD']))) + 3
          title = "MJD" + " "*(JDlen+2)
          for b in bands:  title += "%5s +/-   " % b
-         print >> fp, title
+         print(title, file=fp)
          format = "%%%d.2f  " + "%5.2f %4.2f  "*len(bands)
          for i in range(len(ret_data['MJD'])):
             data = []
             for b in bands:  data += [ret_data[b][i], ret_data['e_'+b][i]]
-            print >> fp, format % tuple(data)
+            print(format % tuple(data), file=fp)
          fp.close()
          return
       else:
@@ -401,7 +401,7 @@ class sn(object):
 
       # Now check that we actually HAVE some data left
       if not sometrue(gids):
-         raise RuntimeError, "Sorry, no data available between t=%f and t=%f" % (tmin,tmax) 
+         raise RuntimeError("Sorry, no data available between t=%f and t=%f" % (tmin,tmax)) 
       
       # extract the data we want and convert to Vmax epochs
       t2 = compress(gids, (t-Tmax)/(1+self.z))
@@ -425,11 +425,11 @@ class sn(object):
       if B14:
          e_lira_EBV = sqrt(power(e_lira_EBV,2) + 0.04**2)
 
-      print "Vmax occurred at %f" % (t_maxes[0])
-      print "Slope of (B-V) vs. t-Tvmax was %f(%f)" % (c[1], ec[1])
-      print "median E(B-V) = %f    1.49*mad(E(B-V)) = %f" % (lira_EBV, e_lira_EBV)
+      print("Vmax occurred at %f" % (t_maxes[0]))
+      print("Slope of (B-V) vs. t-Tvmax was %f(%f)" % (c[1], ec[1]))
+      print("median E(B-V) = %f    1.49*mad(E(B-V)) = %f" % (lira_EBV, e_lira_EBV))
       if absolute(c[1] + 0.0118) > 3*ec[1]:
-         print "WARNING:  fit slope differs from Lira Law by more than three sigma"
+         print("WARNING:  fit slope differs from Lira Law by more than three sigma")
 
       if plot:
          plotmod.plot_lira(t, t2, t_maxes, BV, eBV, BV2, tmin, tmax, c)
@@ -461,7 +461,7 @@ class sn(object):
             rband: list of rest-bands (if model was used to interpolate)
 
       '''
-      if type(bands) in types.StringTypes:
+      if type(bands) is str:
          bands = [bands]
          scalar = True
       else:
@@ -472,8 +472,8 @@ class sn(object):
          lc_model_bands = [b for b in lc_model_bands if b not in model_bands]
       for band in bands:
          if band not in model_bands and band not in lc_model_bands:
-            raise ValueError, "Error:  filter %s has not been fit " % band + \
-                  "with a light-curve yet, so I cannot compute it's maximum"
+            raise ValueError("Error:  filter %s has not been fit " % band + \
+                  "with a light-curve yet, so I cannot compute it's maximum")
       N = len(bands)
       result = (zeros(N, dtype=float32), zeros(N, dtype=float32),
             zeros(N, dtype=float32), [""]*N)
@@ -487,11 +487,11 @@ class sn(object):
             for j in range(4): result[j][i] = mod_result[j][mid]
          if b in lc_model_bands:
             if b in model_bands:
-               print "Warning:  both model and spline fits present, using " +\
-                     "spline values"
+               print("Warning:  both model and spline fits present, using " +\
+                     "spline values")
             if restframe:
-               print "Warning:  can't k-correct spline fits, you're getting " +\
-                     "observed maxima!"
+               print("Warning:  can't k-correct spline fits, you're getting " +\
+                     "observed maxima!")
             if deredden:
                if band in self.Robs:
                   if type(self.Robs[band]) is type(()):
@@ -535,7 +535,7 @@ class sn(object):
             * self.Ss_mask:  dictionary indicating valid S-corrections
       '''
       if bands is None:
-         bands = self.data.keys()
+         bands = list(self.data.keys())
 
       self.Ss = {}
       self.Ss_mask = {}
@@ -553,9 +553,9 @@ class sn(object):
             # days since Bmax in the frame of the SN
             days = (x - self.Tmax)/(1+self.z)/st
             days = days.tolist()
-            self.Ss[band],self.Ss_mask[band] = map(array,kcorr.kcorr(days, 
+            self.Ss[band],self.Ss_mask[band] = list(map(array,kcorr.kcorr(days, 
                self.restbands[band], band, self.z, self.EBVgal, 0.0,
-               version=self.k_version, Scorr=True))
+               version=self.k_version, Scorr=True)))
             self.Ss_mask[band] = self.Ss_mask[band].astype(bool)
          else:
             self.Ss[band] = []
@@ -617,29 +617,29 @@ class sn(object):
          dm15 = getattr(self, 'dm15', None)
          st = getattr(self, 'st', None)
          if dm15 is None and st is None:
-            raise AttributeError, "Before you can k-correct with stretch, you"+\
-                  " need to solve for dm15 or st, using either a model or LC fit"
+            raise AttributeError("Before you can k-correct with stretch, you"+\
+                  " need to solve for dm15 or st, using either a model or LC fit")
          if dm15 is None:
             s = st
          else:
             if dm15 > 1.7:
-               print "Warning:  dm15 > 1.7.  Using this stretch on the Hsiao SED"
-               print "  is not recommended.  I'm setting stretch to 1.0.  You"
-               print "  might consider using the 91bg SED template."
+               print("Warning:  dm15 > 1.7.  Using this stretch on the Hsiao SED")
+               print("  is not recommended.  I'm setting stretch to 1.0.  You")
+               print("  might consider using the 91bg SED template.")
                s = kcorr.dm152s(1.7)
             elif dm15 < 0.7:
                s = kcorr.dm152s(0.7)
             else:
                s = kcorr.dm152s(dm15)
       elif use_stretch and self.k_version == '91bg':
-         print "Warning:  you asked for stretching the template SED, but"
-         print "you have selected the 91bg template.  Setting stretch to 1.0."
+         print("Warning:  you asked for stretching the template SED, but")
+         print("you have selected the 91bg template.  Setting stretch to 1.0.")
          s = 1.0
       else:
          s = 1.0
       self.ks_s = s
 
-      if bands is None:  bands = self.data.keys()
+      if bands is None:  bands = list(self.data.keys())
       if mbands is None:  mbands = [b for b in bands]
       # Check the simple case:
       if not mangle:
@@ -648,9 +648,9 @@ class sn(object):
             # days since Bmax in the frame of the SN
             days = (x - self.Tmax)/(1+self.z)/s
             days = days.tolist()
-            self.ks[band],self.ks_mask[band] = map(array,kcorr.kcorr(days, 
+            self.ks[band],self.ks_mask[band] = list(map(array,kcorr.kcorr(days, 
                self.restbands[band], band, self.z, self.EBVgal, 0.0,
-               version=self.k_version))
+               version=self.k_version)))
             self.ks_mask[band] = self.ks_mask[band].astype(bool)
             #self.ks_tck[band] = scipy.interpolate.splrep(x, self.ks[band], k=1, s=0)
             if len(x) > 1:
@@ -670,7 +670,7 @@ class sn(object):
          mbands = [mbands[i] for i in range(len(bids)) if not bids[i]] + mbands[-1:]
          eff_waves = array([fset[band].eff_wave(Ia_w,Ia_f) for band in mbands])
          dwaves = eff_waves[1:] - eff_waves[0:-1]
-      if not self.quiet:  print "Mangling based on filters:", mbands
+      if not self.quiet:  print("Mangling based on filters:", mbands)
 
       restbands = [self.restbands[band] for band in bands]
       # now get the interpolated magnitudes all along the extent of the
@@ -699,12 +699,10 @@ class sn(object):
       masks = transpose(array(masks))
       # don't forget to convert to rest-frame epochs!
       if self.Tmax is None:
-         raise AttributeError, \
-               "Error.  self.Tmax must be set in oder to compute K-correctsions"
+         raise AttributeError("Error.  self.Tmax must be set in oder to compute K-correctsions")
       t = res['MJD'] - self.Tmax
       if not sometrue(greater_equal(t, -19)*less(t, 70)):
-         raise RuntimeError, \
-            "Error:  your epochs are all outside -20 < t < 70.  Check self.Tmax"
+         raise RuntimeError("Error:  your epochs are all outside -20 < t < 70.  Check self.Tmax")
       kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle(t/(1+self.z)/s, bands, 
             mags, masks, restbands, self.z, 
             colorfilts=mbands, version=self.k_version, full_output=1, **mopts)
@@ -753,7 +751,7 @@ class sn(object):
       '''
       
       if 'ks_mopts' not in self.__dict__:
-         raise AttributeError, "Mangling info not found... try running self.kcorr()"
+         raise AttributeError("Mangling info not found... try running self.kcorr()")
       if self.ks_mopts[band][i] is None:
          return(None,None,None,None)
       epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
@@ -844,7 +842,7 @@ class sn(object):
          bids = greater(data[band], 90)   # where we need to fill in
          if dokcorr:
             if band not in self.ks_tck:
-               raise RuntimeError, "No k-corrections defined for %s.  Either set dokcorr=0 or run self.kcorr() first" % band
+               raise RuntimeError("No k-corrections defined for %s.  Either set dokcorr=0 or run self.kcorr() first" % band)
             k = scipy.interpolate.splev(data['MJD'], self.ks_tck[band])
             kflag = (less(data['MJD'],self.ks_tck[band][0][0]) &\
                     greater(data['MJD'], self.ks_tck[band][0][-1]))*8
@@ -888,7 +886,7 @@ class sn(object):
          else:
             interp = getattr(self.data[band], 'interp', None)
             if interp is None:
-               raise ValueError, "Error: interpolator missing for %s" % band
+               raise ValueError("Error: interpolator missing for %s" % band)
             temp,mask = self.data[band].interp(data['MJD'])
             etemp = self.data[band].interp.error(data['MJD'])
             ms.append(where(bids, temp, data[band])-k)
@@ -951,11 +949,9 @@ class sn(object):
          flags = gids[gids]*0
          if dokcorr:
             if band1 not in self.ks:
-               raise ValueError, \
-                     "band %s has no k-corrections, use self.kcorr()" % band1
+               raise ValueError("band %s has no k-corrections, use self.kcorr()" % band1)
             if band2 not in self.ks:
-               raise ValueError, \
-                     "band %s has no k-corrections, use self.kcorr()" % band2
+               raise ValueError("band %s has no k-corrections, use self.kcorr()" % band2)
             # Now, we need to find indexes into each dataset that correspond
             #  to data['MJD']. 
             ids1 = searchsorted(self.data[band1].MJD, mjd)
@@ -974,8 +970,8 @@ class sn(object):
          MJD,ms,ems,flags = self.interp_table([band1,band2], use_model=True,
             model_float=model_float, dokcorr=dokcorr)
       else:
-         raise RutimeError, "You asked for interpolation, but there are no"\
-               " models or interpolators defined"
+         raise RutimeError("You asked for interpolation, but there are no"\
+               " models or interpolators defined")
 
       # We really don't care which one flags conditions
       flags = bitwise_or(flags[0],flags[1])
@@ -1001,7 +997,7 @@ class sn(object):
                calibration=calibration)
          self.EBVgal = self.EBVgal[0]
       else:
-         print "Error:  need ra and dec to be defined, E(B-V)_gal not computed"
+         print("Error:  need ra and dec to be defined, E(B-V)_gal not computed")
 
    def get_zcmb(self):
       '''Gets the CMB redshift from NED calculator and stores it locally.'''
@@ -1009,8 +1005,8 @@ class sn(object):
       if zcmb is not None:
          return zcmb
       else:
-         import utils.zCMB
-         self._zcmb = utils.zCMB.z_cmb(self.z, self.ra, self.decl)
+         from .utils import zCMB
+         self._zcmb = zCMB.z_cmb(self.z, self.ra, self.decl)
          return self._zcmb
 
    def get_distmod(self, cosmo='LambdaCDM', **kwargs):
@@ -1030,12 +1026,12 @@ class sn(object):
       try:
          from astropy import cosmology
       except:
-         raise ImportError, "Sorry, in order to compute distance modulus, " +\
-            "need the astropy module. Try 'pip install --no-deps astropy'"
+         raise ImportError("Sorry, in order to compute distance modulus, " +\
+            "need the astropy module. Try 'pip install --no-deps astropy'")
       try:
          c = getattr(cosmology, cosmo)
       except:
-         raise AttributeError, "Unknown cosmology specified. See astropy.cosmology"
+         raise AttributeError("Unknown cosmology specified. See astropy.cosmology")
       if not isinstance(c, cosmology.core.Cosmology):
          kwargs.setdefault('H0', 74.3)
          kwargs.setdefault('Om0', 0.27)
@@ -1055,8 +1051,8 @@ class sn(object):
            l:  galactic longitude (in degrees)
            b:  galactic latitude (in degrees)
       '''
-      import utils.radec2gal
-      return utils.radec2gal.radec2gal(self.ra, self.decl)
+      from .utils import radec2gal
+      return radec2gal.radec2gal(self.ra, self.decl)
 
    def summary(self, out=sys.stdout):
       '''Get a quick summary of the data for this SN, along with fitted 
@@ -1068,20 +1064,20 @@ class sn(object):
       Returns:
          None
       '''
-      print >> out, '-'*80
-      print >> out, "SN ",self.name
+      print('-'*80, file=out)
+      print("SN ",self.name, file=out)
       if self.z:  
-         print >> out, "z = %.4f         " % (self.z),
+         print("z = %.4f         " % (self.z), end=' ', file=out)
       if getattr(self, '_zcmb', None) is not None:
-         print >> out, "zcmb = %.4f         " % (self.zcmb),
-      if self.ra:  print >> out, "ra=%9.5f        " % (self.ra),
-      if self.decl:  print >> out, "dec=%9.5f" % (self.decl),
-      print >> out, ""
-      print >> out, "Data in the following bands:",
-      for band in self.data:  print >> out, band + ", ",
-      print >> out, ""
+         print("zcmb = %.4f         " % (self.zcmb), end=' ', file=out)
+      if self.ra:  print("ra=%9.5f        " % (self.ra), end=' ', file=out)
+      if self.decl:  print("dec=%9.5f" % (self.decl), end=' ', file=out)
+      print("", file=out)
+      print("Data in the following bands:", end=' ', file=out)
+      for band in self.data:  print(band + ", ", end=' ', file=out)
+      print("", file=out)
 
-      print >> out, "Fit results (if any):"
+      print("Fit results (if any):", file=out)
       #for band in self.restbands:
       #   print >> out, "   Observed %s fit to restbad %s" % (band, self.restbands[band])
       systs = self.systematics()
@@ -1091,7 +1087,7 @@ class sn(object):
                                                        self.errors[param])
             if param in systs and systs[param] is not None:
                line += "  +/- %.3f (sys)" % systs[param]
-            print >> out, line
+            print(line, file=out)
 
    def dump_lc(self, epoch=0, tmin=-10, tmax=70, k_correct=0, 
                s_correct=False, mw_correct=0):
@@ -1128,84 +1124,84 @@ class sn(object):
          toff = 0
       else:
          toff = self.Tmax
-      for filter in self.data.keys():
-         f = open(base+filter+"_data.dat", 'w')
-         print >> f, "#  column 1:  time"
-         print >> f, "#  column 2:  oberved magnitude"
-         print >> f, "#  column 3:  error in observed magnitude"
-         print >> f, "#  column 4:  Flag:  0=OK  1=Invalid S/K-correction"
+      for filt in list(self.data.keys()):
+         f = open(base+filt+"_data.dat", 'w')
+         print("#  column 1:  time", file=f)
+         print("#  column 2:  oberved magnitude", file=f)
+         print("#  column 3:  error in observed magnitude", file=f)
+         print("#  column 4:  Flag:  0=OK  1=Invalid S/K-correction", file=f)
          if s_correct:
-            print >> f, "# NOTE  Data have been S-corrected from %s to %s" %\
-                  (filter, self.restbands[filter])
+            print("# NOTE  Data have been S-corrected from %s to %s" %\
+                  (filt, self.restbands[filt]), file=f)
          if mw_correct:
             Ia_w,Ia_f = kcorr.get_SED(0, 'H3')
-            Alamb = fset[filter].R(wave=Ia_w, flux=Ia_f, Rv=3.1)*self.EBVgal
+            Alamb = fset[filt].R(wave=Ia_w, flux=Ia_f, Rv=3.1)*self.EBVgal
          else:
             Alamb = 0
-         for i in range(len(self.data[filter].mag)):
+         for i in range(len(self.data[filt].mag)):
             if k_correct:
                flag = 0
-               if filter not in self.ks:
+               if filt not in self.ks:
                   flag = 1
                   ks = 0
                else:
-                  flag = (not self.ks_mask[filter][i])
-                  ks = self.ks[filter][i]
-               print >> f, "%.2f  %.3f  %.3f  %d" % \
-                     (self.data[filter].MJD[i]-toff, 
-                     self.data[filter].mag[i] - ks - Alamb, 
-                     self.data[filter].e_mag[i], flag)
+                  flag = (not self.ks_mask[filt][i])
+                  ks = self.ks[filt][i]
+               print("%.2f  %.3f  %.3f  %d" % \
+                     (self.data[filt].MJD[i]-toff, 
+                     self.data[filt].mag[i] - ks - Alamb, 
+                     self.data[filt].e_mag[i], flag), file=f)
             elif s_correct:
                flag = 0
-               if filter not in self.Ss:
+               if filt not in self.Ss:
                   flag = 1
                   Ss = 0
                else:
-                  flag = (not self.Ss_mask[filter][i])
-                  Ss = self.Ss[filter][i]
-               print >> f, "%.2f  %.3f  %.3f  %d" % \
-                     (self.data[filter].MJD[i]-toff, 
-                     self.data[filter].mag[i] + Ss - Alamb, 
-                     self.data[filter].e_mag[i], flag)
+                  flag = (not self.Ss_mask[filt][i])
+                  Ss = self.Ss[filt][i]
+               print("%.2f  %.3f  %.3f  %d" % \
+                     (self.data[filt].MJD[i]-toff, 
+                     self.data[filt].mag[i] + Ss - Alamb, 
+                     self.data[filt].e_mag[i], flag), file=f)
 
             else:
-               flag = (not self.data[filter].mask[i])
-               print >> f, "%.2f  %.3f  %.3f  %d" % \
-                     (self.data[filter].MJD[i]-toff, 
-                     self.data[filter].mag[i] - Alamb
-                     , self.data[filter].e_mag[i], flag)
+               flag = (not self.data[filt].mask[i])
+               print("%.2f  %.3f  %.3f  %d" % \
+                     (self.data[filt].MJD[i]-toff, 
+                     self.data[filt].mag[i] - Alamb
+                     , self.data[filt].e_mag[i], flag), file=f)
          f.close()
-         if filter in self.model._fbands:
+         if filt in self.model._fbands:
             ts = arange(tmin, tmax+1, 1.0)
-            ms,e_ms,mask = self.model(filter, ts+self.Tmax)
-            if k_correct and filter in self.ks_tck:
-               ks = scipy.interpolate.splev(ts + self.Tmax, self.ks_tck[filter])
+            ms,e_ms,mask = self.model(filt, ts+self.Tmax)
+            if k_correct and filt in self.ks_tck:
+               ks = scipy.interpolate.splev(ts + self.Tmax, self.ks_tck[filt])
                # mask out valid k-corrections
                mids = argmin(absolute(ts[:,newaxis]-\
-                     self.data[filter].MJD[newaxis,:]+\
+                     self.data[filt].MJD[newaxis,:]+\
                      self.Tmax))
-               ks_mask = self.ks_mask[filter][mids]*greater_equal(ts, -19)*\
+               ks_mask = self.ks_mask[filt][mids]*greater_equal(ts, -19)*\
                      less_equal(ts, 70)
                mask = mask*ks_mask
                ms = ms - ks
             ms = ms[mask]
             ts = ts[mask]
-            f = open(base+filter+"_model.dat", 'w')
-            print >>f, "# column 1: time"
-            print >>f, "# column 2:  model magnitude"
+            f = open(base+filt+"_model.dat", 'w')
+            print("# column 1: time", file=f)
+            print("# column 2:  model magnitude", file=f)
             for i in range(len(ts)):
-               print >> f, "%.1f, %.3f" % (ts[i]+self.Tmax-toff, ms[i])
+               print("%.1f, %.3f" % (ts[i]+self.Tmax-toff, ms[i]), file=f)
             f.close()
-         if self.data[filter].interp is not None:
-            f = open(base+filter+"_smooth.dat", 'w')
-            x0,x1 = self.data[filter].interp.domain()
+         if self.data[filt].interp is not None:
+            f = open(base+filt+"_smooth.dat", 'w')
+            x0,x1 = self.data[filt].interp.domain()
             ts = arange(x0, x1+1, 1.0)
-            m,mask = self.data[filter].interp(ts)
-            print >> f, "# column 1:  time"
-            print >> f, "# column 2:  splined magnitude"
+            m,mask = self.data[filt].interp(ts)
+            print("# column 1:  time", file=f)
+            print("# column 2:  splined magnitude", file=f)
             for i in range(len(ts)):
                if not mask[i]:  continue
-               print >> f, "%.1f  %.3f" % (ts[i]-toff, m[i])
+               print("%.1f  %.3f" % (ts[i]-toff, m[i]), file=f)
             f.close()
 
    def to_txt(self, filename, mask=True):
@@ -1219,19 +1215,19 @@ class sn(object):
          None
       '''
       f = open(filename, 'w')
-      print >> f, "%s %f %f %f" % (self.name, self.z, self.ra, self.decl)
-      for filter in self.data.keys():
-         print >> f, "filter %s" % (filter)
-         for i in range(len(self.data[filter].mag)):
+      print("%s %f %f %f" % (self.name, self.z, self.ra, self.decl), file=f)
+      for filt in list(self.data.keys()):
+         print("filter %s" % (filt), file=f)
+         for i in range(len(self.data[filt].mag)):
             # mask out bad data
-            if mask and not self.data[filter].mask[i]: continue
-            print >> f, "%.2f  %.3f  %.3f" % \
-               (self.data[filter].MJD[i], self.data[filter].mag[i],
-                self.data[filter].e_mag[i])
+            if mask and not self.data[filt].mask[i]: continue
+            print("%.2f  %.3f  %.3f" % \
+               (self.data[filt].MJD[i], self.data[filt].mag[i],
+                self.data[filt].e_mag[i]), file=f)
       f.close()
 
    def to_json(self, filename, reference=None, bibcode=None, source=1):
-      import get_osc
+      from . import get_osc
       '''Output a file with JSON format for this object. The format should
       conform to the Open Supernova Catalog and be suitable for upload.
 
@@ -1280,7 +1276,7 @@ class sn(object):
          elif dokcorr:
             for f in self.data:
                self.sql.update_photometry(f, self.data[f].MJD, "K", self.data[f].K)
-         attr_list = ['z','ra','decl'] + self.parameters.keys()
+         attr_list = ['z','ra','decl'] + list(self.parameters.keys())
          for attr in attr_list:
             try:
                self.sql.set_SN_parameter(attr, self.__getattr__[attr])
@@ -1304,7 +1300,7 @@ class sn(object):
       if have_sql:
          N = self.sql.connect(name)
          if N == 0:
-            print "%s not found in database, starting from scratch..." % (name)
+            print("%s not found in database, starting from scratch..." % (name))
             self.sql.close()
             return
          try:
@@ -1313,8 +1309,8 @@ class sn(object):
             self.decl = self.sql.get_SN_parameter('decl')
             data,source = self.sql.get_SN_photometry()
             self.sources = [source]
-            for filter in data:
-               d = data[filter]
+            for filt in data:
+               d = data[filt]
                if 'K' in d:
                   K = d['K']
                else:
@@ -1323,7 +1319,7 @@ class sn(object):
                   SNR = d['SNR']
                else:
                   SNR = None
-               self.data[filter] = lc(self, filter, d['t'], d['m'], d['em'], 
+               self.data[filt] = lc(self, filt, d['t'], d['m'], d['em'], 
                      K=K, SNR=SNR, sids=zeros(d['t'].shape, dtype=int))
          finally:
             self.sql.close()
@@ -1358,36 +1354,36 @@ class sn(object):
       '''
 
       if self.filter_order is None:
-         bands = self.data.keys()
+         bands = list(self.data.keys())
          eff_wavs = []
-         for filter in bands:
-            eff_wavs.append(fset[filter].ave_wave)
+         for filt in bands:
+            eff_wavs.append(fset[filt].ave_wave)
          eff_wavs = asarray(eff_wavs)
          ids = argsort(eff_wavs)
          self.filter_order = [bands[i] for i in ids]
 
       offs = [0]
-      filter = self.filter_order[0]
+      filt = self.filter_order[0]
 
-      x,y,ey = regularize(self.data[filter].MJD, self.data[filter].mag,
-            self.data[filter].e_mag)
+      x,y,ey = regularize(self.data[filt].MJD, self.data[filt].mag,
+            self.data[filt].e_mag)
       if len(x) < 3:
          mn = y.mean()
          f = lambda x:  mn
       else:
          f = interp1d(x,y, bounds_error=False, 
-               fill_value=self.data[filter].mag.max())
-      for filter in self.filter_order[1:]:
-         deltas = self.data[filter].mag + offs[-1] - f(self.data[filter].MJD)
+               fill_value=self.data[filt].mag.max())
+      for filt in self.filter_order[1:]:
+         deltas = self.data[filt].mag + offs[-1] - f(self.data[filt].MJD)
          off = - deltas.max() - 0.5
          offs.append(offs[-1]+off)
-         x,y,ey = regularize(self.data[filter].MJD, self.data[filter].mag,
-            self.data[filter].e_mag)
+         x,y,ey = regularize(self.data[filt].MJD, self.data[filt].mag,
+            self.data[filt].e_mag)
          if len(x) > 1:
             f = interp1d(x,y+offs[-1], bounds_error=False,
-                           fill_value=self.data[filter].mag.max()+offs[-1])
+                           fill_value=self.data[filt].mag.max()+offs[-1])
          else:
-            f = lambda x:  self.data[filter].mag.mean()+offs[-1]
+            f = lambda x:  self.data[filt].mag.mean()+offs[-1]
       return offs
 
 
@@ -1402,7 +1398,7 @@ class sn(object):
       Returns:
          None
       '''
-      f = open(filename, 'w')
+      f = open(filename, 'wb')
       pickle.dump(self, f)
       f.close()
    
@@ -1457,7 +1453,7 @@ class sn(object):
 
       if bands is None:
          # By default, we fit the bands whose restbands are provided by the model
-         bands = [b for b in self.data.keys() \
+         bands = [b for b in list(self.data.keys()) \
                if self.restbands[b] in self.model.rbs]
 
       # Setup initial Robs (in case it is used by the model)
@@ -1466,21 +1462,20 @@ class sn(object):
             self.Robs[band] = fset[band].R(self.Rv_gal, Ia_w, Ia_f, z=self.z)
 
       if self.z <= 0:
-         raise ValueError, "The heliocentric redshift is zero.  Fix this before you fit"
+         raise ValueError("The heliocentric redshift is zero.  Fix this before you fit")
 
       # Check to make sure we have filters we can fit:
-      for filter in bands:
-         if self.restbands[filter] not in self.model.rbs:
-            raise AttributeError, \
-                  "Error:  filter %s is not supported by this model" % self.restbands[filter] + \
-                  ", set self.restbands accordingly"
+      for filt in bands:
+         if self.restbands[filt] not in self.model.rbs:
+            raise AttributeError("Error:  filter %s is not supported by this model" % self.restbands[filt] + \
+                  ", set self.restbands accordingly")
 
       if reset_kcorrs:
          self.ks = {}
          self.ks_mask = {}
          self.ks_tck = {}
       if not self.quiet:
-         print "Doing Initial Fit to get Tmax..."
+         print("Doing Initial Fit to get Tmax...")
       self.model.fit(bands, **args)
 
 
@@ -1488,22 +1483,22 @@ class sn(object):
          kbands = [band for band in bands if band not in self.ks]
          if len(kbands) > 0:
             if not self.quiet:
-               print "Setting up initial k-corrections"
+               print("Setting up initial k-corrections")
             self.kcorr(kbands, mangle=0, use_stretch=k_stretch)
  
          if not self.quiet:
             if mangle:
-               print "Doing first fit..."
+               print("Doing first fit...")
             else:
-               print "Doing fit..."
+               print("Doing fit...")
          self.model.fit(bands, **args)
  
          if mangle:
             if not self.quiet:
-               print "Doing mangled k-corrections"
+               print("Doing mangled k-corrections")
             self.kcorr(bands, interp=0, use_model=1, use_stretch=k_stretch, **margs)
             if not self.quiet:
-               print "Doing final fit..."
+               print("Doing final fit...")
             self.model.fit(bands, **args)
       if self.replot:
          self.plot()
@@ -1552,27 +1547,27 @@ class sn(object):
                        above.
       '''
       if snemcee is None:
-         print "Sorry, in order to fit with MCMC sampler, you need to install"
-         print "the emcee module. Try 'pip install emcee'  or get the source"
-         print " from http://dan.iel.fm/emcee/current/" 
+         print("Sorry, in order to fit with MCMC sampler, you need to install")
+         print("the emcee module. Try 'pip install emcee'  or get the source")
+         print(" from http://dan.iel.fm/emcee/current/") 
          return None
 
       if len(self.model._fbands) == 0:
-         raise AttributeError, "In order to fit with the MCMC sampler, you need to do \
-              an initial fit first."
+         raise AttributeError("In order to fit with the MCMC sampler, you need to do \
+              an initial fit first.")
 
       if bands is None:
          # By default, we fit the bands whose restbands are provided by the model
-         bands = [b for b in self.data.keys() \
+         bands = [b for b in list(self.data.keys()) \
                if self.restbands[b] in self.model.rbs]
       if verbose:
-         print "Fitting "," ".join(bands)
+         print("Fitting "," ".join(bands))
 
-      Nparam = len(self.model.parameters.keys())
+      Nparam = len(list(self.model.parameters.keys()))
       if Nwalkers is None:
          Nwalkers = Nparam*10
       if verbose:
-         print "Setting up %d walkers..." % Nwalkers
+         print("Setting up %d walkers..." % Nwalkers)
       
       # Set up the inverse covariance matrices and determinants
       #self.invcovar = {}
@@ -1602,11 +1597,11 @@ class sn(object):
       sampler,vinfo,p0 = snemcee.generateSampler(self, bands, Nwalkers, threads,
             tracefile, **args)
       if verbose:
-         print "Doing initial burn-in of %d iterations" % burn
+         print("Doing initial burn-in of %d iterations" % burn)
       if burn > 0:
          pos,prob,state = sampler.run_mcmc(p0, burn)
          if verbose:
-            print "Now doing production run of %d iterations" % Niter
+            print("Now doing production run of %d iterations" % Niter)
          sampler.reset()
       else:
          pos = p0
@@ -1654,8 +1649,8 @@ class sn(object):
 
       if plot_triangle:
          if triangle is None:
-            print "Sorry, but if you want a triangle plot, you have to install"
-            print "the triangle module (http://github.com/dfm/triangle.py)"
+            print("Sorry, but if you want a triangle plot, you have to install")
+            print("the triangle module (http://github.com/dfm/triangle.py)")
          else:
             triangle.corner(samples, labels=pars, truths=meds)
 
@@ -1757,8 +1752,8 @@ class sn(object):
       if dokcorr:
          if band1 not in self.ks or band2 not in self.ks or \
                band3 not in self.ks:
-            raise ValueError, "Not all requested bands have k-corrections.  "+\
-                              "Try running self.kcorr()"
+            raise ValueError("Not all requested bands have k-corrections.  "+\
+                              "Try running self.kcorr()")
       # Now, we need the values. First, if not interpolating, just use the 
       # data
       if not interp:
@@ -2121,13 +2116,13 @@ def dump_arrays(file, arrays, formats=None, labels=None, separator=' '):
    if labels is not None:
       forms = ["%%%ds" % (wid) for wid in widths]
       header = [forms[i] % (labels[i]) for i in range(len(labels))]
-      header = string.join(header, separator)
+      header = separator.join(header)
       header[0] = "#"
-      print >>f, header
+      print(header, file=f)
 
    for i in range(len(arrays[0])):
       line = [formats[j] % (arrays[j][i]) for j in range(len(arrays))]
-      print >>f, string.join(line, separator)
+      print(separator.join(line), file=f)
    f.close()
 
 def fix_arrays(node):
@@ -2141,14 +2136,14 @@ def fix_arrays(node):
          if key != 'parent':
             node.__dict__[key] = fix_arrays(node.__dict__[key])
       return node
-   elif type(node) is types.DictType:
-      for key in node.keys():
+   elif type(node) is dict:
+      for key in list(node.keys()):
          if key != 'parent':
             node[key] = fix_arrays(node[key])
       return node
-   elif type(node) is types.ListType:
+   elif type(node) is list:
       return [fix_arrays(item) for item in node]
-   elif type(node) is types.TupleType:
+   elif type(node) is tuple:
       return tuple([fix_arrays(item) for item in node])
    else:
       return node
@@ -2169,14 +2164,14 @@ def import_lc(file):
       f = file
    lines = f.readlines()
    fields = lines[0].split()
-   if len(fields) != 4:  raise RuntimeError, "first line of %s must have 4 " +\
-         "fields:  name, redshift, RA, DEC"
+   if len(fields) != 4:  raise RuntimeError("first line of %s must have 4 " +\
+         "fields:  name, redshift, RA, DEC")
    name = fields[0]
    try:
-      z,ra,decl = map(float, fields[1:])
+      z,ra,decl = list(map(float, fields[1:]))
    except:
-      raise RuntimeError, "z, ra and dec must be floats " + \
-            " (ra/dec in decimal degrees)"
+      raise RuntimeError("z, ra and dec must be floats " + \
+            " (ra/dec in decimal degrees)")
 
 
    s = sn(name, ra=ra, dec=decl, z=z)
@@ -2210,9 +2205,10 @@ def import_lc(file):
             sids[this_filter] = []
       elif this_filter is not None:
          try:
-            t,m,em = map(float, string.split(string.strip(line)))
+            #t,m,em = list(map(float, string.split(string.strip(line))))
+            t,m,em = map(float, line.strip().split())
          except:
-            raise RuntimeError, "Bad format in line:\n %s" % (line)
+            raise RuntimeError("Bad format in line:\n %s" % (line))
          MJD[this_filter].append(t)
          mags[this_filter].append(m)
          emags[this_filter].append(em)
@@ -2241,19 +2237,19 @@ def get_sn(str, sql=None, **kw):
    are sent as options to the sql module.'''
    if os.path.isfile(str):
       try:
-         f = open(str, 'r')
-         s = pickle.load(f)
+         f = open(str, 'rb')
+         s = pickle.load(f, encoding='iso-8859-1')
          return s
       except:
          try:
             s = import_lc(str)
          except RuntimeError:
-            raise RuntimeError, "Could not load %s into SNPY" % str
+            raise RuntimeError("Could not load %s into SNPY" % str)
    elif str.find('http://') == 0 or str.find('https://') == 0:
-      import get_osc
+      from . import get_osc
       s,message = get_osc.get_obj(str)
       if s is None:
-         print message
+         print(message)
          return None
    else:
       s = sn(str, source=sql, **kw)
@@ -2261,10 +2257,10 @@ def get_sn(str, sql=None, **kw):
 
 def check_version():
    global __version__
-   import urllib2
+   import urllib.request, urllib.error, urllib.parse
    from distutils.version import LooseVersion
    try:
-      u = urllib2.urlopen('ftp://ftp.obs.carnegiescience.edu/pub/cburns/snpy/latest', timeout=1)
+      u = urllib.request.urlopen('ftp://ftp.obs.carnegiescience.edu/pub/cburns/snpy/latest', timeout=1)
    except:
       return None,None
    if not u:

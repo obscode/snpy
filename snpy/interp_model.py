@@ -40,8 +40,8 @@ class model:
 
    def __getattr__(self, key):
       if key == '_fbands':
-         return self.__dict__['interps'].keys()
-      raise AttributeError, "Model object has no attribute %s" % (key)
+         return list(self.__dict__['interps'].keys())
+      raise AttributeError("Model object has no attribute %s" % (key))
 
    def fit_lc(self, band, type=None, fit_flux=False, **args):
       '''Fit a single filter with an interpolator of type [type], passing
@@ -53,7 +53,7 @@ class model:
       if type is None:
          type = default_type
       if type not in fit1dcurve.functions:
-         print "Error:  specified type is not supported.  Try one of:"
+         print("Error:  specified type is not supported.  Try one of:")
          fit1dcurve.list_types()
          raise ValueError
 
@@ -168,17 +168,17 @@ class model:
                      dm15s.append(-1)
          #Now compute stats
          inter.reset_mean()
-         Tmaxs,Mmaxs,dm15s = map(array, [Tmaxs, Mmaxs, dm15s])
+         Tmaxs,Mmaxs,dm15s = list(map(array, [Tmaxs, Mmaxs, dm15s]))
 
          Tgids = greater(Tmaxs, 0)
          if sum(Tgids)*1.0/len(Tgids) < 0.8:
-            print "Warning!  More than 20% of MC realizations had bad Tmax"
+            print("Warning!  More than 20% of MC realizations had bad Tmax")
          Mgids = greater(Mmaxs, 0)
          if sum(Mgids)*1.0/len(Mgids) < 0.8:
-            print "Warning!  More than 20% of MC realizations had bad Mmax"
+            print("Warning!  More than 20% of MC realizations had bad Mmax")
          dgids = greater(dm15s, 0)
          if sum(dgids)*1.0/len(dgids) < 0.8:
-            print "Warning!  More than 20% of MC realizations had bad dm15"
+            print("Warning!  More than 20% of MC realizations had bad dm15")
          self.parent.data[band].Tmax = Tmaxs[0]
          self.parent.data[band].e_Tmax = std(Tmaxs[Tgids]) 
          self.parent.data[band].Mmax = Mmaxs[0]

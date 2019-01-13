@@ -2,7 +2,7 @@
 Module for computing the galactic coordinates from stored RA/DEC
 coordinates. If we have astropy,use that, otherwise try NED calculator'''
 
-import urllib, re
+import urllib.request, urllib.parse, urllib.error, re
 try:
    from astropy import coordinates,units
 except:
@@ -18,7 +18,7 @@ def radec2gal(ra, dec):
       l = c.galactic.l.deg
       b = c.galactic.b.deg
       return l,b
-   u = urllib.urlopen(url_temp % (ra, dec))
+   u = urllib.request.urlopen(url_temp % (ra, dec))
    lines = u.readlines()
    indx = None
    for i,line in enumerate(lines):
@@ -26,6 +26,6 @@ def radec2gal(ra, dec):
          indx = i+1
          break
    if index is None:
-      raise ValueError, "Could not parse output from NED"
+      raise ValueError("Could not parse output from NED")
    vals = pat.findall(lines[indx])
    return float(vals[0]),float(vals[1])
