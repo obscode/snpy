@@ -588,7 +588,7 @@ class mangler:
       bases = num.array(bases)
       for i in range(resps.shape[0]):
          resps[i,:] = resps[i,:]/resps[i,nid]
-      a,d1,d2,d3 = lstsq(bases, num.ravel(resps))
+      a,d1,d2,d3 = lstsq(bases, num.ravel(resps), rcond=-1)
 
       self.function.set_pars(a)
 
