@@ -1,5 +1,6 @@
 '''This class lets you interactively fit using the fit1dcurve
 classes.'''
+from __future__ import print_function
 import numpy as num
 from snpy.myplotlib import PanelPlot
 from matplotlib import pyplot as plt

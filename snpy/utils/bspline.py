@@ -6,6 +6,7 @@ This is needed because the basis functions are hidden from python view in
 the scipy.interpolate implementation. We want the basis functions themselves,
 so we have to make our own.'''
 
+from __future__ import print_function
 import numpy as np
 
 def memo(f):

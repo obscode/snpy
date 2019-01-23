@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import print_function, absolute_import
+import six
 import sys,string,os
 import warnings
 have_sql = 1
@@ -46,6 +48,15 @@ Robs = kcorr.R_obs
 Ia_w,Ia_f = getSED(0, 'H3')
 Vega = standards.Vega.VegaB
 BD17 = standards.Smith.bd17
+
+def check_file(o):
+   '''Return true if o is an open file.'''
+   if six.PY2:
+      return type(o) is types.FileType
+   else:
+      from io import IOBase
+      return isinstance(o, IOBase)
+
 
 def myupdate(d1, d2):
    '''Update keys in d1 based on keys in d2, but only if they exist in d1'''
@@ -260,9 +271,11 @@ class sn(object):
       models = []
       for item in model.__dict__:
          obj = model.__dict__[item]
-         if type(obj) is type:
+         try:
             if issubclass(obj, model.model):
                models.append(item)
+         except:
+            pass
       if name not in models:
          st = "Not a valid model.  Choose one of:  "+str(models)
          raise ValueError(st)
@@ -322,9 +335,9 @@ class sn(object):
          ret_data["e_"+band] = temp2
 
       if outfile is not None:
-         if type(outfile) in str:
+         if type(outfile) is str:
             fp = open(outfile, 'w')
-         elif type(outfile) is types.FileType:
+         elif check_file(outfile):
             fp = outfile
          else:
             raise TypeError("outfile must be a file name or file handle")
@@ -2125,29 +2138,6 @@ def dump_arrays(file, arrays, formats=None, labels=None, separator=' '):
       print(separator.join(line), file=f)
    f.close()
 
-def fix_arrays(node):
-   '''A recursive function that seeks out Numeric arrays and replaces them
-   with numpy arrays.'''
-   from Numeric import ArrayType
-   if type(node) is ArrayType:
-      return array(node)
-   elif type(node) is types.InstanceType:
-      for key in node.__dict__:
-         if key != 'parent':
-            node.__dict__[key] = fix_arrays(node.__dict__[key])
-      return node
-   elif type(node) is dict:
-      for key in list(node.keys()):
-         if key != 'parent':
-            node[key] = fix_arrays(node[key])
-      return node
-   elif type(node) is list:
-      return [fix_arrays(item) for item in node]
-   elif type(node) is tuple:
-      return tuple([fix_arrays(item) for item in node])
-   else:
-      return node
-
 def import_lc(file):
    '''Import SN data from a datafile in the following format:
    line 1:     name z ra decl
@@ -2238,7 +2228,10 @@ def get_sn(str, sql=None, **kw):
    if os.path.isfile(str):
       try:
          f = open(str, 'rb')
-         s = pickle.load(f, encoding='iso-8859-1')
+         if six.PY3:
+            s = pickle.load(f, encoding='iso-8859-1')
+         else:
+            s = pickle.load(f)
          return s
       except:
          try:
@@ -2257,10 +2250,15 @@ def get_sn(str, sql=None, **kw):
 
 def check_version():
    global __version__
-   import urllib.request, urllib.error, urllib.parse
+   if six.PY3:
+      import urllib.request as urllib
+   else:
+      import urllib
    from distutils.version import LooseVersion
    try:
-      u = urllib.request.urlopen('ftp://ftp.obs.carnegiescience.edu/pub/cburns/snpy/latest', timeout=1)
+      u = urllib.urlopen(
+            'ftp://ftp.obs.carnegiescience.edu/pub/cburns/snpy/latest',
+            timeout=1)
    except:
       return None,None
    if not u:

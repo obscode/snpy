@@ -2,7 +2,12 @@
 '''A module to make WEB querries to the IRSA Schlegel dust map calulator
 and extract E(B-V)'''
 
-import urllib.request, urllib.parse, urllib.error
+from __future__ import print_function
+import six
+if six.PY2:
+   import urllib
+else:
+   import urllib.request as urllib
 import re
 from xml.dom.minidom import parse
 
@@ -17,7 +22,7 @@ def get_dust_RADEC(ra, dec, calibration="SF11"):
    if debug:
       print("get_dust_RADEC:  Querying URL:  ",BASE_URL % (ra,dec))
    try:
-      u = urllib.request.urlopen(BASE_URL % (ra,dec))
+      u = urllib.urlopen(BASE_URL % (ra,dec))
    except:
       print("Failed to connect to IRSA.  E(B-V) query failed")
       return([None],[1])
@@ -44,7 +49,7 @@ def get_dust_sigma_RADEC(ra, dec, calibration="SF11"):
    if debug:
       print("get_dust_RADEC:  Querying URL:  ",BASE_URL % (ra,dec))
    try:
-      u = urllib.request.urlopen(BASE_URL % (ra,dec))
+      u = urllib.urlopen(BASE_URL % (ra,dec))
    except:
       print("Failed to connect to IRSA.  E(B-V) query failed")
       return([None],[1])

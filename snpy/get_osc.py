@@ -2,8 +2,13 @@
 Module for SNooPy to download/parse data from the Open Supernova Catalog.
 '''
 
+from __future__ import print_function
+import six
 import json
-import urllib.request, urllib.parse, urllib.error
+if six.PY3:
+   import urllib.request as urllib
+else:
+   import urllib
 from astropy.coordinates import Angle
 from snpy import sn,lc,fset
 from numpy import array,log10
@@ -92,7 +97,7 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
    URL.'''
 
    try:
-      u = urllib.request.urlopen(url)
+      u = urllib.urlopen(url)
    except:
       if full_data:
          return None, "Invalid URL", None

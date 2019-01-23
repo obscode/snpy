@@ -406,6 +406,7 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
    Converted from Numeric to numpy (Sergey Koposov, July 2008)
 """
 
+from __future__ import print_function
 import numpy
 import types
 import scipy.linalg.blas

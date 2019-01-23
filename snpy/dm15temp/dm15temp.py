@@ -7,6 +7,8 @@ August 14, 2007:  added a hack to produce NIR stretch templates valid on
 [-12,10].
 Feb. 2014:  The method used up to now was really inefficient. Now we do what
              what we do with the other templates:  spline the surface.'''
+from __future__ import print_function
+import six
 import sys,os,string
 import numpy as num
 import scipy
@@ -49,7 +51,10 @@ class template:
       self.eK = None
 
       f = open(os.path.join(dm15_path, "tck.pickle"), 'rb')
-      self.tck = pickle.load(f, encoding='iso-8859-1')
+      if six.PY3:
+         self.tck = pickle.load(f, encoding='iso-8859-1')
+      else:
+         self.tck = pickle.load(f)
       f.close()
 
       self.shiftV = 0

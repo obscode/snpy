@@ -2,7 +2,12 @@
 Module for computing the galactic coordinates from stored RA/DEC
 coordinates. If we have astropy,use that, otherwise try NED calculator'''
 
-import urllib.request, urllib.parse, urllib.error, re
+import six
+if six.PY3:
+   import urllib.request as urllib
+else:
+   import urllib
+import re
 try:
    from astropy import coordinates,units
 except:

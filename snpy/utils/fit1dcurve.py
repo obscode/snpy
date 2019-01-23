@@ -3,6 +3,7 @@ using several different methods (polynomial, splines, Gaussian processes),
 but providing a consistent API for evalutation and computing derivatives,
 extrama, etc.'''
 
+from __future__ import print_function
 import numpy as num
 from snpy.utils import fit_spline
 from scipy.interpolate import splrep,splev,sproot

@@ -1,3 +1,4 @@
+from __future__ import print_function
 from numpy import *
 from .filters import fset
 import numpy.random as RA

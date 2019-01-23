@@ -6,6 +6,8 @@ classing Model and overriding the member functions.
 
 New:  Add an optional [decline_param] to choose between a dm15 model and stretch
       (st)  model'''
+from __future__ import print_function
+import six
 import os,string
 from snpy import ubertemp
 from snpy import kcorr
@@ -1417,7 +1419,10 @@ class color_model(model):
       self.redlaw = self.args.get('redlaw', 'ccm')
       self.rvprior = self.args.get('rvprior', 'uniform')
       f = open(cfile, 'rb')
-      cdata = pickle.load(f, encoding='iso-8859-1')
+      if six.PY3:
+         cdata = pickle.load(f, encoding='iso-8859-1')
+      else:
+         cdata = pickle.load(f)
       f.close()
       if self.redlaw not in cdata or \
             self.rvprior not in cdata[self.redlaw]:

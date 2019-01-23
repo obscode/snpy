@@ -38,6 +38,7 @@ information, but making things far faster.  Now, we check to see if the tck
 in a file tck.pickle is available.  If so, then use this instead of calling
 gloes.
 '''
+from __future__ import print_function
 import sys,os,string
 import numpy as num
 import dm15temp2c as dm15tempc

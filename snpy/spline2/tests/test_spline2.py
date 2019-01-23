@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pytest
 import snpy.spline2 as spline2
 import sys

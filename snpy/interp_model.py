@@ -3,6 +3,7 @@ other module (model.py), this model is based on a interpolate1d.py and so doesn'
 a least-squares fit routine (at least not at the user level).  This supplants the
 template-fitting with splines.'''
 
+from __future__ import print_function
 import os
 from snpy import kcorr
 from snpy.filters import fset

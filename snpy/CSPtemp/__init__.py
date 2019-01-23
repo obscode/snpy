@@ -38,6 +38,7 @@ in a file tck.pickle is available.  If so, then use this instead of calling
 gloes.
 
 '''
+from __future__ import print_function
 import sys,os,string
 import numpy as num
 from scipy.interpolate import CloughTocher2DInterpolator as interp2D

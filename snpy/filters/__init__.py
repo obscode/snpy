@@ -20,6 +20,7 @@ following funcionality:
 This module also supplies a dictionary called filters with some common filters
 and zero-points built in.'''
 
+from __future__ import print_function
 import os,sys,types
 import numpy as num
 import scipy.integrate

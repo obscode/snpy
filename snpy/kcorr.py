@@ -8,6 +8,7 @@ Most of the heavy lifting w.r.t. integration of filters over the SED has
 been moved to the :mod:`snpy.filter` module.
 '''
 
+from __future__ import print_function
 import os,sys,string,re
 import numpy as num
 import scipy.interpolate

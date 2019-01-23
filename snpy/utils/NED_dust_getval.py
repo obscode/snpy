@@ -2,6 +2,7 @@
 '''A module to make WEB querries to the NED Schlegel dust map calulator
 and extract E(B-V)'''
 
+from __future__ import print_function
 import urllib.request, urllib.parse, urllib.error
 import re
 
