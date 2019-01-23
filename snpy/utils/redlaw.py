@@ -23,8 +23,8 @@ import os
 import pickle
 
 base = os.path.dirname(__file__)
-if os.path.isfile(os.path.join(base,'Ia_R_splines.pkl')):
-   f = open(os.path.join(base,'Ia_R_splines.pkl'), 'rb')
+if os.path.isfile(os.path.join(base,'Ia_R_splines.pickle')):
+   f = open(os.path.join(base,'Ia_R_splines.pickle'), 'rb')
    Bspls = pickle.load(f, encoding='iso-8859-1')
    f.close()
 
