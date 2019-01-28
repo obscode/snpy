@@ -1537,7 +1537,7 @@ def after_install(options,home_dir):
    print('Using pip:', pip)
    # First, the absolutely necessary stuff
    print("Now going to install the manditory software...")
-   man_packages = ['scipy','pymysql','pyfits','matplotlib',
+   man_packages = ['scipy','pymysql','astropy','matplotlib',
                    'ipython','gnureadline']
    for package in man_packages:
       sys.stdout.write("   Installing %s..." % package)
@@ -1568,7 +1568,7 @@ def after_install(options,home_dir):
       sys.stdout.write("Done\n")
    # Now, the optional stuff
    print("Now going to try installing the optional software...")
-   opt_packages = ['emcee','pymc','astropy']
+   opt_packages = ['emcee','pymc']
    for package in opt_packages:
       sys.stdout.write("   Installing %s..." % package)
       sys.stdout.flush()

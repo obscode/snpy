@@ -1086,7 +1086,8 @@ if pymc is not None:
          #adys = (dys[1:] + dys[:-1])/2
          #dys = num.concatenate([[dys[0]],adys,[dys[-1]]])
          pids = num.greater(dys, 0)
-         inds = num.nonzero(pids[1:] - pids[:-1])[0]
+         # Find indeces where go from True->False or False->True:  XOR
+         inds = num.nonzero(num.logical_xor(pids[1:],pids[:-1]))[0]
    
          if len(inds) == 0:
             return (num.array([]), num.array([]), num.array([]))

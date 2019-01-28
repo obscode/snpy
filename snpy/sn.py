@@ -1192,7 +1192,7 @@ class sn(object):
                # mask out valid k-corrections
                mids = argmin(absolute(ts[:,newaxis]-\
                      self.data[filt].MJD[newaxis,:]+\
-                     self.Tmax))
+                     self.Tmax), axis=1)
                ks_mask = self.ks_mask[filt][mids]*greater_equal(ts, -19)*\
                      less_equal(ts, 70)
                mask = mask*ks_mask
@@ -1256,6 +1256,80 @@ class sn(object):
       st = get_osc.to_osc(self, ref=reference, bibcode=bibcode, source=source)
       fout = open(filename, 'w')
       fout.write(st)
+      fout.close()
+
+   def to_mlcs(self, Tmax=None, spec_sample='hsiao', prior='rv19', 
+         vector='rv19-early-smix'):
+      '''Output the LC data to formats suitable for fitting with MLCS2k2.
+      
+      Args:
+         Tmax (float or None): Time of maximum (initial guess for MLCS). If 
+                               None, try to get from fits or splines.
+         spec_sample (str): The spetroscopic sample to use for k-corrections.
+                            (See MLCS documentation)
+         prior (str):  Reddening prior for MLCS (see MLCS documentation)
+         vector (str):  Vector to use for MLCS (see MLCS documentation)
+      Returns:
+         None
+
+      Effects:
+         Creates (or appends to) an output file named sn.info with the SN
+         information needed by MLCS. Also creates a file named {SN}.dat
+         with the light-curve data. Both are used to fit in MLCS
+      '''
+      if Tmax is None:
+         if self.Tmax > 1.0:
+            Tmax = self.Tmax
+         else:
+            raise ValueError, "No Tmax defined. Fit a model or template first"
+
+      # First sn.info 
+      fout = open('sn.info','a')
+      fout.write("%-23s %6.4f %10.4f    %6.4f     %s    %s   %s\n" % \
+            (self.name, self.z, Tmax, self.EBVgal, spec_sample, prior, vector))
+      fout.close()
+
+      fmt = "%-11s %10.4f     %5.3f    %4.3f\n"
+      fout = open(self.name+".dat", 'w')
+      for filt in self.data:
+         if filt not in ['u','g','r','i','Y','J','H','B','V','Jrc2']:
+            continue
+         for i in range(len(self.data[filt].MJD)):
+            fout.write(fmt % (filt[0]+"_CSP", self.data[filt].MJD[i], 
+               self.data[filt].mag[i], self.data[filt].e_mag[i]))
+      fout.close()
+
+   def to_salt(self, outfile=None):
+      '''Output a LC file that can be fed into SALT.
+      
+      Args:
+         outfile (str or None): Output file that SALT2 will input. If
+                                None, default to {SN}.list
+      
+      Returns:
+         None
+      
+      Effects: 
+         Creates output file with all SN info needed by SALT2 to fit.
+      '''
+
+      if outfile is None:
+         outfile = self.name+".list"
+      fout = open(outfile, 'w')
+      fout.write('@SN %s\n' % self.name)
+      fout.write('@RA %f\n' % self.ra)
+      fout.write('@DEC %f\n' % self.decl)
+      fout.write('@Z_HELIO %f\n' % self.z)
+      if self.Tmax > 1.0:
+         fout.write('@DayMax %f\n' % self.Tmax)
+      fout.write('@MWEBV %f\n' % self.EBVgal)
+      fout.write('#Date :\n#Flux :\n#Fluxerr :\n#ZP :\n#Filter :\n#MagSys :\n#end\n') 
+      fmt = "%.2f %.6f %.6f %.6f SWOPE2::%s VEGA2\n"
+      for filt in self.data:
+         if filt not in ['u','g','r','i','B','V']: continue
+         l = self.data[filt]
+         for i in range(len(l.mag)):
+            fout.write(fmt % (l.MJD[i],l.flux[i],l.e_flux[i],l.filter.zp,filt))
       fout.close()
 
    def update_sql(self, attributes=None, dokcorr=1):
