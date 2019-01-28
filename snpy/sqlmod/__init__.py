@@ -73,6 +73,12 @@ class sqlbase:
       dict['connected'] = 0
       return dict
 
+   def filter_key(self, name, epoch=None):
+      '''Function to map an SQL filter string to a filter name.'''
+      if name in self.FILTER_KEYS:
+         return self.FILTER_KEYS[name]
+      else:
+         return name[0]
 
    def connect(self, name):
       '''Connect to the database.'''
@@ -288,11 +294,8 @@ class sqlbase:
 
       data = {}
       for l in list:
-         filter = l[0]
-         if l[0] not in self.FILTER_KEYS:  
-            filter = l[0]
-         else:
-            filter = self.FILTER_KEYS[l[0]]
+         # We now make this a function to handle more complicated cases
+         filter = self.filter_key(l[0], l[1] + self.JD_OFFSET)
          if filter in data:
             data[filter]['t'].append(l[1] + self.JD_OFFSET)
             data[filter]['m'].append(l[2])
@@ -507,12 +510,63 @@ class sql_csp2(sqlbase):
    PHOTO_JD = "MAGSN.JD"
    PHOTO_MAG = "MAGSN.mag"
    PHOTO_EMAG = "sqrt(MAGSN.err*MAGSN.err + MAGSN.fiterr*MAGSN.fiterr)"
-   PHOTO_FILT = "CASE WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD < 2454846.0) THEN 'J' WHEN (ins='WI' and MAGSN.filt='Y') THEN 'Ydw' WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD >= 2454846.0) THEN 'Jrc2' ELSE MAGSN.filt END"
+   PHOTO_FILT = "CONCAT(tel,ins,MAGSN.filt)"
+   #PHOTO_FILT = "CASE WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD < 2454846.0) THEN 'J' WHEN (ins='WI' and MAGSN.filt='Y') THEN 'Ydw' WHEN (ins='RC' and MAGSN.filt='J' and MAGSN.JD >= 2454846.0) THEN 'Jrc2' ELSE MAGSN.filt END"
    PHOTO_K = None      # No K-corrections in the DB
-   #PHOTO_SNR = "CASE WHEN ins='WI' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/1.6)) WHEN ins='DC' THEN 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/3.0)) ELSE 0.66*MAGINS.flux/(2.355*sqrt(MAGINS.gau1*MAGINS.gau2)*sqrt(MAGINS.sky/2.0)) END"
    PHOTO_SNR = "MAGINS.flux/sqrt(MAGINS.flux + 200*MAGINS.sky)"
    PHOTO_COND = "and MAGSN.obj=-1 and MAGSN.mag > 0 and MAGSN.fits=MAGINS.fits and MAGSN.obj=MAGINS.obj"
    JD_OFFSET = -2400000.5    # database is JD, JD-2400000.5 gives MJD
+
+   FILTER_KEYS = {
+         'BAAFSJ':'JFS',
+         'BAAFSH':'HFS',
+         'BAAFSY':'J1FS',
+         'DUPRCY':'Yd',
+         'DUPRCJ':'Jd',
+         'DUPRCH':'Hd',
+         'DUPWIY':'Ydw',
+         'DUPWIJ':'J',
+         'DUPWIH':'H',
+         'DUPWIK':'Kdw',
+         'DUPDCB':'B',
+         'DUPDCV':'V',
+         'DUPDCu':'u',
+         'DUPDCg':'g',
+         'DUPDCr':'r',
+         'DUPDCi':'i',
+         'SWODCB':'B',
+         'SWODCu':'u',
+         'SWODCg':'g',
+         'SWODCr':'r',
+         'SWODCi':'i',
+         'SWONCB':'B2',
+         'SWONCV':'V2',
+         'SWONCu':'u2',
+         'SWONCg':'g2',
+         'SWONCr':'r2',
+         'SWONCi':'i2',
+         'SWORCY':'Y',
+         'SWORCH':'H'}
+   
+   def filter_key(self, name, epoch):
+      if name in self.FILTER_KEYS:
+         return self.FILTER_KEYS[name]
+
+      if name == 'SWORCJ':
+         # J was changed
+         if epoch < 54845.0:
+            return 'J'
+         else:
+            return 'Jrc2'
+      if name == 'SWODCV':
+         if epoch < 53748.0:
+            return 'V0'
+         elif 53748.0 < epoch < 53759.0:
+            return 'V1'
+         else:
+            return 'V'
+      print "Warning: don't know filter", name
+      return name[-1]
 
 class sql_SBS_csp2(sql_csp2):
    host = 'obsns09.obs.carnegiescience.edu'
