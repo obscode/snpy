@@ -1283,7 +1283,7 @@ class sn(object):
       fmt = "%-11s %10.4f     %5.3f    %4.3f\n"
       fout = open(self.name+".dat", 'w')
       for filt in self.data:
-         if filt not in ['u','g','r','i','Y','J','H','B','V','Jrc2']:
+         if filt not in ['u','g','r','i','B','V']:
             continue
          for i in range(len(self.data[filt].MJD)):
             fout.write(fmt % (filt[0]+"_CSP", self.data[filt].MJD[i], 
