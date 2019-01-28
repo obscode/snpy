@@ -1,7 +1,7 @@
-'''This module provices two classes:  spectrum and filter (filter is a sub-class of
-spectrum.  These classes are designed to make certain tasks more convenient, especially
-for filters.  Aside from being containers of the spectrum/filter data, they provide the
-following funcionality:
+'''This module provices two classes:  spectrum and filter (filter is a
+sub-class of spectrum.  These classes are designed to make certain tasks more
+convenient, especially for filters.  Aside from being containers of the
+spectrum/filter data, they provide the following funcionality:
 
    spectrum:
       - read a wavelength-flux two-column file.
@@ -42,8 +42,8 @@ c = 2.997925e18   # Angstrom/s
 ch = c * h        # erg Angstrom
 
 class spectrum:
-   '''This class defines a spectrum.  It contains the response as Numeric arrays.  It has
-   the following member data:
+   '''This class defines a spectrum.  It contains the response as Numeric 
+   arrays.  It has the following member data:
       name:      string describing the filter (eg. 'B')
       file:      where to find the filter response
       wave:      Numeric array of wavelengths (Angstroms)
@@ -55,15 +55,17 @@ class spectrum:
     There are also some useful functions:
       read():                   Read in the data and compute member data
    '''
-   def __init__(self, name=None, file=None, comment=None, load=1):
-      '''Creates a filter instance.  Required parameters:  name and file.  Can also
-      specify the zero point (instead of using the comptute_zpt() function do do it).'''
-      self.name = name
-      self.file = file      # location of the filter response
-      self.wave_data = None      # wavelength of response
-      self.resp_data = None      # response
-      self.comment = comment   # any words?
-      if file is not None and load==1:  self.read()
+   def __init__(self, name=None, filename=None, comment=None, load=1):
+      '''Creates a spectrum instance.  Required parameters:  name and file.  Can
+      also specify the zero point (instead of using the comptute_zpt() function
+      do do it).''' 
+      
+      self.name = name 
+      self.file = filename     # location of the filter response 
+      self.wave_data = None    # wavelength of response
+      self.resp_data = None    # response 
+      self.comment = comment   # any words?  
+      if filename is not None and load==1:  self.read()
 
    def __str__(self):
       return "%s:  %s" % (self.name, self.comment)
