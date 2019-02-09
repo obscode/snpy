@@ -40,3 +40,4 @@ briefly, here is what SNOOPY can do:
    - Interact with a properly set-up SQL database.'''
 
 from .sn import *
+from .sn import __version__
