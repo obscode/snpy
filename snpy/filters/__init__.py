@@ -28,7 +28,7 @@ import scipy.interpolate
 from glob import glob
 import string
 from snpy.utils.deredden import unred
-from astropy import units as u
+#from astropy import units as u
 from astropy.constants import c,h
 
 interp_method = 'spline'
@@ -43,9 +43,7 @@ stand_base = os.path.join(base,'standards')
 #h = 6.626068e-27  # erg s
 #c = 2.997925e18   # Angstrom/s
 ch = c * h
-uflux = u.erg/u.s/u.cm/u.cm/u.Angstrom   # erg/s/cm^2/AA
-uresp = 1.0/u.s/u.cm/u.cm                # photons/s/cm^2
-
+ch = ch.to('erg Angstrom').value
 
 class spectrum:
    '''This class defines a spectrum.  It contains the response as Numeric arrays.  It has
@@ -62,15 +60,16 @@ class spectrum:
       read():                   Read in the data and compute member data
    '''
    def __init__(self, name=None, file=None, comment=None, wave=None,
-         flux=None, load=1):
+         flux=None, fluxed=True, load=1):
       '''Creates a spectrum instance.  Required parameters:  name and file.  
       Can also specify the zero point (instead of using the comptute_zpt() 
       function do do it).'''
       self.name = name
       self.file = file      # location of the filter response
-      self.wave_data = wave      # wavelength of response
-      self.resp_data = flux      # response
+      self.wave_data = wave    # wavelength of response
+      self.resp_data = flux    # response
       self.comment = comment   # any words?
+      self.fluxed = fluxed     # indicates the spectrum is in physical units
       if file is not None and load==1:  self.read()
 
    def __str__(self):
@@ -84,9 +83,9 @@ class spectrum:
          f = open(self.file)
          lines = f.readlines()
          self.wave_data = num.array([float(line.split()[0]) \
-               for line in lines if line[0] != "#"])*u.Angstrom
+               for line in lines if line[0] != "#"])
          self.resp_data = num.array([float(line.split()[1]) \
-               for line in lines if line[0] != "#"])*uflux
+               for line in lines if line[0] != "#"])
          f.close()
 
    def copy(self):
@@ -158,8 +157,6 @@ class filt(spectrum):
    def read(self):
       '''Reads in the response for file and updates several member functions.'''
       spectrum.read(self)
-      # Because this is a filter object, the response is unitless
-      self.resp_data = self.resp_data.value*u.dimensionless_unscaled
 
    def compute_zpt(self, spectrum, mag, zeropad=0):
       '''Compute the photometric zero point.  If spectrum is a list of spectra, then
@@ -183,8 +180,7 @@ class filt(spectrum):
          result = self.response(spec, zeropad=zeropad)
 
          # Now use the spectrum's magnitude to compute zero point:
-         print(result/uresp)
-         zpt = 2.5*num.log10(result/uresp) + mag
+         zpt = 2.5*num.log10(result) + mag
          zpts.append(zpt)
    
       if only1:
@@ -196,14 +192,14 @@ class filt(spectrum):
       '''evaluate the filter on the sequence of wavelengths.'''
       if interp_method == "spline":
          if self.tck is None:
-            self.tck = scipy.interpolate.splrep(self.wave.value, 
-                  self.resp.value, k=1, s=0)
-         fresp_int = scipy.interpolate.splev(wave, self.tck)*uflux
+            self.tck = scipy.interpolate.splrep(self.wave, 
+                  self.resp, k=1, s=0)
+         fresp_int = scipy.interpolate.splev(wave, self.tck)
       else:
          if self.mint is None:
-            self.mint = scipy.interpolate.interp1d(self.wave.value, 
+            self.mint = scipy.interpolate.interp1d(self.wave, 
                   self.resp, kind=interp_method)
-         fresp_int = self.mint(trim_wave)*uflux
+         fresp_int = self.mint(trim_wave)
 
       fresp_int = num.where(num.less(wave,self.wave.min()), num.nan, fresp_int)
       fresp_int = num.where(num.greater(wave,self.wave.max()), num.nan, 
@@ -228,6 +224,9 @@ class filt(spectrum):
          # We must have a spectrum object:
          if not isinstance(specwave, spectrum):
             raise TypeError("If specifying just specwave, it must be a spectrum object")
+         # if this object is not fluxed, then return -1
+         if not getattr(specwave, 'fluxed', True):
+            return -1.0
          wave = specwave.wave
          spec = specwave.flux
       else:
@@ -273,9 +272,9 @@ class filt(spectrum):
       # Now, we need to resample the response wavelengths to the spectrum:
       if interp_method == "spline":
          if self.tck is None:
-            self.tck = scipy.interpolate.splrep(self.wave.value, 
-                  self.resp.value, k=1, s=0)
-         fresp_int = scipy.interpolate.splev(trim_wave, self.tck)*uflux
+            self.tck = scipy.interpolate.splrep(self.wave, 
+                  self.resp, k=1, s=0)
+         fresp_int = scipy.interpolate.splev(trim_wave, self.tck)
       else:
          if self.mint is None:
             self.mint = scipy.interpolate.interp1d(self.wave, self.resp, 
@@ -292,11 +291,10 @@ class filt(spectrum):
       if integ_method=='simpsons':
          result = scipy.integrate.simps(integrand, x=trim_wave, even='avg')
       elif integ_method=='trapz':
-         result = scipy.integrate.trapz(integrand, x=trim_wave)*u
+         result = scipy.integrate.trapz(integrand, x=trim_wave)
       else:
          result = (trim_wave[-1] - trim_wave[0])/(len(trim_wave)-1)*\
                sum(integrand)
-      result = result * integrand.unit*trim_wave.unit
 
       return(result)
 
@@ -315,7 +313,7 @@ class filt(spectrum):
       if res <= 0:
          return(num.nan)
       else:
-         return(-2.5*num.log10(res/uresp) + self.zp)
+         return(-2.5*num.log10(res) + self.zp)
 
    def synth_abmag(self, specwave, flux=None, z=0, zeropad=0):
       '''Compute the synthetic AB magnitude of the input spectrum defined by
