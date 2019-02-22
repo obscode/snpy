@@ -329,9 +329,9 @@ class sqlbase:
          raise RuntimeError("Not connected to SQL database.")
       slct1 = '''SELECT %s,%s from %s where %s=%%s''' % \
             (self.SPEC_JD,self.SPEC_INDEX,self.SPEC_INFO,self.SPEC_NAME)
-      slct2 = '''SELECT %s,%s from %s where %s=%%s and %s=%%s''' % \
+      slct2 = '''SELECT %s,%s from %s where %s=%%s and %s=%%s order by %s''' % \
             (self.SPEC_LAMB,self.SPEC_FLUX, self.SPEC_TABLE,self.SPEC_NAME,
-             self.SPEC_INDEX)
+             self.SPEC_INDEX, self.SPEC_LAMB)
       N = self.c2.execute(slct1, (self.name))
       if N == 0:
          raise ValueError("No spectroscopy for %s found" % \

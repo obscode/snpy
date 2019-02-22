@@ -121,7 +121,8 @@ class sn(object):
       z (float): heliocentric redshift of object
    '''
 
-   def __init__(self, name, source=None, ra=None, dec=None, z=0):
+   def __init__(self, name, source=None, ra=None, dec=None, z=0,
+         get_spectra=False):
       '''Create the object.  Only required parameter is the [name].  If this 
       is a new object, you can also specify [ra], [dec], and [z].'''
       self.__dict__['data'] = {}        # the photometric data, one for each band.
@@ -155,7 +156,7 @@ class sn(object):
          if ra is None or dec is None:
             if have_sql:
                self.sql = sqlmod.default_sql
-               self.read_sql(self.name)
+               self.read_sql(self.name, spectra=get_spectra)
                self._sql_read_time = time.gmtime()
             else:
                print("Warning:  ra and/or decl not specified and no source specified.")
@@ -166,7 +167,7 @@ class sn(object):
             self.decl = dec
       else:
          self.sql = source
-         self.read_sql(self.name)
+         self.read_sql(self.name, spectra=get_spectra)
 
       #self.summary()
       self.getEBVgal()
@@ -1371,7 +1372,7 @@ class sn(object):
                pass
          self.sql.close()
 
-   def read_sql(self, name):
+   def read_sql(self, name, spectra=False):
       '''Get the data from the SQL server for supernova.
       
       Args:
@@ -1390,26 +1391,40 @@ class sn(object):
             print("%s not found in database, starting from scratch..." % (name))
             self.sql.close()
             return
-         try:
-            self.z = self.sql.get_SN_parameter('z')
-            self.ra = self.sql.get_SN_parameter('ra')
-            self.decl = self.sql.get_SN_parameter('decl')
-            data,source = self.sql.get_SN_photometry()
-            self.sources = [source]
-            for filt in data:
-               d = data[filt]
-               if 'K' in d:
-                  K = d['K']
-               else:
-                  K = None
-               if 'SNR' in d:
-                  SNR = d['SNR']
-               else:
-                  SNR = None
-               self.data[filt] = lc(self, filt, d['t'], d['m'], d['em'], 
-                     K=K, SNR=SNR, sids=zeros(d['t'].shape, dtype=int))
-         finally:
-            self.sql.close()
+         #try:
+         self.z = self.sql.get_SN_parameter('z')
+         self.ra = self.sql.get_SN_parameter('ra')
+         self.decl = self.sql.get_SN_parameter('decl')
+         data,source = self.sql.get_SN_photometry()
+         self.sources = [source]
+         for filt in data:
+            d = data[filt]
+            if 'K' in d:
+               K = d['K']
+            else:
+               K = None
+            if 'SNR' in d:
+               SNR = d['SNR']
+            else:
+               SNR = None
+            self.data[filt] = lc(self, filt, d['t'], d['m'], d['em'], 
+                  K=K, SNR=SNR, sids=zeros(d['t'].shape, dtype=int))
+
+         if spectra:
+            from .filters import spectrum
+            from .specobj import timespec
+            specs = []
+            MJDs = []
+            ts,ws,fs = self.sql.get_SN_spectra()
+            for i in range(ts.shape[0]):
+               MJDs.append(ts[i] + self.sql.JD_OFFSET)
+               specs.append(spectrum(wave=ws[i], flux=fs[i], fluxed=True,
+                  name="Spectrum MJD={:.1f}".format(MJDs[-1])))
+            self.sdata = timespec(self, MJDs, specs)
+            self.sdata.sort_time()
+
+         #finally:
+         #   self.sql.close()
 
    def set_restbands(self):
       return self.get_restbands()
@@ -1958,6 +1973,14 @@ class sn(object):
       '''
 
       return plotmod.plot_sn(self, **kwargs)
+
+   def splot(self):
+      from .specobj import InteractiveSpec
+      '''Launch the spectrum plotter.'''
+      if getattr(self, 'sdata', None) is None:
+         raise RuntimeError("Error: this sn object has no spectral data")
+      sp = InteractiveSpec(self.sdata)
+      return sp
 
    def plot_kcorrs(self, colors=None, symbols=None, outfile=None):
       '''Plot the derived k-corrections after they have been computed.

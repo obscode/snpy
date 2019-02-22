@@ -303,6 +303,7 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
             fluxed = True
          except ValueError:
             print("Warning:  unrecognized unit for flux: {}".format(fu))
+            fluxed = False
             fu = u.dimensionless_unscaled
 
       tu = s.get('u_time', 'MJD')
@@ -324,6 +325,10 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
       if dr:
          w = w*(1+zhel)
 
+      # At this point, we should be able to convert to the units we want
+      w = w.to('Angstrom').value
+      f = f.to('erg / (s cm2 Angstrom')
+
       # source reference
       srcs = s.get('source','').split(',')
       this_source = None
@@ -340,7 +345,7 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
       sid = used_sources.index(this_source)
       sids.append(sid)
       
-      spectra.append(spectrum(wave=w, flux=f, 
+      spectra.append(spectrum(wave=w, flux=f, fluxed=fluxed, 
          name="Spectrum MJD={:.1f}".format(t)))
       dates.append(t)
    snobj.sdata = timespec(snobj, dates, spectra)
