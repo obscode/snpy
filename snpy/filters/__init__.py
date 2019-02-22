@@ -175,6 +175,8 @@ class filt(spectrum):
       for spec in spectrum:
          # Check to see if 
          if spec.wave is None:  spec.read()
+         if not spec.fluxed:
+            raise ValueError("spectrum must be in erg/s/cm^2/Angstrom")
    
          # Compute the integral spec1*spec2*(lambda/ch):
          result = self.response(spec, zeropad=zeropad)
@@ -309,6 +311,10 @@ class filt(spectrum):
       '''Compute the synthetic magnitude based on the input spectrum defined by
       (specwave) or (specwave,flux).  If z is supplied, first redshift the 
       input spectrum by this amount.'''
+
+      # First check to make sure the spectrum is fluxed
+      if isinstance(specwave, spectrum):
+         if not specwave.fluxed: return(num.nan)
       res = self.response(specwave,flux=flux,z=z,zeropad=zeropad)
       if res <= 0:
          return(num.nan)
@@ -319,6 +325,11 @@ class filt(spectrum):
       '''Compute the synthetic AB magnitude of the input spectrum defined by
       (specwave) or (specwave, flux).  If z is supplied, first blueshift
       the filter by this amount (ie, you are observing a redshifed spectrum).'''
+
+      # First check to make sure the spectrum is fluxed
+      if isinstance(specwave, spectrum):
+         if not specwave.fluxed: return(num.nan)
+
       numer = self.response(specwave, flux=flux, z=z, zeropad=zeropad,
             photons=1)*ch
       # numer is in erg*Angstrom/s/cm^2
@@ -347,6 +358,8 @@ class filt(spectrum):
          wave,flux = standards['Vega']['VegaB'].wave,\
                      standards['Vega']['VegaB'].resp
       elif isinstance(specwave, spectrum):
+         if not specwave.fluxed:
+            raise ValueError("spectrum must be  in erg/s/cm^2/Angstrom")
          wave,flux = specwave.wave,specwave.flux
       else:
          if flux is None:
