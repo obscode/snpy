@@ -280,9 +280,10 @@ class f_Bspline(function):
       elif nf == 3 and self.k > 1:
          k = 2
          Nknots = 2
-         self.knots = num.array([fset[bs[0]].wave[0], fset[bs[1]].wave[-1]])
+         self.knots = num.array([fset[bs[0]].wave[0], 
+            fset[bs[1]].ave_wave, fset[bs[2]].wave[-1]])
          args['gradient'] = False
-         args['zeroslope'] = False
+         args['zeroslope'] = True
       else:
          #max_degree = (nf+3)/2
          #k = min(self.k, max_degree)
