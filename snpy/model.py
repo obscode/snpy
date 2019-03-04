@@ -977,7 +977,7 @@ class max_model(model):
                break
          t0 = (self.parent.data[band].MJD - self.Tmax).min()/(1+self.parent.z)
          if t0 < 0:  return 0
-         id = argmax(absolute(t0-days))
+         id = argmin(absolute(t0-days))
          return errors[parameter][id]
 
       t0s = []
