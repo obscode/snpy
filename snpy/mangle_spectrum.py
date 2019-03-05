@@ -268,21 +268,25 @@ class f_Bspline(function):
    def init_pars(self, nid=0):
       # one parameter for each knot points, unless slopes are constrained
       bs = self.parent.bands
+      if self.verbose: print("Fitting ",bs)
       nf = len(bs)            
       args = {}
       if nf == 2: 
          # only linear allowed
-         k = 1
-         Nknots = 2
-         self.knots = num.array([fset[bs[0]].wave[0], fset[bs[1]].wave[-1]])
-         args['gradient'] = False
-         args['zeroslope'] = False
-      elif nf == 3 and self.k > 1:
          k = 2
          Nknots = 2
          self.knots = num.array([fset[bs[0]].wave[0], fset[bs[1]].wave[-1]])
          args['gradient'] = False
-         args['zeroslope'] = False
+         args['zeroslope'] = True
+         if self.verbose: print("   setting k= 2, nograd, zeroslope ")
+      elif nf == 3 and self.k > 1:
+         k = 2
+         Nknots = 3
+         self.knots = num.array([fset[bs[0]].wave[0], 
+            fset[bs[1]].ave_wave, fset[bs[-1]].wave[-1]])
+         args['gradient'] = False
+         args['zeroslope'] = True
+         if self.verbose: print("   setting k= 2, nograd, zeroslope ")
       else:
          #max_degree = (nf+3)/2
          #k = min(self.k, max_degree)
@@ -298,6 +302,9 @@ class f_Bspline(function):
             args['gradient'] = True
          else:
             args['zeroslope'] = True
+         if self.verbose: 
+            print("   setting k= 3, grad={}, zeroslope={} ".format(
+               args['gradient'], args['zeroslope']))
 
       if self.verbose:
          print self.parent.bands
@@ -307,6 +314,8 @@ class f_Bspline(function):
       bsp = [bspline_basis(self.knots,self.parent.wave[i],k,**args) \
             for i in range(self.parent.wave.shape[0])]
       self.bsp = bsp
+      if self.verbose:
+         print("Number of basis splines: {}".format(self.bsp[0].shape[1]))
 
       # setup the parameters
       if self.log:
