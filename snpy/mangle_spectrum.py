@@ -561,11 +561,20 @@ class mangler:
          bands (list of str): The list of filters to fit
          mags (float array): the magnitudes through the bands.
       '''
+      mags = num.asarray(mags)
       basis = getattr(self.function, 'basis', None)
       if basis is None:
          raise RuntimeError, "Error: you can't use lstsq unless method is linear"
-
-      self.bands = bands
+      # Check that all bands have support on the spectra
+      ggids = [~num.isnan([fset[band].synth_mag(self.wave[i],self.flux[i]) \
+            for band in bands]) for i in range(self.wave.shape[0])]
+      gids = num.alltrue(ggids, axis=0)
+      if not num.alltrue(gids):
+         bad = ",".join([bands[i] for i in range(len(gids)) if not gids[i]])
+         print "Warning! The following filters were not covered by the SED:"
+         print bad
+      self.bands = [bands[i] for i in range(len(gids)) if gids[i]]
+      mags = mags[gids]
 
       # We fit responses, so convert to flux relative to normfilter
       if self.normfilter is not None:
@@ -589,7 +598,7 @@ class mangler:
       bases = []
       for i in range(len(mags)):
          resps.append([])
-         for j,b in enumerate(bands):
+         for j,b in enumerate(self.bands):
             if gids[i,j]:
                resps[-1].append(num.power(10, -0.4*(mags[i][j] - fset[b].zp)))
                bases.append(basis[b][i])
@@ -597,7 +606,7 @@ class mangler:
       bases = num.array(bases)
       for i in range(resps.shape[0]):
          resps[i,:] = resps[i,:]/resps[i,nid]
-      a,d1,d2,d3 = lstsq(bases, num.ravel(resps))
+      a,d1,d2,d3 = lstsq(bases, num.ravel(resps), rcond=-1)
 
       self.function.set_pars(a)
 
