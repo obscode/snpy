@@ -1189,12 +1189,15 @@ class sn(object):
                mask = mask*ks_mask
                ms = ms - ks
             ms = ms[mask]
+            e_ms = e_ms[mask]
             ts = ts[mask]
             f = open(base+filter+"_model.dat", 'w')
             print >>f, "# column 1: time"
             print >>f, "# column 2:  model magnitude"
+            print >>f, "# column 3:  model magnitudei error"
             for i in range(len(ts)):
-               print >> f, "%.1f, %.3f" % (ts[i]+self.Tmax-toff, ms[i])
+               print >> f, "%.1f, %.3f %.3f" % (ts[i]+self.Tmax-toff, ms[i], 
+                     e_ms[i])
             f.close()
          if self.data[filter].interp is not None:
             f = open(base+filter+"_smooth.dat", 'w')
