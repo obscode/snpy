@@ -10,7 +10,7 @@ import types
 import numpy as num
 from numpy.linalg import lstsq
 from snpy.filters import fset
-from snpy.filters import filt
+from snpy.filters import filter
 from snpy.filters import vegaB
 import scipy.interpolate
 try:
@@ -513,8 +513,8 @@ class mangler:
       wave1 = fset[red].wave[-1]
 
       # Create two new fake filters
-      fset['blue'] = filt('blue_anchor')
-      fset['red'] = filt('red_anchor')
+      fset['blue'] = filter('blue_anchor')
+      fset['red'] = filter('red_anchor')
       resp = num.array([0.,0.,1.,1.,0.,0.])
       dwave = num.array([anchorwidth+2., anchorwidth+1., anchorwidth, 3., 2., 1.])
    

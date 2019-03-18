@@ -5,7 +5,7 @@ from numpy import *
 from snpy import fset
 from snpy.filters import ch
 from snpy.filters import spectrum
-from snpy.filters import filt
+from snpy.filters import filter
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Button,CheckButtons
 import scipy
@@ -101,7 +101,7 @@ class timespec:
       included in the light-curve.
       
       Args:
-         band (str or filters.filt instance): The filter to compute.
+         band (str or filters.filter instance): The filter to compute.
          z (float):  Redshift the spectrum by this much before computing
                      light-curve
          zeropad (bool): Assume the spectrum has zero flux outside the
@@ -111,8 +111,8 @@ class timespec:
          (MJD, mags):  MJD(float array): epochs of the light-curve
                        mags(floag array): synthetic magnitudes
       '''
-      if not isinstance(band, filt) and not isinstance(band, basestring):
-         raise ValueError, "band must be string or filters.filt instance"
+      if not isinstance(band, filter) and not isinstance(band, basestring):
+         raise ValueError, "band must be string or filters.filter instance"
       if isinstance(band, basestring):
          band = fset[band]
       mags = array([band.synth_mag(spec,z=z,zeropad=zeropad) \

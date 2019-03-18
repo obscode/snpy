@@ -9,7 +9,7 @@ following funcionality:
       - several member variables for bookkeeping:
          o max/min wavelenghts
          o name, coment
-   filt:
+   filter:
       - everthing in spectrum, plus:
       - computation of effective wavelength for a given spectrum
       - compute zero-point of a filter based on reference spectrum
@@ -119,7 +119,7 @@ class spectrum:
          raise AttributeError("Error:  attribute %s not defined" % (name))
 
 
-class filt(spectrum):
+class filter(spectrum):
    '''This class defines a filter.  It contains the response as Numeric arrays.  It has
    the following member data:
       name:      string describing the filter (eg. 'B')
@@ -399,7 +399,7 @@ class filt(spectrum):
 
    def copy(self):
       '''Return a copy of this instance.'''
-      return(filt(self.name, self.file, self.zp, self.comment))
+      return(filter(self.name, self.file, self.zp, self.comment))
 
    def R(self, Rv=3.1, wave=None, flux=None, z=0.0, EBV=0.001, redlaw='ccm',
          strict_ccm=False):
@@ -637,7 +637,7 @@ class telescope:
       self.filters = {}
 
    def add_filter(self, filter_object):
-      if not isinstance(filter_object, filt):
+      if not isinstance(filter_object, filter):
          raise TypeError("Error: filter_object must be a filter type")
       self.filters[filter_object.name] = filter_object
 
@@ -725,7 +725,7 @@ for obs in obsdirs:
                except:
                   raise ValueError("Could not convert standard magnitude for filter %s" %\
                         l[0])
-               newf = filt(l[0], os.path.join(dir,l[1]), 0.0, 
+               newf = filter(l[0], os.path.join(dir,l[1]), 0.0, 
                   "".join(l[3:]))
                newf.zp = newf.compute_zpt(standards[std], m)
                fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
@@ -737,14 +737,14 @@ for obs in obsdirs:
             # We have an AB system, so in principle there is no standard. The
             # zero-point is derived from the filter function alone. See
             # documentation.
-            newf = filt(l[0], os.path.join(dir,l[1]), 0.0, 
+            newf = filter(l[0], os.path.join(dir,l[1]), 0.0, 
                "".join(l[3:]))
             newf.zp = 16.84692 + 2.5*num.log10(
                   scipy.integrate.trapz(newf.resp/newf.wave, x=newf.wave))
             fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
          else:
             fset.observatories[obs_name].telescopes[tel_name].add_filter(
-                         filt(l[0], os.path.join(dir,l[1]),
+                         filter(l[0], os.path.join(dir,l[1]),
                              float(l[2]), " ".join(l[3:])))
       f.close()
 fset.cache_filters()
