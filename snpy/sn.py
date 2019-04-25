@@ -285,16 +285,18 @@ class sn(object):
       self.template_bands = [b for b in self.model.rbs \
             if b not in ['Bs','Vs','Rs','Is']]
      
-   def get_mag_table(self, bands=None, dt=0.5, outfile=None):
+   def get_mag_table(self, bands=None, dt=1.0, outfile=None):
       '''This routine returns a table of the photometry, where the data from
-      different filters are grouped according to day of observation.  The
+      different filters are grouped according intervals of dt.  The
       desired filters can be specified, otherwise all filters are
-      returned. When data is missing, a value of 99.9 is inserted.
+      returned. When data is missing, a value of 99.9 is inserted. Multiple
+      observations are averaged in flux. The times are takent to be the
+      average of all times in each bin.
       
       Args: 
          bands (list):  filters to include in the table
-         dt (flaot): controls how to group by time:  observations
-               separated by less than ``dt`` in time are grouped.
+         dt (flaot): controls how to group by time: data are grouped
+               into bins of width ``dt`` days.
          outfile (str or open file): optinal file name for output
       
       Returns:
@@ -315,25 +317,35 @@ class sn(object):
       times = [self.data[band].MJD for band in bands]
       times = sort(concatenate(times))
 
-      # Eliminate repeating days:
-      gids = concatenate([[1], greater(absolute(times[0:-1] - times[1:]), dt)])
-      times = compress(gids, times)
+      # Create bin boundaries
+      tbins = arange(times.min()+dt*0.5, times.max()+dt, dt) 
+      bids = searchsorted(tbins, times)
+      # Compute mean time in each bin. Empty bins will be assigned 'nan'
+      with warnings.catch_warnings():
+         warnings.filterwarnings('ignore', message=".*Mean of empty slice.*")
+         warnings.filterwarnings('ignore', message=".*invalid value*")
+         times = array([mean(times[bids == i]) for i in range(len(tbins))])
+         gids = ~isnan(times)
+      # Now we deal with edge cases: due to sparse sampling, you can get
+      # bins separatedma/def 
 
-      ret_data['MJD'] = times
+      ret_data['MJD'] = times[gids]
       # Now loop through the bands and see where we need to fill in data
       for band in bands:
-         gids = less(absolute(times[:,newaxis] - \
-               self.data[band].MJD[newaxis,:]), dt)
-         temp1 = 0.0*times + 99.9
-         temp2 = 0.0*times + 99.9
-         for i in range(len(gids)):
-            if sum(gids[i]) > 0:
-               temp1[i] = sum(self.data[band].mag*gids[i])/sum(gids[i])
-               temp2[i] = max(sqrt(sum(power(self.data[band].e_mag,2)*gids[i]))/sum(gids[i]),
-                              sqrt(average(power(temp1[i] - \
-                                   compress(gids[i], self.data[band].mag),2))))
-         ret_data[band] = temp1
-         ret_data["e_"+band] = temp2
+         bids = searchsorted(tbins, self.data[band].MJD)
+         temp1 = 0.0*tbins + 99.9
+         temp2 = 0.0*tbins + 9.9
+         for i in range(len(tbins)):
+            ggids = equal(bids, i)
+            if sum(ggids) > 0:
+               fs = self.data[band].flux[ggids]
+               ws = power(self.data[band].e_flux[ggids],-2)
+               af = sum(fs*ws)/sum(ws)
+               ef = sqrt(1.0/sum(ws))
+               temp1[i] = -2.5*log10(af) + self.data[band].filter.zp
+               temp2[i] = 1.087*ef/af
+         ret_data[band] = temp1[gids]
+         ret_data["e_"+band] = temp2[gids]
 
       if outfile is not None:
          if type(outfile) is str:
@@ -342,13 +354,13 @@ class sn(object):
             fp = outfile
          else:
             raise TypeError("outfile must be a file name or file handle")
-         JDlen = len(str(int(ret_data['MJD']))) + 3
+         JDlen = len(str(int(mean(ret_data['MJD'])))) + 3
          title = "MJD" + " "*(JDlen+2)
          for b in bands:  title += "%5s +/-   " % b
          print(title, file=fp)
-         format = "%%%d.2f  " + "%5.2f %4.2f  "*len(bands)
+         format = ("%%%d.2f  " % (JDlen-3)) + "%5.2f %4.2f  "*len(bands)
          for i in range(len(ret_data['MJD'])):
-            data = []
+            data = [ret_data['MJD'][i]]
             for b in bands:  data += [ret_data[b][i], ret_data['e_'+b][i]]
             print(format % tuple(data), file=fp)
          fp.close()
@@ -968,8 +980,10 @@ class sn(object):
                raise ValueError("band %s has no k-corrections, use self.kcorr()" % band2)
             # Now, we need to find indexes into each dataset that correspond
             #  to data['MJD']. 
-            ids1 = searchsorted(self.data[band1].MJD, mjd)
-            ids2 = searchsorted(self.data[band2].MJD, mjd)
+            ids1 = argmin(absolute(self.data[band1].MJD[:,newaxis] - \
+                  mjd[newaxis,:]), axis=0)
+            ids2 = argmin(absolute(self.data[band2].MJD[:,newaxis] - \
+                  mjd[newaxis,:]), axis=0)
             col = col - self.ks[band1][ids1] + self.ks[band2][ids2]
             flags = flags + (logical_not(self.ks_mask[band1][ids1])*\
                              logical_not(self.ks_mask[band2][ids2]))*8
