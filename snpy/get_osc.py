@@ -281,75 +281,78 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
          print(warning_message[warning])
 
    # lastly, the spectroscopy
-   spectra = []
-   dates = []
-   sids = []
-   for s in d['spectra']:
-      wu = s.get('u_wavelengths', 'Agnstrom')
-      fu = s.get('u_fluxes', 'Uncalibrated')
-      
-      try:
-         wu = u.Unit(wu)
-      except ValueError:
-         print("Warning:  unrecognized unit for wavelength: {}".format(wu))
-         print("  assuming Angstroms")
-         wu = u.Angstrom
-
-      if fu == 'Uncalibrated':
-         fu = u.dimensionless_unscaled
-      else:
+   if d.get('spectra',None) is not None:
+      spectra = []
+      dates = []
+      sids = []
+      for s in d['spectra']:
+         wu = s.get('u_wavelengths', 'Agnstrom')
+         fu = s.get('u_fluxes', 'Uncalibrated')
+         
          try:
-            fu = u.Unit(fu)
-            fluxed = True
+            wu = u.Unit(wu)
          except ValueError:
-            print("Warning:  unrecognized unit for flux: {}".format(fu))
+            print("Warning:  unrecognized unit for wavelength: {}".format(wu))
+            print("  assuming Angstroms")
+            wu = u.Angstrom
+ 
+         if fu == 'Uncalibrated':
             fluxed = False
             fu = u.dimensionless_unscaled
-
-      tu = s.get('u_time', 'MJD')
-      t = float(s['time'])
-      if tu not in MJD_offsets:
-         print("Warning:  unrecognized time unit: {}".format(tu))
-         if len(s['time'].split('.')[0]) == 7 and s['time'][0] == '2':
-            print("   assuming JD")
-            t = t - 2400000.5
-         elif len(s['time'].split('.')[0]) == 5 and s['time'][0] == '5':
-            print("   assuming MJD")
          else:
-            print("   skipping this spectrum.")
-            continue
-
-      w = array([float(item[0]) for item in s['data']])*wu
-      f = array([float(item[1]) for item in s['data']])*fu
-      dr = s.get('deredshifted', False)
-      if dr:
-         w = w*(1+zhel)
-
-      # At this point, we should be able to convert to the units we want
-      w = w.to('Angstrom').value
-      f = f.to('erg / (s cm2 Angstrom')
-
-      # source reference
-      srcs = s.get('source','').split(',')
-      this_source = None
-      for src in srcs:
-         if src in all_sources:
-            this_source = all_sources[src]
-            break
-      if this_source is None:
-         print("Warning: spectrum has no source")
-
-      if this_source not in used_sources:
-         used_sources.append(this_source)
-      # At this point we're actually using the spectroscopy, so find source
-      sid = used_sources.index(this_source)
-      sids.append(sid)
-      
-      spectra.append(spectrum(wave=w, flux=f, fluxed=fluxed, 
-         name="Spectrum MJD={:.1f}".format(t)))
-      dates.append(t)
-   snobj.sdata = timespec(snobj, dates, spectra)
-   snobj.sdata.sids = sids
+            try:
+               fu = u.Unit(fu)
+               fluxed = True
+            except ValueError:
+               print("Warning:  unrecognized unit for flux: {}".format(fu))
+               fluxed = False
+               fu = u.dimensionless_unscaled
+ 
+         tu = s.get('u_time', 'MJD')
+         t = float(s['time'])
+         if tu not in MJD_offsets:
+            print("Warning:  unrecognized time unit: {}".format(tu))
+            if len(s['time'].split('.')[0]) == 7 and s['time'][0] == '2':
+               print("   assuming JD")
+               t = t - 2400000.5
+            elif len(s['time'].split('.')[0]) == 5 and s['time'][0] == '5':
+               print("   assuming MJD")
+            else:
+               print("   skipping this spectrum.")
+               continue
+ 
+         w = array([float(item[0]) for item in s['data']])*wu
+         f = array([float(item[1]) for item in s['data']])*fu
+         dr = s.get('deredshifted', False)
+         if dr:
+            w = w*(1+zhel)
+ 
+         # At this point, we should be able to convert to the units we want
+         w = w.to('Angstrom').value
+         if fluxed: f = f.to('erg / (s cm2 Angstrom)')
+         f = f.value
+ 
+         # source reference
+         srcs = s.get('source','').split(',')
+         this_source = None
+         for src in srcs:
+            if src in all_sources:
+               this_source = all_sources[src]
+               break
+         if this_source is None:
+            print("Warning: spectrum has no source")
+ 
+         if this_source not in used_sources:
+            used_sources.append(this_source)
+         # At this point we're actually using the spectroscopy, so find source
+         sid = used_sources.index(this_source)
+         sids.append(sid)
+         
+         spectra.append(spectrum(wave=w, flux=f, fluxed=fluxed, 
+            name="Spectrum MJD={:.1f}".format(t)))
+         dates.append(t)
+      snobj.sdata = timespec(snobj, dates, spectra)
+      snobj.sdata.sids = sids
 
    if full_data:
       return(snobj, 'Success', d)
