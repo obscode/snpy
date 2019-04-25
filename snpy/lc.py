@@ -136,7 +136,7 @@ class lc:
       if self.covar is not None:
          if flux:
             f = self.get_flux()
-            return self.covar*f[NewAxis,:]*f[:,NewAxis]/1.17874
+            return self.covar*f[newaxis,:]*f[:,newaxis]/1.17874
          else:
             return self.covar
       else:
@@ -302,7 +302,7 @@ class lc:
       if t_tol > 0:
          # Now, we scan t and eval_t and find where they are less than tol.  
          # In these cases, we take the average of any matching times
-         delta = absolute(self.MJD[NewAxis,:] - times[:,NewAxis])
+         delta = absolute(self.MJD[newaxis,:] - times[:,newaxis])
          cond = less(delta, t_tol)
          values = array([self.mag]*len(times))*cond
          N = sum(cond, axis=1)
