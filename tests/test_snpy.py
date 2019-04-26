@@ -2,7 +2,7 @@ import pytest
 import os
 import matplotlib
 import numpy as np
-#matplotlib.use("Agg")
+matplotlib.use("Agg")
 try:
    import astropy
    haveastropy = pytest.mark.skipif(False, reason="astropy is installed")
