@@ -1296,7 +1296,7 @@ class sn(object):
          if self.Tmax > 1.0:
             Tmax = self.Tmax
          else:
-            raise ValueError, "No Tmax defined. Fit a model or template first"
+            raise ValueError("No Tmax defined. Fit a model or template first")
 
       # First sn.info 
       fout = open('sn.info','a')
