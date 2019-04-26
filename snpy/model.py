@@ -6,6 +6,8 @@ classing Model and overriding the member functions.
 
 New:  Add an optional [decline_param] to choose between a dm15 model and stretch
       (st)  model'''
+from __future__ import print_function
+import six
 import os,string
 from snpy import ubertemp
 from snpy import kcorr
@@ -171,11 +173,11 @@ class model:
          values from the covariance matrix.
       '''
       self.args = args.copy()
-      if debug:  print "model.fit() called with args = ", args
+      if debug:  print("model.fit() called with args = ", args)
 
       for b in bands:
          if b not in self.parent.data:
-            raise ValueError, "band %s not defined in this SN object" % (b)
+            raise ValueError("band %s not defined in this SN object" % (b))
 
       self._fbands = bands
 
@@ -184,24 +186,24 @@ class model:
 
       # build up the fixed variables
       self.fixed = []
-      for key in args.keys():
+      for key in list(args.keys()):
          if key in self.parameters:
             # check that it is a valid floag
             try:
                testvalue = 1.0*args[key]
             except TypeError:
-               raise ValueError, "You are trying to hold %s fixed, but with an illegal value or type: %s" % (key, str(args[key]))
+               raise ValueError("You are trying to hold %s fixed, but with an illegal value or type: %s" % (key, str(args[key])))
             self.parameters[key] = args[key]
             self.fixed.append(key)
             del args[key]
       # build up list of free variables:
-      self._free = [p for p in self.parameters.keys() if p not in self.fixed]
+      self._free = [p for p in list(self.parameters.keys()) if p not in self.fixed]
       pars = [self.parameters[p] for p in self._free]
       # Make initial parameter guesses if any are None
       for i in range(len(pars)):
          if pars[i] is None:
             pars[i] = self.guess(self._free[i])
-            if debug:  print "Initial guess for %s = %f" % (self._free[i],pars[i])
+            if debug:  print("Initial guess for %s = %f" % (self._free[i],pars[i]))
 
       # get the error matrix or vector
       error = {}
@@ -210,28 +212,28 @@ class model:
 
       pars,C,self.info,self.mesg,self.ier = \
             leastsq(self._wrap_model, pars, (bands,error), full_output=1)
-      if self.ier > 4:  print self.mesg
+      if self.ier > 4:  print(self.mesg)
 
       self.chisquare = sum(power(self.info['fvec'], 2))
       self.dof = len(self.info['fvec']) - len(self._free)
       if self.dof < 1:
-         print "Warning!  less than 1 degree of freedom!"
+         print("Warning!  less than 1 degree of freedom!")
          self.rchisquare = self.chisquare
       else:
          self.rchisquare = self.chisquare/self.dof
       
       # update errors and covariance matrix
       if C is None:
-         raise RuntimeError, "Error:  Covariance Matrix is singular.  " + \
+         raise RuntimeError("Error:  Covariance Matrix is singular.  " + \
                "Either two or more parameters are degenerate or the model " + \
-               "has become insensitive to one or more parameters."
+               "has become insensitive to one or more parameters.")
       C = C*self.rchisquare    # the trick for underestimated errors.
       self.C = {}
       for p in self.parameters:  self.errors[p] = self._extra_error(p)
       for i in range(len(self._free)):
          if C[i,i] < 0:
-            print "Error: covariance matrix has negative diagonal element."
-            print "       Error for %s not computed" % (self._free[i])
+            print("Error: covariance matrix has negative diagonal element.")
+            print("       Error for %s not computed" % (self._free[i]))
             self.errors[self._free[i]] = 0
          else:
             self.errors[self._free[i]] += sqrt(C[i,i])
@@ -287,17 +289,17 @@ class model:
          self.parameters[self._free[i]] = pars[i]
 
       if debug:  
-         print ">>> _wrap_model called with pars:"
+         print(">>> _wrap_model called with pars:")
          for i in range(len(self._free)):
-            print "   %s:  %f" % (self._free[i],pars[i])
+            print("   %s:  %f" % (self._free[i],pars[i]))
       for band in bands:
-         if debug: print">>> calling model member function"
+         if debug: print(">>> calling model member function")
          mod,err,mask = self.__call__(band, self.parent.data[band].MJD)
          if not sometrue(mask):
             msg = "All weights for filter %s are zero." % band
             msg += " The fitter is in a part of parameter space where the model"
             msg += " is not valid or there is no useful data."
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
          if self.model_in_mags:
             f = power(10, -0.4*(mod - self.parent.data[band].filter.zp))
             #ef = sqrt(power(err*mod/1.0857,2) + \
@@ -321,7 +323,7 @@ class model:
       res = concatenate(resids_list)
 
       # now apply any priors:  chi2 = chi2 + 2*ln(p) -N/2log(2pi)-sum(log(sigi))
-      if debug:  print "  weighted resids = ", resids_list
+      if debug:  print("  weighted resids = ", resids_list)
       #N = len(W[m])
       #extra = log(2*pi)-2/N*sum(log(W[m])) - 2*log(self.prior())/N
       #res = sqrt(power(res,2) + extra)
@@ -334,7 +336,7 @@ class model:
       if attr in self.__dict__:
          return self.__dict__[attr]
       else:
-         raise AttributeError, "Attribute %s not found" % (attr)
+         raise AttributeError("Attribute %s not found" % (attr))
 
    def __setattr__(self, attr, value):
       if 'parameters' in self.__dict__:
@@ -372,7 +374,7 @@ class EBV_model(model):
    def __init__(self, parent, stype='dm15'):
 
       if stype != 'dm15':
-         raise ValueError, "This model only supports the dm15 parameter"
+         raise ValueError("This model only supports the dm15 parameter")
       model.__init__(self, parent)
       self.rbs = ['u','B','V','g','r','i','Y','J','H','K','Bs','Vs','Rs','Is',
             'J_K','H_K']
@@ -407,7 +409,7 @@ class EBV_model(model):
    def setup(self):
       if 'EBVhost' not in self.args:
          if len(self._fbands) < 2:
-            raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
+            raise RuntimeError("Error:  to solve for EBVhost, you need to fit more than one filter")
 
       self.calibration = self.args.get('calibration',6)
       self.gen = self.args.get('gen',2)
@@ -429,7 +431,7 @@ class EBV_model(model):
       if param == 'DM':
          # Quick DM based on Ho = 72
          if s.z < 1e-10:
-            raise ValueError, "SN redshift is too close to zero.  Set it properly."
+            raise ValueError("SN redshift is too close to zero.  Set it properly.")
          return 43.11 + 5*log10(s.z)
 
       if param == 'dm15':
@@ -532,7 +534,7 @@ class EBV_model(model):
    def systematics(self, calibration=6, include_Ho=False):
       '''Returns the systematic errors in the paramters as a dictionary.  
       If no estimate is available, return None for that paramter.'''
-      systs = dict.fromkeys(self.parameters.keys())
+      systs = dict.fromkeys(list(self.parameters.keys()))
       # DM contains systematics for Ho, plus average of calibration
       #  uncertainties
       syst_DM = []
@@ -573,9 +575,9 @@ def read_table(file):
    f = open(file, 'r')
    lines = f.readlines()
    f.close()
-   lines = map(string.strip, lines)
-   lines = [line for line in lines if line[0] != "#"]
-   lines = map(string.split, lines)
+   #lines = list(map(string.strip, lines))
+   #lines = list(map(string.split, lines))
+   lines = [line.strip().split() for line in lines if line[0] != '#']
    a = {}; b = {};  c={};  Rv = {};  sig = {}
    ea = {}; eb = {};  ec={};  eRv = {}
    for line in lines:
@@ -618,7 +620,7 @@ class EBV_model2(model):
    def __init__(self, parent, stype='st'):
 
       if stype not in ['dm15','st']:
-         raise ValueError, "This model only supports the dm15 and st parameter"
+         raise ValueError("This model only supports the dm15 and st parameter")
       model.__init__(self, parent)
       self.rbs = ['u','B','V','g','r','i','Y','J','H']
       self.parameters = {'DM':None, stype:None, 'EBVhost':None, 'Tmax':None}
@@ -642,7 +644,7 @@ class EBV_model2(model):
       # check to see if we have more than one filter when solving for EBV
       if 'EBVhost' not in self.args:
          if len(self._fbands) < 2:
-            raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
+            raise RuntimeError("Error:  to solve for EBVhost, you need to fit more than one filter")
 
       self.calibration = self.args.get('calibration',0)
       self.gen = 2
@@ -750,7 +752,7 @@ class EBV_model2(model):
       filter [band].  The calibration paramter allows you to choose which
       fit (1-6) in Folatelli et al. (2009), table 9'''
       if band not in self.a[calibration]:
-         raise ValueError, "Error, filter %s cannot be fit with this calibration"
+         raise ValueError("Error, filter %s cannot be fit with this calibration")
       if self.stype in ['st']:
          delta = self.st - 1.0
       else:
@@ -761,7 +763,7 @@ class EBV_model2(model):
    def systematics(self, calibration=1, include_Ho=False):
       '''Returns the systematic errors in the paramters as a dictionary.  
       If no estimate is available, return None for that paramter.'''
-      systs = dict.fromkeys(self.parameters.keys())
+      systs = dict.fromkeys(list(self.parameters.keys()))
       # DM contains systematics for Ho, plus average of calibration
       #  uncertainties
       syst_DM = []
@@ -816,7 +818,7 @@ class max_model(model):
    def __init__(self, parent, stype='dm15'):
 
       if stype not in ['dm15','st']:
-         raise ValueError, "This model only supports dm15 and st as shape parameters"
+         raise ValueError("This model only supports dm15 and st as shape parameters")
       self.stype = stype
       model.__init__(self, parent)
       self.rbs = ['u','B','V','g','r','i','Y','J','H','K','UVM2','UVW2','UVW1']
@@ -892,20 +894,20 @@ class max_model(model):
 
 
    def __call__(self, band, t, extrap=False):
-      if debug:  print ">>>   Now in max_model"
-      if debug:  print ">>>> setting shape parameter to ", self.parameters[self.stype]
+      if debug:  print(">>>   Now in max_model")
+      if debug:  print(">>>> setting shape parameter to ", self.parameters[self.stype])
       self.template.mktemplate(self.parameters[self.stype])
       t = t - self.Tmax
       rband = self.parent.restbands[band]
 
       # Now build the lc model
       if debug:  
-         print ">>>> calling template.eval with"
-         print "rband = %s, t =" % (rband), t
+         print(">>>> calling template.eval with")
+         print("rband = %s, t =" % (rband), t)
 
       temp,etemp,mask = self.template.eval(rband, t, self.parent.z, 
             gen=self.gen, extrap=extrap)
-      if debug:  print ">>>>  done."
+      if debug:  print(">>>>  done.")
       K,mask2 = self.kcorr(band, t)
       temp = temp + K
 
@@ -929,8 +931,8 @@ class max_model(model):
          x0 = brent(lambda x: self.template.eval(rband, x, gen=self.gen)[0], brack=(0.,5.))
          Tmaxs.append(x0 + self.Tmax)
          if rband+"max" not in self.parameters:
-            raise ValueError, "Trying to find max of %s, but haven't solved for %s" %\
-                  (band, rband+"max")
+            raise ValueError("Trying to find max of %s, but haven't solved for %s" %\
+                  (band, rband+"max"))
          mmax = self.parameters[rband+'max']
          if not restframe and band in self.parent.ks_tck:
             # add the K-correction
@@ -999,7 +1001,7 @@ class max_model(model):
       merrs = {'umax':0.03, 'gmax':0.014, 'rmax':0.022, 'imax':0.022, 
                'Bmax':0.012, 'Vmax':0.019, 'Ymax':0.050, 'Jmax':0.044, 
                'Hmax':0.055}
-      systs = dict.fromkeys(self.parameters.keys())
+      systs = dict.fromkeys(list(self.parameters.keys()))
       for key in systs:
          if key in merrs:
             systs[key] = merrs[key]
@@ -1014,7 +1016,7 @@ class max_model2(model):
    def __init__(self, parent, stype = 'dm15'):
 
       if stype not in ['dm15','st']:
-         raise ValueError, "This model only supports dm15 and st as shape parameters"
+         raise ValueError("This model only supports dm15 and st as shape parameters")
       self.stype = stype
       model.__init__(self, parent)
       self.rbs = ['u','B','V','g','r','i','Y','J','H','K',
@@ -1119,8 +1121,8 @@ class max_model2(model):
          # find where the template truly peaks:
          x0 = brent(lambda x: self.template.eval(rband, x, gen=self.gen)[0], brack=(0.,5.))
          if rband+"max" not in self.parameters:
-            raise ValueError, "Trying to find max of %s, but haven't solved for %s" %\
-                  (band, rband+"max")
+            raise ValueError("Trying to find max of %s, but haven't solved for %s" %\
+                  (band, rband+"max"))
          Tmaxs.append(x0 + self.parameters['T'+rband+'max'])
          mmax = self.parameters[rband+'max']
          if not restframe and band in self.parent.ks_tck:
@@ -1153,7 +1155,7 @@ class max_model2(model):
       if attr in self.__dict__:
          return self.__dict__[attr]
       else:
-         raise AttributeError, "Attribute %s not found" % (attr)
+         raise AttributeError("Attribute %s not found" % (attr))
 
    def systematics(self, calibration=1, include_Ho=False):
       '''Returns the systematic errors in the paramters as a dictionary.  
@@ -1161,7 +1163,7 @@ class max_model2(model):
       merrs = {'umax':0.03, 'gmax':0.014, 'rmax':0.022, 'imax':0.022, 
                'Bmax':0.012, 'Vmax':0.019, 'Ymax':0.050, 'Jmax':0.044, 
                'Hmax':0.055}
-      systs = dict.fromkeys(self.parameters.keys())
+      systs = dict.fromkeys(list(self.parameters.keys()))
       for key in systs:
          if key in merrs:
             systs[key] = merrs[key]
@@ -1242,7 +1244,7 @@ class Rv_model(model):
       # check to see if we have more than one filter when solving for EBV
       if 'EBVhost' not in self.args:
          if len(self._fbands) < 2:
-            raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
+            raise RuntimeError("Error:  to solve for EBVhost, you need to fit more than one filter")
 
       self.calibration = self.args.get('calibration',0)
       self.gen = self.args.get('gen',2)
@@ -1351,7 +1353,7 @@ class Rv_model(model):
    def systematics(self, calibration=1, include_Ho=False):
       '''Returns the systematic errors in the paramters as a dictionary.  
       If no estimate is available, return None for that paramter.'''
-      systs = dict.fromkeys(self.parameters.keys())
+      systs = dict.fromkeys(list(self.parameters.keys()))
       # DM contains systematics for Ho, plus average of calibration
       #  uncertainties
       return(systs)
@@ -1376,7 +1378,7 @@ class color_model(model):
    def __init__(self, parent, stype='st', normfilter='B'):
 
       if stype == 'dm15':
-         raise AttributeError, "This model only supports st parameter"
+         raise AttributeError("This model only supports st parameter")
       model.__init__(self, parent)
       self.rbs = ['u','B','V','g','r','i','Y','J','H']
       self.normfilter = normfilter
@@ -1400,29 +1402,32 @@ class color_model(model):
       # check to see if we have more than one filter when solving for EBV
       if 'EBVhost' not in self.args:
          if len(self._fbands) < 2:
-            raise RuntimeError, "Error:  to solve for EBVhost, you need to fit more than one filter"
+            raise RuntimeError("Error:  to solve for EBVhost, you need to fit more than one filter")
 
       # Make sure that at least one filter has restband for norm_filter
       nf = []
       for f in self.parent.data:
          if self.parent.restbands[f] == self.normfilter: nf.append(f)
       if len(nf) == 0:
-         raise RuntimeError, "Error, to use color-model, you must have a B rest-frame observation"
+         raise RuntimeError("Error, to use color-model, you must have a B rest-frame observation")
       self.nf = nf
 
       cfile = os.path.join(base,"color_priors.pickle")
       if not os.path.isfile(cfile):
-         raise ValueError, "Calibration file not found: %s" % \
-               (self.calibration+".pickle")
+         raise ValueError("Calibration file not found: %s" % \
+               (self.calibration+".pickle"))
       self.redlaw = self.args.get('redlaw', 'ccm')
       self.rvprior = self.args.get('rvprior', 'uniform')
-      f = open(cfile)
-      cdata = pickle.load(f)
+      f = open(cfile, 'rb')
+      if six.PY3:
+         cdata = pickle.load(f, encoding='iso-8859-1')
+      else:
+         cdata = pickle.load(f)
       f.close()
       if self.redlaw not in cdata or \
             self.rvprior not in cdata[self.redlaw]:
-         raise ValueError, "Intrinsic colors for %s prior and %s reddening law not found" %\
-               (self.rvprior,self.redlaw)
+         raise ValueError("Intrinsic colors for %s prior and %s reddening law not found" %\
+               (self.rvprior,self.redlaw))
 
       d = cdata[self.redlaw][self.rvprior]
       self.colors = d['colors']
@@ -1571,7 +1576,7 @@ class color_model(model):
    def systematics(self, calibration=1, include_Ho=False):
       '''Returns the systematic errors in the paramters as a dictionary.  
       If no estimate is available, return None for that parameter.'''
-      systs = dict.fromkeys(self.parameters.keys())
+      systs = dict.fromkeys(list(self.parameters.keys()))
       systs['EBVhost'] = 0.06
       systs['st'] = 0.03
       systs['Tmax'] = 0.34

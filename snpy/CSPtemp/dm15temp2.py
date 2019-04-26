@@ -38,6 +38,7 @@ information, but making things far faster.  Now, we check to see if the tck
 in a file tck.pickle is available.  If so, then use this instead of calling
 gloes.
 '''
+from __future__ import print_function
 import sys,os,string
 import numpy as num
 import dm15temp2c as dm15tempc
@@ -52,8 +53,8 @@ filter_numbers = {'B':0, 'V':1, 'u_s':2, 'g_s':3, 'r_s':4, 'i_s':5,
                   'Y':12,'J':13,'H':14}
 
 if not os.path.isfile(os.path.join(base, 'templates.dat')):
-   raise IOError, "templates.dat file not found where expected:  %s" % \
-         (os.path.join(base, 'templates.dat'))
+   raise IOError("templates.dat file not found where expected:  %s" % \
+         (os.path.join(base, 'templates.dat')))
 dm15tempc.load_data(base)
 use_gloes = 0
 use_gp = 1
@@ -136,8 +137,8 @@ class template:
          evt = times/(1+z)
          scalar = 0
       if band not in filter_numbers and band != 'K':
-         raise AttributeError, "Sorry, band %s is not supported by dm15temp2" % \
-               band
+         raise AttributeError("Sorry, band %s is not supported by dm15temp2" % \
+               band)
 
       # This provides a template for JHK photometry based on Kevin Krisciunas' polynomial
       s = dm152s(self.dm15)
@@ -255,20 +256,20 @@ class template:
 if __name__ == "__main__":
    use_gloes = 1
    if len(sys.argv) < 3:
-      print "Usage:  dm15temp2 dm15 filter"
-      print "        dm15 = decline rate"
-      print "        filter = one of u,g,r,i,Bs,Vs, u_s,g_s,r_s,i_s,B,V"
+      print("Usage:  dm15temp2 dm15 filter")
+      print("        dm15 = decline rate")
+      print("        filter = one of u,g,r,i,Bs,Vs, u_s,g_s,r_s,i_s,B,V")
       sys.exit(1)
 
    dm15 = float(sys.argv[1])
    filter = sys.argv[2]
    t = template()
    t.mktemplate(dm15, generate=0, dm15_colors='int')
-   print "# This is dm15temp2 v. 0.1, using GLoEs with built-in weights"
-   print "# Constructed light curve template for dm15=%.3f mag, filter=%s" % (dm15,filter)
-   print "# Columns:  \n#  1    t(Bmax) \n#  2-3  M-M(max)   sigma[M-M(max)]"
+   print("# This is dm15temp2 v. 0.1, using GLoEs with built-in weights")
+   print("# Constructed light curve template for dm15=%.3f mag, filter=%s" % (dm15,filter))
+   print("# Columns:  \n#  1    t(Bmax) \n#  2-3  M-M(max)   sigma[M-M(max)]")
    ts = num.arange(-10, 70, 1.0)
    m,em,mask = t.eval(filter, ts)
    for i in range(len(m)):
       if mask[i] == 1:
-         print ts[i], m[i], em[i]
+         print(ts[i], m[i], em[i])

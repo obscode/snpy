@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 from snpy import dm15temp
 import os,sys
 from numpy import *
@@ -58,20 +59,20 @@ for band in bands:  smooths[band] = 10
 for band in bands:
    z = ravel(array(z_mat[band]))
    ez = ravel(array(ez_mat[band]))
-   print "fitting band ",band
-   print inter.__file__
+   print("fitting band ",band)
+   print(inter.__file__)
    try:
-      print x.shape
-      print y.shape
-      print z.shape
+      print(x.shape)
+      print(y.shape)
+      print(z.shape)
       #tck[band] = inter.bisplrep(x, y, z, w=1.0/ez, kx=1, ky=1, s=0.0*len(x))
       tck[band] = inter.SmoothBivariateSpline(x, y, z, w=1.0/ez, s=smooths[band]*len(x))
    except:
-      print x,y,z,ez,smooths[band]*len(x)
-      print type(x), x.shape
-      print type(y), y.shape
-      print type(z), z.shape
-      print type(ez), ez.shape
+      print(x,y,z,ez,smooths[band]*len(x))
+      print(type(x), x.shape)
+      print(type(y), y.shape)
+      print(type(z), z.shape)
+      print(type(ez), ez.shape)
       sys.exit(1)
    tck["e_"+band] = inter.SmoothBivariateSpline(x, y, ez, kx=1, ky=1, s=0.0*len(x))
 f = open(tck_file, 'w')

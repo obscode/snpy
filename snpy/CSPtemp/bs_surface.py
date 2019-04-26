@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 from snpy import CSPtemp
 import os,sys
 from numpy import *
@@ -27,7 +28,7 @@ SNe = {}
 for band in bands:
    data0[band],list0[band] = CSPtemp.dm15tempc.get_data(band)
    list0[band] = array(list0[band])
-   SNe[band] = {}.fromkeys(list0[band]).keys()
+   SNe[band] = list({}.fromkeys(list0[band]).keys())
    SNe[band].sort()
 
 tck = {}.fromkeys(bands)
@@ -36,7 +37,7 @@ for b in bands:
    tck['e_'+b] = []
 
 for j in range(50):
-   print "iteration ", j
+   print("iteration ", j)
    dm15_mat = []
    t_mat = []
    z_mat = {}
@@ -73,8 +74,8 @@ for j in range(50):
       smooths[band] = 0.1
       z = ravel(array(z_mat[band]))
       ez = ravel(array(ez_mat[band]))
-      print "fitting band ",band
-      print inter.__file__
+      print("fitting band ",band)
+      print(inter.__file__)
       try:
          tck[band].append(inter.bisplrep(x, y, z, w=1.0/ez, s=smooths[band]*len(x)))
       except:

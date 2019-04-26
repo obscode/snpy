@@ -2,7 +2,12 @@
 '''A module to make WEB querries to the IRSA Schlegel dust map calulator
 and extract E(B-V)'''
 
-import urllib
+from __future__ import print_function
+import six
+if six.PY2:
+   import urllib
+else:
+   import urllib.request as urllib
 import re
 from xml.dom.minidom import parse
 
@@ -15,14 +20,14 @@ def get_dust_RADEC(ra, dec, calibration="SF11"):
    with dust_getval module, return a list (dust_getval results an array).
    You can specify calibration of "SF11" or "SFD98"'''
    if debug:
-      print "get_dust_RADEC:  Querying URL:  ",BASE_URL % (ra,dec)
+      print("get_dust_RADEC:  Querying URL:  ",BASE_URL % (ra,dec))
    try:
       u = urllib.urlopen(BASE_URL % (ra,dec))
    except:
-      print "Failed to connect to IRSA.  E(B-V) query failed"
+      print("Failed to connect to IRSA.  E(B-V) query failed")
       return([None],[1])
    if not u:
-      print "Failed to connect to IRSA.  E(B-V) query failed"
+      print("Failed to connect to IRSA.  E(B-V) query failed")
       return([None],[1])
    dom = parse(u)
    u.close()
@@ -33,8 +38,8 @@ def get_dust_RADEC(ra, dec, calibration="SF11"):
       EBVstr = dom.getElementsByTagName(tag[calibration])[0].childNodes[0].data
       result = float(EBVstr.strip().split()[0])
    except:
-      print "E(B-V) query to IRSA failed.  Check RA/DEC and make" +\
-            " sure you have internet access."
+      print("E(B-V) query to IRSA failed.  Check RA/DEC and make" +\
+            " sure you have internet access.")
       return ([None],[1])
    return [result],[1]
 
@@ -42,14 +47,14 @@ def get_dust_sigma_RADEC(ra, dec, calibration="SF11"):
    '''Query IRSA with given ra and dec to get the error in E(B-V). 
    You can specify calibration of "SF11" or "SFD98"'''
    if debug:
-      print "get_dust_RADEC:  Querying URL:  ",BASE_URL % (ra,dec)
+      print("get_dust_RADEC:  Querying URL:  ",BASE_URL % (ra,dec))
    try:
       u = urllib.urlopen(BASE_URL % (ra,dec))
    except:
-      print "Failed to connect to IRSA.  E(B-V) query failed"
+      print("Failed to connect to IRSA.  E(B-V) query failed")
       return([None],[1])
    if not u:
-      print "Failed to connect to IRSA.  E(B-V) query failed"
+      print("Failed to connect to IRSA.  E(B-V) query failed")
       return([None],[1])
    dom = parse(u)
    u.close()
@@ -60,7 +65,7 @@ def get_dust_sigma_RADEC(ra, dec, calibration="SF11"):
       EBVstr = dom.getElementsByTagName(tag[calibration])[0].childNodes[0].data
       result = float(EBVstr.strip().split()[0])
    except:
-      print "E(B-V) query to IRSA failed.  Check RA/DEC and make" +\
-            " sure you have internet access."
+      print("E(B-V) query to IRSA failed.  Check RA/DEC and make" +\
+            " sure you have internet access.")
       return None
    return result

@@ -2,11 +2,19 @@
 Module for SNooPy to download/parse data from the Open Supernova Catalog.
 '''
 
+from __future__ import print_function
+import six
 import json
-import urllib
+if six.PY3:
+   import urllib.request as urllib
+else:
+   import urllib
 from astropy.coordinates import Angle
 from snpy import sn,lc,fset
 from numpy import array,log10
+import astropy.units as u
+from snpy.filters import spectrum
+from snpy.specobj import timespec
 
 def CfAbands(filt, MJD):
    if MJD < 51913.0:
@@ -34,9 +42,6 @@ pubs = {
    '2012ApJS..200...12H':  # Hicken et al. (2012) CfA4 Natural Photometry
       CfAbands
       }
-
-
-
 
 # telescope,band --> SNooPy filter database
 # We do this by matching (band,system,telescope,observatory) info from the 
@@ -112,6 +117,10 @@ def CSP_systems(filt, MJD):
             zeropoint="{:.4f}".format(fset[filt+'d'].zp)))
    return({})
 
+MJD_offsets = {
+      'MJD':0,
+      'JD':-2400000.5
+      }
 
 
 warning_message = {
@@ -124,23 +133,23 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
    URL.'''
 
    try:
-      u = urllib.urlopen(url)
+      uf = urllib.urlopen(url)
    except:
       if full_data:
          return None, "Invalid URL", None
       return None,"Invalid URL"
    try:
-      d = json.load(u)
+      d = json.load(uf)
    except:
-      u.close()
+      uf.close()
       if full_data:
          return None,"Failed to decode JSON",None
       return None,"Failed to decode JSON"
    else:
-      u.close()
+      uf.close()
    
    # We now have the JSON data. Get the info we need
-   d = d.values()[0]
+   d = list(d.values())[0]
    name = d['name']
    if 'redshift' not in d or 'ra' not in d or 'dec' not in d:
       if full_data:
@@ -182,7 +191,7 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
             this_source = all_sources[s]
             break
       if this_source is None:
-         print "Warning:  no primary source, skipping"
+         print("Warning:  no primary source, skipping")
          continue
 
       bibcode = this_source[0]
@@ -194,22 +203,22 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
          b = ftrans_standard[t]
          if t not in known_unknowns:
             known_unknowns.append(t)
-            print "Warning:  no telescope/system info, assuming ", \
-                  standard_warnings[b[0]], b[0]
+            print("Warning:  no telescope/system info, assuming ", \
+                  standard_warnings[b[0]], b[0])
       elif (t[0],"","","") in ftrans_standard:
          b = ftrans_standard[(t[0],"","","")]
          if t not in known_unknowns:
             known_unknowns.append(t)
-            print "Warning: telescope/system defined by %s/%s/%s not "\
+            print("Warning: telescope/system defined by %s/%s/%s not "\
                   "recognized, assuming %s %s" %\
-                  (t[1],t[2],t[3],standard_warnings[t[0]],t[0])
+                  (t[1],t[2],t[3],standard_warnings[t[0]],t[0]))
       else:
          # No idea
          if t not in unknown_unknowns:
             unknown_unknowns.append(t)
-            print "Warning: telescope/system defined by %s/%s/%s not "\
+            print("Warning: telescope/system defined by %s/%s/%s not "\
                   "recognized and can't figure out the filter %s" % \
-                  (t[1],t[2],t[3],t[0])
+                  (t[1],t[2],t[3],t[0]))
          unknown_unknowns.append(t)
          continue
       if b not in MJD:  
@@ -263,13 +272,88 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
 
    if len(unknown_unknowns) > 0:
       unknown_unknowns = list(set(unknown_unknowns))
-      print "Warning:  the following photometry was not recognized by SNooPy"
-      print "and was not imported:"
+      print("Warning:  the following photometry was not recognized by SNooPy")
+      print("and was not imported:")
       for item in unknown_unknowns:
-         print item
+         print(item)
    if warnings:
       for warning in warnings:
-         print warning_message[warning]
+         print(warning_message[warning])
+
+   # lastly, the spectroscopy
+   if d.get('spectra',None) is not None:
+      spectra = []
+      dates = []
+      sids = []
+      for s in d['spectra']:
+         wu = s.get('u_wavelengths', 'Agnstrom')
+         fu = s.get('u_fluxes', 'Uncalibrated')
+         
+         try:
+            wu = u.Unit(wu)
+         except ValueError:
+            print("Warning:  unrecognized unit for wavelength: {}".format(wu))
+            print("  assuming Angstroms")
+            wu = u.Angstrom
+ 
+         if fu == 'Uncalibrated':
+            fluxed = False
+            fu = u.dimensionless_unscaled
+         else:
+            try:
+               fu = u.Unit(fu)
+               fluxed = True
+            except ValueError:
+               print("Warning:  unrecognized unit for flux: {}".format(fu))
+               fluxed = False
+               fu = u.dimensionless_unscaled
+ 
+         tu = s.get('u_time', 'MJD')
+         t = float(s['time'])
+         if tu not in MJD_offsets:
+            print("Warning:  unrecognized time unit: {}".format(tu))
+            if len(s['time'].split('.')[0]) == 7 and s['time'][0] == '2':
+               print("   assuming JD")
+               t = t - 2400000.5
+            elif len(s['time'].split('.')[0]) == 5 and s['time'][0] == '5':
+               print("   assuming MJD")
+            else:
+               print("   skipping this spectrum.")
+               continue
+ 
+         w = array([float(item[0]) for item in s['data']])*wu
+         f = array([float(item[1]) for item in s['data']])*fu
+         dr = s.get('deredshifted', False)
+         if dr:
+            w = w*(1+zhel)
+ 
+         # At this point, we should be able to convert to the units we want
+         w = w.to('Angstrom').value
+         if fluxed: f = f.to('erg / (s cm2 Angstrom)')
+         f = f.value
+ 
+         # source reference
+         srcs = s.get('source','').split(',')
+         this_source = None
+         for src in srcs:
+            if src in all_sources:
+               this_source = all_sources[src]
+               break
+         if this_source is None:
+            print("Warning: spectrum has no source")
+ 
+         if this_source not in used_sources:
+            used_sources.append(this_source)
+         # At this point we're actually using the spectroscopy, so find source
+         sid = used_sources.index(this_source)
+         sids.append(sid)
+         
+         spectra.append(spectrum(wave=w, flux=f, fluxed=fluxed, 
+            name="Spectrum MJD={:.1f}".format(t)))
+         dates.append(t)
+      snobj.sdata = timespec(snobj, dates, spectra)
+      snobj.sdata.sids = sids
+
    if full_data:
       return(snobj, 'Success', d)
    return(snobj,'Success')

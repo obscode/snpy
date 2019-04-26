@@ -414,7 +414,7 @@ def unred(wave, flux, ebv, R_V = 3.1, z=0, redlaw='ccm', strict_ccm=0):
       a = R_lambda/R_V
       b = R_lambda*0
    else:
-      raise ValueError, "Unkwown reddening law %s" % redlaw
+      raise ValueError("Unkwown reddening law %s" % redlaw)
    return(unred_flux, a , b)
 
 

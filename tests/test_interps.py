@@ -24,7 +24,7 @@ for func in funcs:
    if func in allresults:
       results[func] = allresults[func]
 
-@pytest.mark.parametrize("func,Tmax", results.items())
+@pytest.mark.parametrize("func,Tmax", list(results.items()))
 def test_interp(snobj, func, Tmax):
    snobj.B.template(method=func)
    assert round(Tmax,3) == round(snobj.B.Tmax,3)

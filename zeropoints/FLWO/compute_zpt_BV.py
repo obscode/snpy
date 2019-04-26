@@ -19,11 +19,11 @@ B_vega2 = V_vega + 0.8734*(Bvega - Vvega)
 
 vega_mags = [B_vega1, B_vega2, V_vega, V_vega]
 
-print "Using the following Natural (shifted) magnitudes for Vega:"
-print "Bk = ",B_vega1
-print "Bk2 = ",B_vega2
-print "Vk = ",V_vega
-print "Vk2 = ",V_vega
+print("Using the following Natural (shifted) magnitudes for Vega:")
+print("Bk = ",B_vega1)
+print("Bk2 = ",B_vega2)
+print("Vk = ",V_vega)
+print("Vk2 = ",V_vega)
 
 for i in range(len(fs)):
-   print fs[i],fset[fs[i]].compute_zpt(vegaB, vega_mags[i])
+   print(fs[i],fset[fs[i]].compute_zpt(vegaB, vega_mags[i]))

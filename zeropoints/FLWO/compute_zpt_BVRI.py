@@ -26,9 +26,9 @@ vega_mags['R4sh'] = vega_mags['V4sh'] - 1.0855*(Vvega - Rvega)
 vega_mags['I4sh'] = vega_mags['V4sh'] - 1.0166*(Vvega - Ivega)
 
 
-print "Using the following Natural magnitudes for Vega:"
+print("Using the following Natural magnitudes for Vega:")
 for i,f in enumerate(fs):
-   print "   ",f,vega_mags[f]
+   print("   ",f,vega_mags[f])
 
 for i,f in enumerate(fs):
-   print f,fset[f].compute_zpt(vegaB, vega_mags[f])
+   print(f,fset[f].compute_zpt(vegaB, vega_mags[f]))

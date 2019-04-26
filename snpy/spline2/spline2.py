@@ -28,7 +28,7 @@ For more details, see:
     vol 12 no. 4 July 1998
  *  http://structureandchange.3me.tudelft.nl/
 '''
-import spline2c
+from . import spline2c
 import numpy as num
 
 acffuncs = ['exp','gauss','linear','sinc']
@@ -97,7 +97,7 @@ def spline2(x, y, w=None, sigma=None, rsigma=None, xrange=None, degree=3,
    else:
       win = x*0.0 + 1.0    # assume no weight info.
    if not (len(xin) == len(yin) == len(win)):
-      raise IndexError, "Arrays x,y, and w must have same length"
+      raise IndexError("Arrays x,y, and w must have same length")
 
    rel=0
    fixed_sigma=0
@@ -204,7 +204,7 @@ def eval_extrema(tck):
    k = tck[2]
    
    if k <= 2:
-      raise ValueError, "Spline order must be at least 2 for finding extrema"
+      raise ValueError("Spline order must be at least 2 for finding extrema")
    
    result = spline2c.eval_extrema(k, l, t, c)
    return(result)
@@ -229,7 +229,7 @@ def eval_inflect(tck):
    l = len(t) - 1
    k = tck[2]
    if k <= 3:
-      raise ValueError, "Spline order must be at least 3 for finding inflections"
+      raise ValueError("Spline order must be at least 3 for finding inflections")
 
    result = spline2c.eval_inflect(k,l,t,c)
    return(result)
@@ -251,7 +251,7 @@ def eval_integ(x0, x1, tck):
    l = len(t) - 1
    k = tck[2]
    if x0 < t[0] or x1 > t[1]:
-      raise ValueError, "integration limits beyond spline definition"
+      raise ValueError("integration limits beyond spline definition")
 
    result = spline2c.eval_integ(x0, x1, k, l, t, c)
    return(result)

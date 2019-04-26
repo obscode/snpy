@@ -1,7 +1,8 @@
 import pytest
+import os
 import matplotlib
 import numpy as np
-#matplotlib.use("Agg")
+matplotlib.use("Agg")
 try:
    import astropy
    haveastropy = pytest.mark.skipif(False, reason="astropy is installed")
@@ -48,6 +49,10 @@ def test_get_mag_table(snobj):
       expected_keys.append(f)
       expected_keys.append('e_'+f)
    assert set(tab.keys()) == set(expected_keys)
+
+def test_get_mag_table_out(snobj):
+   snobj.get_mag_table(outfile='table.dat')
+   assert os.path.isfile('table.dat')
 
 def test_make_template_spline(snobj):
    from snpy.utils.fit1dcurve import oneDcurve

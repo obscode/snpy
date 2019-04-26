@@ -38,6 +38,7 @@ in a file tck.pickle is available.  If so, then use this instead of calling
 gloes.
 
 '''
+from __future__ import print_function
 import sys,os,string
 import numpy as num
 from scipy.interpolate import CloughTocher2DInterpolator as interp2D
@@ -84,18 +85,18 @@ def load_data(band, param='dm15', gen=1):
       ef = st_eflux
    pfile = file.replace('.fits','.pickle')
    if (band,gen) not in df:
-      if debug:  print "Getting data from ",file
+      if debug:  print("Getting data from ",file)
       if not os.path.isfile(file) and not os.path.isfile(pfile):
-         raise IOError, "Could not find surface data for band %s, gen %d" \
-               % (band,gen)
+         raise IOError("Could not find surface data for band %s, gen %d" \
+               % (band,gen))
       # Look for previously saved pickle that's newer than the original FITS
       # file
       if os.path.isfile(pfile) and \
             os.path.getctime(pfile) > os.path.getctime(file):
-         f = open(pfile)
+         f = open(pfile, 'rb')
          df[(band,gen)] = pickle.load(f)
          f.close()
-         f = open(pfile.replace('mean','std'))
+         f = open(pfile.replace('mean','std'), 'rb')
          ef[(band,gen)] = pickle.load(f)
          f.close()
          return
@@ -123,10 +124,10 @@ def load_data(band, param='dm15', gen=1):
             tx=tx, ty=ty)
       # Try to save it as a pickle, to speed things up later
       try:
-         f = open(pfile, 'w')
+         f = open(pfile, 'wb')
          pickle.dump(df[(band,gen)], f)
          f.close()
-         f = open(pfile.replace('mean','std'), 'w')
+         f = open(pfile.replace('mean','std'), 'wb')
          pickle.dump(ef[(band,gen)], f)
          f.close()
       except:
@@ -135,7 +136,7 @@ def load_data(band, param='dm15', gen=1):
       if debug:
          rms = num.sqrt(num.mean(num.power(bisplev(xs,ys,df[(band,gen)])-fdata.T,2)))
          mad = num.median(num.absolute(bisplev(xs,ys,df[(band,gen)])-fdata.T))
-         print "rms = ",rms, 'mad = ',mad
+         print("rms = ",rms, 'mad = ',mad)
    else:
       return
 
@@ -334,13 +335,13 @@ class dm15_template:
             dmlim = dmmax
          test_vals = self.teval('B', test_t, dmlim) - target
          id = num.nonzero(num.greater(test_vals,0))[0][0]
-         if debug:  print "start=",start,"dm15=",self.dm15,"target = ",target
+         if debug:  print("start=",start,"dm15=",self.dm15,"target = ",target)
          t0 = test_t[id-1]
          t1 = test_t[id]
-         if debug:  print "t0 = ",t0,"t1 = ",t1
+         if debug:  print("t0 = ",t0,"t1 = ",t1)
          root = scipy.optimize.brentq(\
                lambda x:  self.teval('B', x, dmlim) - target, t0, t1)
-         if debug:  print "root = ",root
+         if debug:  print("root = ",root)
          s = 15./root
       else:
          s = 1.0

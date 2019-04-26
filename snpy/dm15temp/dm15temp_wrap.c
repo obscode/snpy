@@ -2,45 +2,9 @@
 
 #include <string.h>
 #include <stdlib.h>
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include "Python.h"
 #include <float.h>
-#ifdef __cplusplus
-}
-#endif
 
-/* Definitions for Windows/Unix exporting */
-#if defined(__WIN32__)
-#   if defined(_MSC_VER)
-#   define SWIGEXPORT(a,b) __declspec(dllexport) a b
-#   else
-#   if defined(__BORLANDC__)
-#       define SWIGEXPORT(a,b) a _export b
-#   else
-#       define SWIGEXPORT(a,b) a b
-#   endif
-#   endif
-#else
-#   define SWIGEXPORT(a,b) a b
-#endif
-
-#ifdef SWIG_GLOBAL
-#ifdef __cplusplus
-#define SWIGSTATIC extern "C"
-#else
-#define SWIGSTATIC
-#endif
-#endif
-
-#ifndef SWIGSTATIC
-#define SWIGSTATIC static
-#endif
-
-#define SWIG_init    initdm15tempc
-#define SWIG_name    "dm15temp"
-/* #include <numpy/oldnumeric.h> */
 #include <numpy/arrayobject.h>
 #include "dm15temp.h"
 
@@ -160,17 +124,32 @@ fail:
 
 }
 
+#if PY_MAJOR_VERSION >= 3
+  #define MOD_ERROR_VAL NULL
+  #define MOD_SUCCESS_VAL(val) val
+  #define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
+  #define MOD_DEF(ob, name, doc, methods) \
+          static struct PyModuleDef moduledef = { \
+            PyModuleDef_HEAD_INIT, name, doc, -1, methods, }; \
+          ob = PyModule_Create(&moduledef);
+#else
+  #define MOD_ERROR_VAL
+  #define MOD_SUCCESS_VAL(val)
+  #define MOD_INIT(name) void init##name(void)
+  #define MOD_DEF(ob, name, doc, methods) \
+          ob = Py_InitModule3(name, methods, doc);
+#endif
+
 static PyMethodDef dm15tempMethods[] = {
     { "dm15temp", _wrap_dm15temp, 1 }, 
     { NULL, NULL }
 };
-#ifdef __cplusplus
-extern "C" 
-#endif
-SWIGEXPORT(void,initdm15tempc)(void) {
-    PyObject *m, *d;
-    m = Py_InitModule("dm15tempc", dm15tempMethods);
-    d = PyModule_GetDict(m);
+
+MOD_INIT(dm15tempc)
+{
+    PyObject *m;
+    MOD_DEF(m, "dm15tempc", "dm15 template from Prieto et al", dm15tempMethods);
 
    import_array();
+   return MOD_SUCCESS_VAL(m);
 }

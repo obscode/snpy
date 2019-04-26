@@ -7,7 +7,12 @@ Yes, let's do the math. It's not hard:  using astropy.coordinates, you can
 get the angular separation easily. We'll leave the NED version here for
 posterity, though.'''
 
-import urllib, re
+import six
+if six.PY3:
+   import urllib.request as urllib
+else:
+   import urllib
+import re
 from astropy.coordinates import SkyCoord
 from math import sin,cos,pi,sqrt
 url_temp = "http://ned.ipac.caltech.edu/cgi-bin/velc?lon=%.6fd&in_csys=Equatorial&lat=%.6fd&in_equinox=J2000.0&vel=%.3f&vfrom=Heliocentric&vto=3K&alon=&a_csys=Equatorial&alat=&a_equinox=J2000.0&avel=0.0"
@@ -71,5 +76,5 @@ def z_cmb_NED(z_hel, ra, dec):
          if res is not None:
             vcmb = float(res.groups()[0])
    if vcmb is None:
-      raise ValueError, "Could not parse output from NED"
+      raise ValueError("Could not parse output from NED")
    return vcmb/3e5

@@ -1,1 +1,1 @@
-from tspline import *
+from .tspline import *

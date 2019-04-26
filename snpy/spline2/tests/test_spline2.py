@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pytest
 import snpy.spline2 as spline2
 import sys
@@ -27,6 +28,6 @@ def test_extrema(spdata):
 
 def test_root(spdata):
    roots = spline2.eval_x(0, tck)
-   print roots
+   print(roots)
    assert len(xe) == 3
 

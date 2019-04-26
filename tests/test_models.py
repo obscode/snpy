@@ -40,7 +40,7 @@ results = {
             'Tmax': 827.565,
             'st': 0.962}}
 
-@pytest.mark.parametrize("model,result", results.items())
+@pytest.mark.parametrize("model,result", list(results.items()))
 def test_model(snobj, model, result):
    if model == 'EBV_model':  
       stype='dm15'

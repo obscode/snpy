@@ -6,6 +6,7 @@ This is needed because the basis functions are hidden from python view in
 the scipy.interpolate implementation. We want the basis functions themselves,
 so we have to make our own.'''
 
+from __future__ import print_function
 import numpy as np
 
 def memo(f):
@@ -50,13 +51,13 @@ def bspline_basis(knots, u, degree, zeroslope=False, gradient=False,
    try:
       knots = np.asarray(knots)
    except:
-      raise ValueError, "knots must be a list type or array"
+      raise ValueError("knots must be a list type or array")
    if len(np.shape(knots)) != 1:
-      raise ValueError, "knots must be a 1d array/list"
+      raise ValueError("knots must be a 1d array/list")
    if knots.shape[0] < degree:
-      raise ValueError, "You must have at least <degree> internal knots"
+      raise ValueError("You must have at least <degree> internal knots")
    if not np.alltrue(np.greater_equal(knots[1:] - knots[:-1],0)):
-      raise ValueError, "knots must be strictly increasing"
+      raise ValueError("knots must be strictly increasing")
    kv = np.concatenate([[knots[0]]*degree,
                          knots,
                          [knots[-1]]*degree])
@@ -87,7 +88,7 @@ def bspline_basis(knots, u, degree, zeroslope=False, gradient=False,
       return term1 + term2
 
    # Compute basis for each point
-   b = np.column_stack([coxDeBoor(k, degree) for k in xrange(len(kv)-degree-1)])
+   b = np.column_stack([coxDeBoor(k, degree) for k in range(len(kv)-degree-1)])
 
    # Now deal with the endpoint
    zid = np.nonzero(np.greater(b[:,-1],0))[0][-1]+1
@@ -148,4 +149,4 @@ if __name__ == "__main__":
    
    b = bspline_basis(len(cv), n, degree)
    points_basis = np.dot(b, cv)  
-   print np.allclose(points_basis, points_scipy)
+   print(np.allclose(points_basis, points_scipy))

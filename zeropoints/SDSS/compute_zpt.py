@@ -27,14 +27,14 @@ sm['u_s'],sm['g_s'],sm['r_s'],sm['i_s'],sm['z_s'] = \
       sloan_mags[stand]['r_40'], sloan_mags[stand]['i_40'],
       sloan_mags[stand]['z_40'])
 
-print "The zero-points for the orignal BD+174708 SED:"
+print("The zero-points for the orignal BD+174708 SED:")
 for f in fs:
    zpt = fset[f].compute_zpt(sloan_standards['bd+174708'], 
          sm[f],zeropad=1)
-   print f,zpt
-print "The zero-points for Mark's modified BD+174708 SED:"
+   print(f,zpt)
+print("The zero-points for Mark's modified BD+174708 SED:")
 for f in fs:
    zpt = fset[f].compute_zpt(sloan_standards['bd+174708adj'], 
          sm[f],zeropad=1)
-   print f,zpt
+   print(f,zpt)
 

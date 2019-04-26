@@ -1506,19 +1506,35 @@ def create_bootstrap_script(extra_text, python_version=''):
     return content.replace('##EXT' 'END##', extra_text)
 
 
-import os,subprocess
+import os,subprocess,string
 def after_install(options,home_dir):
    home_dir = os.path.realpath(home_dir)
+   print "home_dir is",home_dir
    # Test for installed software
    if has_conda():
       # we can use the conda package installer. Sweet! Actually, more than
       # sweet: necessary. Matplotlib and scipy seem to be seriously messed
       # up if you try to install with pip in a conda venv.
+
+      # Conda can now live in two different places: the virtual env or
+      # base.
       conda = join(home_dir, 'bin', 'conda')
+      print "Trying conda =",conda
       if not os.path.isfile(conda):
-         sys.stderr.write('You seem to be using anaconda, but conda is not\n')
-         sys.stderr.write('where I expect it. Please fix your PATH.')
-         sys.exit(1)
+         paths = home_dir.split(os.path.sep)
+         if 'envs' in paths:
+            id = paths.index('envs')
+            paths = string.join(paths[0:id], os.path.sep)
+            conda = join(paths, 'bin', 'conda')
+            print "Trying conda =",conda
+            if not os.path.isfile(conda):
+               sys.stderr.write('You seem to be using anaconda, but conda is not\n')
+               sys.stderr.write('where I expect it. Please fix your PATH.')
+               sys.exit(1)
+         else:
+            sys.stderr.write('You seem to be using anaconda, but conda is not\n')
+            sys.stderr.write('where I expect it. Please fix your PATH.')
+            sys.exit(1)
       print "Using conda:", conda
    else:
       conda = None
@@ -1537,7 +1553,7 @@ def after_install(options,home_dir):
    print 'Using pip:', pip
    # First, the absolutely necessary stuff
    print "Now going to install the manditory software..."
-   man_packages = ['scipy','pymysql','astropy','matplotlib',
+   man_packages = ['scipy','pymysql==0.7.9','astropy','matplotlib',
                    'ipython','gnureadline']
    for package in man_packages:
       sys.stdout.write("   Installing %s..." % package)

@@ -12,9 +12,9 @@ keywords:  [gen], which corresponds to the generation of the lightcurve,
 and [param] which can refer to 'dm15' or 'st'   
 
 Got rid of the MMax function, as this is now part of the model class.'''
-import CSPtemp as dm15temp2
-import SwiftTemp
-import dm15temp
+from . import CSPtemp as dm15temp2
+from . import SwiftTemp
+from . import dm15temp
 
 template_bands = dm15temp2.template_bands + \
                  dm15temp.template_bands +\
@@ -50,7 +50,7 @@ class template:
          return self.Ct.t
       elif name in self.__dict__:
          return self.__dict__[name]
-      raise AttributeError, "Error:  attribute %s not defined" % (name)
+      raise AttributeError("Error:  attribute %s not defined" % (name))
 
    def __setstate__(self, state):
       if 'St' not in state:
@@ -75,7 +75,7 @@ class template:
       elif band in ['UVW1','UVW2','UVM2']:
          return self.St.domain(band)
       else:
-         raise AttributeError, "Sorry, band %s not supported" % band
+         raise AttributeError("Sorry, band %s not supported" % band)
 
 
    def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
@@ -88,7 +88,7 @@ class template:
       elif band in ['UVM2','UVW1','UVW2']:
          return(self.St.eval(band, times, z, mag, sextrap, gen, toff))
       else:
-         raise AttributeError,"Sorry, band %s is not supported" % band
+         raise AttributeError("Sorry, band %s is not supported" % band)
 
 class stemplate:
 
@@ -113,7 +113,7 @@ class stemplate:
          return self.Ct.t
       elif name in self.__dict__:
          return self.__dict__[name]
-      raise AttributeError, "Error:  attribute %s not defined" % (name)
+      raise AttributeError("Error:  attribute %s not defined" % (name))
 
 
    def mktemplate(self, st, dm15_int=None, dm15_colors='int', generate=0):
@@ -128,7 +128,7 @@ class stemplate:
       elif band in ['UVW1','UVW2','UVM2']:
          return self.St.domain(band)
       else:
-         raise AttributeError, "Sorry, band %s not supported" % band
+         raise AttributeError("Sorry, band %s not supported" % band)
 
    def eval(self, band, times, z=0, mag=1, sextrap=1, gen=1, toff=True,
          extrap=False):
@@ -138,7 +138,7 @@ class stemplate:
       elif band in ['UVW1','UVW2','UVM2']:
          return(self.St.eval(band, times, z, mag, sextrap, gen, toff))
       else:
-         raise AttributeError,"Sorry, band %s is not supported" % band
+         raise AttributeError("Sorry, band %s is not supported" % band)
 
    def __setstate__(self, state):
       if 'St' not in state:

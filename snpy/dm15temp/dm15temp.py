@@ -7,6 +7,8 @@ August 14, 2007:  added a hack to produce NIR stretch templates valid on
 [-12,10].
 Feb. 2014:  The method used up to now was really inefficient. Now we do what
              what we do with the other templates:  spline the surface.'''
+from __future__ import print_function
+import six
 import sys,os,string
 import numpy as num
 import scipy
@@ -48,8 +50,11 @@ class template:
       self.K = None
       self.eK = None
 
-      f = open(os.path.join(dm15_path, "tck.pickle"))
-      self.tck = pickle.load(f)
+      f = open(os.path.join(dm15_path, "tck.pickle"), 'rb')
+      if six.PY3:
+         self.tck = pickle.load(f, encoding='iso-8859-1')
+      else:
+         self.tck = pickle.load(f)
       f.close()
 
       self.shiftV = 0
@@ -127,8 +132,8 @@ class template:
          evt = times/(1+z)
          scalar = 0
       if band not in self.__dict__ and band not in ['J','H','K']:
-         raise AttributeError, "Sorry, band %s is not supported by dm15temp" % \
-               band
+         raise AttributeError("Sorry, band %s is not supported by dm15temp" % \
+               band)
       s = dm152s(self.dm15)
       if band == 'J':
          return(0.080 + evt/s*0.05104699 + 0.007064257*(evt/s)**2 - 0.000257906*(evt/s)**3,
@@ -175,12 +180,12 @@ if __name__ == "__main__":
    dm15 = float(sys.argv[1])
    t = template()
    t.mktemplate(dm15)
-   print "# Constructed light curve template for dm15=%.3f mag" % (dm15)
-   print "# Columns: \n#  1    t(Bmax) \n#  2-3  B-B(max)   sigma[B-B(max)]^2"
-   print "#  4-5  V-V(max)   sigma[V-V(max)]^2 \n#  6-7  R-R(max)   sigma[R-R(max)]^2 \n"
-   print "#  8-9  I-I(max)   sigma[I-I(max)]^2 \n"
+   print("# Constructed light curve template for dm15=%.3f mag" % (dm15))
+   print("# Columns: \n#  1    t(Bmax) \n#  2-3  B-B(max)   sigma[B-B(max)]^2")
+   print("#  4-5  V-V(max)   sigma[V-V(max)]^2 \n#  6-7  R-R(max)   sigma[R-R(max)]^2 \n")
+   print("#  8-9  I-I(max)   sigma[I-I(max)]^2 \n")
    
    sys.stderr.write('%f %f %f\n' % (t.shiftV,t.shiftR,t.shiftI))
    for i in range(len(t.B)):
-     print form % (t.t[i],t.B[i],t.eB[i],t.V[i],t.eV[i],t.R[i], t.eR[i],
-           t.I[i],t.eI[i])
+     print(form % (t.t[i],t.B[i],t.eB[i],t.V[i],t.eV[i],t.R[i], t.eR[i],
+           t.I[i],t.eI[i]))

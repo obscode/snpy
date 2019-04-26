@@ -2,30 +2,8 @@
 
 #include <string.h>
 #include <stdlib.h>
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include "Python.h"
-#ifdef __cplusplus
-}
-#endif
 
-/* Definitions for Windows/Unix exporting */
-#if defined(__WIN32__)
-#   if defined(_MSC_VER)
-#   define SWIGEXPORT(a,b) __declspec(dllexport) a b
-#   else
-#   if defined(__BORLANDC__)
-#       define SWIGEXPORT(a,b) a _export b
-#   else
-#       define SWIGEXPORT(a,b) a b
-#   endif
-#   endif
-#else
-#   define SWIGEXPORT(a,b) a b
-#endif
-
-/* #include <numpy/oldnumeric.h> */
 #include <numpy/arrayobject.h>
 #include "spline2.h"
 
@@ -348,6 +326,22 @@ static PyObject *_wrap_eval_x(PyObject *self, PyObject *args) {
     return(ret);
 }
 
+#if PY_MAJOR_VERSION >= 3
+  #define MOD_ERROR_VAL NULL
+  #define MOD_SUCCESS_VAL(val) val
+  #define MOD_INIT(name) PyMODINIT_FUNC PyInit_##name(void)
+  #define MOD_DEF(ob, name, doc, methods) \
+         static struct PyModuleDef moduledef = {\
+             PyModuleDef_HEAD_INIT, name, doc, -1, methods, };\
+         ob = PyModule_Create(&moduledef);
+#else
+  #define MOD_ERROR_VAL
+  #define MOD_SUCCESS_VAL(val)
+  #define MOD_INIT(name) void init##name(void)
+  #define MOD_DEF(ob, name, doc, methods) \
+         ob = Py_InitModule3(name, methods, doc);
+#endif
+
 static PyMethodDef spline2cMethods[] = {
     { "spline2", _wrap_spline2, 1 },
     { "evalsp", _wrap_evalsp, 1 },
@@ -357,13 +351,14 @@ static PyMethodDef spline2cMethods[] = {
     { "eval_x", _wrap_eval_x, 1 },
     { NULL, NULL }
 };
-#ifdef __cplusplus
-extern "C" 
-#endif
-SWIGEXPORT(void,initspline2c)(void) {
-    PyObject *m, *d;
-    m = Py_InitModule("spline2c", spline2cMethods);
-    d = PyModule_GetDict(m);
+
+MOD_INIT(spline2c)
+{
+    PyObject *m;
+
+    MOD_DEF(m, "spline2c", "Hyperspline module.", spline2cMethods)
+    if (m == NULL) return MOD_ERROR_VAL;
 
    import_array();
+   return MOD_SUCCESS_VAL(m);
 }

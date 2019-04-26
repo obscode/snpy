@@ -32,8 +32,8 @@ mags = {
    }  
 
 for stand in stands:
-   print stand
-   print "   standard JHK = ",mags[stand]
+   print(stand)
+   print("   standard JHK = ",mags[stand])
    smag = stand2lco(*mags[stand])
    for f in fs:
-      print "      ",f,smag[f],fset[f].compute_zpt(stand, smag[f])
+      print("      ",f,smag[f],fset[f].compute_zpt(stand, smag[f]))

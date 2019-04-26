@@ -5,6 +5,7 @@ do all the heavy lifting of fitting a smooth function. A base class called
 function is provided and should be sub-classed to implement new smoothing 
 functions.  So far, there's tension splines and CCM.'''
 
+from __future__ import print_function
 import types
 import numpy as num
 from numpy.linalg import lstsq
@@ -307,9 +308,9 @@ class f_Bspline(function):
                args['gradient'], args['zeroslope']))
 
       if self.verbose:
-         print self.parent.bands
-         print 'Nk = ',Nknots
-         print 'knots:',self.knots
+         print(self.parent.bands)
+         print('Nk = ',Nknots)
+         print('knots:',self.knots)
       # The basis splines
       bsp = [bspline_basis(self.knots,self.parent.wave[i],k,**args) \
             for i in range(self.parent.wave.shape[0])]
@@ -449,8 +450,8 @@ class mangler:
          self.flux = self.flux.reshape((1,self.flux.shape[0]))
       self.ave_waves = None
       if method not in mangle_functions:
-         methods = ",".join(mangle_functions.keys())
-         raise ValueError, "method must be one of the following:\n%s" % methods
+         methods = ",".join(list(mangle_functions.keys()))
+         raise ValueError("method must be one of the following:\n%s" % methods)
       self.function = mangle_functions[method](self, **margs)
       self.z = z
       self.verbose=margs.get('verbose', False)
@@ -542,14 +543,14 @@ class mangler:
       wave1 = fset['red'].wave[-1]
    
       if wave0 < self.wave.min()*(1+self.z) or wave1 > self.wave.max()*(1+self.z): 
-         print 'Problem in mangle_spectrum: SED does not cover anchor filter '+\
-               'definitions'
+         print('Problem in mangle_spectrum: SED does not cover anchor filter '+\
+               'definitions')
          if(self.verbose): 
-            print 'Anchor filter definitions cover  ',wave0, 'A to ',wave1,'A'
-            print 'SED covers ',self.wave.min()*(1+self.z),'A to ',\
-                  self.wave.max()*(1+self.z),'A (observed)'
-      if(self.verbose): print 'Anchor filter definitions cover  ', \
-                               wave0,'A to ',wave1,'A'
+            print('Anchor filter definitions cover  ',wave0, 'A to ',wave1,'A')
+            print('SED covers ',self.wave.min()*(1+self.z),'A to ',\
+                  self.wave.max()*(1+self.z),'A (observed)')
+      if(self.verbose): print('Anchor filter definitions cover  ', \
+                               wave0,'A to ',wave1,'A')
       
 
    def lstsq(self, bands, mags):
@@ -564,7 +565,8 @@ class mangler:
       mags = num.asarray(mags)
       basis = getattr(self.function, 'basis', None)
       if basis is None:
-         raise RuntimeError, "Error: you can't use lstsq unless method is linear"
+         raise RuntimeError("Error: you can't use lstsq unless method is "
+                            "linear")
       # Check that all bands have support on the spectra
       ggids = [~num.isnan([fset[band].synth_mag(self.wave[i],self.flux[i]) \
             for band in bands]) for i in range(self.wave.shape[0])]
@@ -579,7 +581,7 @@ class mangler:
       # We fit responses, so convert to flux relative to normfilter
       if self.normfilter is not None:
          if self.normfilter not in self.bands:
-            raise ValueError, "normfilter must be one of the filters to be fit"
+            raise ValueError("normfilter must be one of the filters to be fit")
          nid = self.bands.index(self.normfilter)
       else:
          nid = len(self.bands)-1
@@ -640,9 +642,9 @@ class mangler:
          colors = colors.reshape((1,colors.shape[0]))
 
       if colors.shape[0] != self.wave.shape[0]:
-         raise ValueError, "colors.shape[0] and number of spectra must match"
+         raise ValueError("colors.shape[0] and number of spectra must match")
       if colors.shape[1] != len(bands) - 1:
-         raise ValueError, "colors.shape[1] must be len(bands)-1"
+         raise ValueError("colors.shape[1] must be len(bands)-1")
       self.gids = num.less(colors, 90)
 
       self.bands = bands
@@ -651,14 +653,14 @@ class mangler:
             b in self.bands])
 
       if len(bands) != colors.shape[1] + 1:
-         raise ValueError, "length of bands must be one more than colors"
+         raise ValueError("length of bands must be one more than colors")
 
       if self.normfilter is None:
          num_good = num.sum(self.gids*1, axis=0)
          self.normfilter = bands[num.argmax(num_good)+1]
       else:
          if self.normfilter not in bands:
-            raise ValueError, "normfilter must be one of bands"
+            raise ValueError("normfilter must be one of bands")
       if fixed_filters is not None:
          if fixed_filters == "blue":
             fixed_filters = [bands[0]]
@@ -667,7 +669,7 @@ class mangler:
          elif fixed_filters == 'both':
             fixed_filters = [bands[0], bands[-1]]
          else:
-            raise ValueError, "fixed_filters must be 'blue','red', or 'both'"
+            raise ValueError("fixed_filters must be 'blue','red', or 'both'")
          self.allbands = bands
       else:
          self.create_anchor_filters(bands, anchorwidth)
@@ -684,14 +686,14 @@ class mangler:
       self.resp_rats = num.where(self.gids, self.resp_rats, 1)
       id = self.allbands.index(self.normfilter)
       if self.verbose:
-         print "You input the following colors:"
+         print("You input the following colors:")
          for i in range(colors.shape[1]):
-            print "%s - %s" % (bands[i],bands[i+1])
-         print colors
-         print "This translates to the following response ratios:"
-         print self.resp_rats[self.gids]
-         print "Initial colors for this spectrum are:"
-         print self.get_colors(bands)
+            print("%s - %s" % (bands[i],bands[i+1]))
+         print(colors)
+         print("This translates to the following response ratios:")
+         print(self.resp_rats[self.gids])
+         print("Initial colors for this spectrum are:")
+         print(self.get_colors(bands))
          self.init_colors = self.get_colors(bands)
 
 
@@ -710,14 +712,13 @@ class mangler:
       #quiet = 1
       result = mpfit.mpfit(self.leastsq, parinfo=pi, quiet=quiet, maxiter=200,
             ftol=ftol, gtol=gtol, xtol=xtol, functkw={'bands':bands,'nid':id})
-      if (result.status == 5) : print \
-        'Maximum number of iterations exceeded in mangle_spectrum'
+      if (result.status == 5) : print('Maximum number of iterations exceeded in mangle_spectrum')
       self.function.set_pars(result.params)
       if self.verbose:
-         print "The final colors of the SED are:"
-         print self.get_colors(bands)
-         print "Compared to initial colors:"
-         print self.init_colors
+         print("The final colors of the SED are:")
+         print(self.get_colors(bands))
+         print("Compared to initial colors:")
+         print(self.init_colors)
 
       return(result)
 
@@ -826,11 +827,11 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
             anchorwidth=anchorwidth, xtol=xtol, ftol=ftol, gtol=gtol,
             init=init)
       if res.status > 4:
-         print "Warning:  %s" % messages[res.status]
+         print("Warning:  %s" % messages[res.status])
       elif res.status < 0:
-         print "Warning:  some unknown error occurred"
+         print("Warning:  some unknown error occurred")
       elif verbose:
-         print "mpfit finised with:  %s" % messages[res.status]
+         print("mpfit finised with:  %s" % messages[res.status])
 
    # finally, normalize the flux
    mflux = m.get_mflux()
@@ -839,10 +840,10 @@ def mangle_spectrum2(wave,flux,bands, mags, fixed_filters=None,
       omag = num.array([mags[id]])
    else:
       omag = mags[id,:]
-   if verbose: print "OMAG = ", omag
+   if verbose: print("OMAG = ", omag)
    for i in range(len(mflux)):
       mmag = fset[m.normfilter].synth_mag(wave,mflux[i],z=z)
-      if verbose: print "MMAG = ",mmag,"factor=",num.power(10, -0.4*(omag[i]-mmag))
+      if verbose: print("MMAG = ",mmag,"factor=",num.power(10, -0.4*(omag[i]-mmag)))
       mflux[i] = mflux[i]*num.power(10,-0.4*(omag[i]-mmag))
 
    return (mflux, m._getstate(), m.function.pars)

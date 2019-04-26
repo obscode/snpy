@@ -20,6 +20,7 @@ spectrum/filter data, they provide the following funcionality:
 This module also supplies a dictionary called filters with some common filters
 and zero-points built in.'''
 
+from __future__ import print_function
 import os,sys,types
 import numpy as num
 import scipy.integrate
@@ -27,6 +28,8 @@ import scipy.interpolate
 from glob import glob
 import string
 from snpy.utils.deredden import unred
+#from astropy import units as u
+from astropy.constants import c,h
 
 interp_method = 'spline'
 integ_method = 'simpsons'
@@ -37,9 +40,10 @@ base = os.path.dirname(base)
 filter_base = os.path.join(base,'filters')
 stand_base = os.path.join(base,'standards')
 
-h = 6.626068e-27  # erg s
-c = 2.997925e18   # Angstrom/s
-ch = c * h        # erg Angstrom
+#h = 6.626068e-27  # erg s
+#c = 2.997925e18   # Angstrom/s
+ch = c * h
+ch = ch.to('erg Angstrom').value
 
 class spectrum:
    '''This class defines a spectrum.  It contains the response as Numeric 
@@ -55,17 +59,18 @@ class spectrum:
     There are also some useful functions:
       read():                   Read in the data and compute member data
    '''
-   def __init__(self, name=None, filename=None, comment=None, load=1):
-      '''Creates a spectrum instance.  Required parameters:  name and file.  Can
-      also specify the zero point (instead of using the comptute_zpt() function
-      do do it).''' 
-      
-      self.name = name 
-      self.file = filename     # location of the filter response 
-      self.wave_data = None    # wavelength of response
-      self.resp_data = None    # response 
-      self.comment = comment   # any words?  
-      if filename is not None and load==1:  self.read()
+   def __init__(self, name=None, filename=None, comment=None, wave=None,
+         flux=None, fluxed=True, load=1):
+      '''Creates a spectrum instance.  Required parameters:  name and file.  
+      Can also specify the zero point (instead of using the comptute_zpt() 
+      function do do it).'''
+      self.name = name
+      self.file = filename     # location of the filter response
+      self.wave_data = wave    # wavelength of response
+      self.resp_data = flux    # response
+      self.comment = comment   # any words?
+      self.fluxed = fluxed     # indicates the spectrum is in physical units
+      if file is not None and load==1:  self.read()
 
    def __str__(self):
       return "%s:  %s" % (self.name, self.comment)
@@ -77,9 +82,9 @@ class spectrum:
       if self.file is not None:
          f = open(self.file)
          lines = f.readlines()
-         self.wave_data = num.array([float(string.split(line)[0]) \
+         self.wave_data = num.array([float(line.split()[0]) \
                for line in lines if line[0] != "#"])
-         self.resp_data = num.array([float(string.split(line)[1]) \
+         self.resp_data = num.array([float(line.split()[1]) \
                for line in lines if line[0] != "#"])
          f.close()
 
@@ -111,7 +116,7 @@ class spectrum:
          else:
             return None
       else:
-         raise AttributeError, "Error:  attribute %s not defined" % (name)
+         raise AttributeError("Error:  attribute %s not defined" % (name))
 
 
 class filter(spectrum):
@@ -139,8 +144,9 @@ class filter(spectrum):
                                 assumed value of Rv and redshift z.'''
 
    def __init__(self, name, file=None, zp=None, comment=None):
-      '''Creates a filter instance.  Required parameters:  name and file.  Can also
-      specify the zero point (instead of using the comptute_zpt() function do do it).'''
+      '''Creates a filter instance.  Required parameters:  name and file.  Can 
+      also specify the zero point (instead of using the comptute_zpt() 
+      function do do it).'''
       spectrum.__init__(self, name, file)
       self.zp = zp
       self.comment = comment
@@ -159,7 +165,7 @@ class filter(spectrum):
       # get the response if needed:
       if self.wave is None: self.read()
 
-      if type(spectrum) is not types.ListType:
+      if type(spectrum) is not list:
          spectrum = [spectrum]
          only1 = 1
       else:
@@ -169,6 +175,8 @@ class filter(spectrum):
       for spec in spectrum:
          # Check to see if 
          if spec.wave is None:  spec.read()
+         if not spec.fluxed:
+            raise ValueError("spectrum must be in erg/s/cm^2/Angstrom")
    
          # Compute the integral spec1*spec2*(lambda/ch):
          result = self.response(spec, zeropad=zeropad)
@@ -186,12 +194,13 @@ class filter(spectrum):
       '''evaluate the filter on the sequence of wavelengths.'''
       if interp_method == "spline":
          if self.tck is None:
-            self.tck = scipy.interpolate.splrep(self.wave, self.resp, k=1, s=0)
+            self.tck = scipy.interpolate.splrep(self.wave, 
+                  self.resp, k=1, s=0)
          fresp_int = scipy.interpolate.splev(wave, self.tck)
       else:
          if self.mint is None:
-            self.mint = scipy.interpolate.interp1d(self.wave, self.resp, 
-                  kind=interp_method)
+            self.mint = scipy.interpolate.interp1d(self.wave, 
+                  self.resp, kind=interp_method)
          fresp_int = self.mint(trim_wave)
 
       fresp_int = num.where(num.less(wave,self.wave.min()), num.nan, fresp_int)
@@ -216,17 +225,17 @@ class filter(spectrum):
       if flux is None:
          # We must have a spectrum object:
          if not isinstance(specwave, spectrum):
-            raise TypeError, \
-                  "If specifying just specwave, it must be a spectrum object"
+            raise TypeError("If specifying just specwave, it must be a spectrum object")
+         # if this object is not fluxed, then return -1
+         if not getattr(specwave, 'fluxed', True):
+            return -1.0
          wave = specwave.wave
          spec = specwave.flux
       else:
          if type(specwave) is not num.ndarray or type(flux) is not num.ndarray:
-            raise TypeError, \
-                  "If specifying both specwave and flux, they must be arrays"
+            raise TypeError("If specifying both specwave and flux, they must be arrays")
          if len(num.shape(specwave)) != 1 or len(num.shape(flux)) != 1:
-            raise TypeError, \
-                  "specwave and flux must be 1D arrays"
+            raise TypeError("specwave and flux must be 1D arrays")
          wave = specwave
          spec = flux
 
@@ -265,7 +274,8 @@ class filter(spectrum):
       # Now, we need to resample the response wavelengths to the spectrum:
       if interp_method == "spline":
          if self.tck is None:
-            self.tck = scipy.interpolate.splrep(self.wave, self.resp, k=1, s=0)
+            self.tck = scipy.interpolate.splrep(self.wave, 
+                  self.resp, k=1, s=0)
          fresp_int = scipy.interpolate.splev(trim_wave, self.tck)
       else:
          if self.mint is None:
@@ -285,7 +295,8 @@ class filter(spectrum):
       elif integ_method=='trapz':
          result = scipy.integrate.trapz(integrand, x=trim_wave)
       else:
-         result = (trim_wave[-1] - trim_wave[0])/(len(trim_wave)-1)*sum(integrand)
+         result = (trim_wave[-1] - trim_wave[0])/(len(trim_wave)-1)*\
+               sum(integrand)
 
       return(result)
 
@@ -300,6 +311,10 @@ class filter(spectrum):
       '''Compute the synthetic magnitude based on the input spectrum defined by
       (specwave) or (specwave,flux).  If z is supplied, first redshift the 
       input spectrum by this amount.'''
+
+      # First check to make sure the spectrum is fluxed
+      if isinstance(specwave, spectrum):
+         if not specwave.fluxed: return(num.nan)
       res = self.response(specwave,flux=flux,z=z,zeropad=zeropad)
       if res <= 0:
          return(num.nan)
@@ -310,6 +325,11 @@ class filter(spectrum):
       '''Compute the synthetic AB magnitude of the input spectrum defined by
       (specwave) or (specwave, flux).  If z is supplied, first blueshift
       the filter by this amount (ie, you are observing a redshifed spectrum).'''
+
+      # First check to make sure the spectrum is fluxed
+      if isinstance(specwave, spectrum):
+         if not specwave.fluxed: return(num.nan)
+
       numer = self.response(specwave, flux=flux, z=z, zeropad=zeropad,
             photons=1)*ch
       # numer is in erg*Angstrom/s/cm^2
@@ -338,11 +358,13 @@ class filter(spectrum):
          wave,flux = standards['Vega']['VegaB'].wave,\
                      standards['Vega']['VegaB'].resp
       elif isinstance(specwave, spectrum):
+         if not specwave.fluxed:
+            raise ValueError("spectrum must be  in erg/s/cm^2/Angstrom")
          wave,flux = specwave.wave,specwave.flux
       else:
          if flux is None:
-            raise TypeError, "specwave must either be a spectrum instance or "\
-                  "an array of wavelengths and flux must be specified"
+            raise TypeError("specwave must either be a spectrum instance or "\
+                  "an array of wavelengths and flux must be specified")
          wave,flux = specwave,flux
       flam = num.power(10, -0.4*(mag-self.zp))   # in photons/s/cm^2
       flam = flam/self.response(wave, flux, z=z)  # now in ergs/s/cm^2
@@ -413,18 +435,18 @@ class system:
 
    def add_SED(self, SED):
       if not isinstance(SED, spectrum):
-         raise ValueError, "SED must be a spectrum instance"
+         raise ValueError("SED must be a spectrum instance")
       self.SEDs[SED.name] = SED
 
    def list_SEDs(self):
       for SED in self.SEDs:
-         print "\t"+self.SEDs[SED].name
+         print("\t"+self.SEDs[SED].name)
 
    def keys(self):
-      return self.SEDs.keys()
+      return list(self.SEDs.keys())
 
    def values(self):
-      return self.SEDs.values()
+      return list(self.SEDs.values())
 
    def __contains__(self, item):
       return self.SEDs.__contains__(item)
@@ -469,19 +491,19 @@ class standard_set:
 
    def list_systems(self):
       for syst in self.systems:
-         print syst+": "+self.systems[syst].name
+         print(syst+": "+self.systems[syst].name)
 
    def list_SEDs(self):
       for syst in self.systems:
-         print self.systems[syst].name
+         print(self.systems[syst].name)
          self.systems[syst].list_SEDs()
 
    def cache_spectra(self):
-      for syst in self.systems.values():
-         for sed in syst.SEDs.values():
+      for syst in list(self.systems.values()):
+         for sed in list(syst.SEDs.values()):
             if sed.name in self.spectra:
-               print "Warning!  Encountered multiple filter IDs for %s" %\
-                        (sed)
+               print("Warning!  Encountered multiple filter IDs for %s" %\
+                        (sed))
             self.spectra[sed.name] = sed
 
    def __getattr__(self, attr):
@@ -498,7 +520,7 @@ class standard_set:
       elif key in self.systems:
          return self.systems[key]
       else:
-         raise KeyError, "spectrum ID %s not found" % (key)
+         raise KeyError("spectrum ID %s not found" % (key))
 
    def __setitem__(self, key, value):
       self.spectra[key] = value
@@ -526,27 +548,27 @@ class filter_set:
       self.observatories[name] = observatory(name)
 
    def cache_filters(self):
-      for obs in self.observatories.values():
-         for tel in obs.telescopes.values():
-            for filt in tel.filters.values():
+      for obs in list(self.observatories.values()):
+         for tel in list(obs.telescopes.values()):
+            for filt in list(tel.filters.values()):
                if filt.name in self.filters:
-                  print "Warning!  Encountered multiple filter IDs for %s" %\
-                        (filt)
+                  print("Warning!  Encountered multiple filter IDs for %s" %\
+                        (filt))
                self.filters[filt.name] = filt
 
       
    def list_observatories(self):
       for obs in self.observatories:
-         print self.observatories[obs].name
+         print(self.observatories[obs].name)
 
    def list_telescopes(self):
       for obs in self.observatories:
-         print self.observatories[obs].name
+         print(self.observatories[obs].name)
          self.observatories[obs].list_telescopes()
 
    def list_filters(self):
       for obs in self.observatories:
-         print self.observatories[obs].name
+         print(self.observatories[obs].name)
          self.observatories[obs].list_filters()
 
    def __getattr__(self, attr):
@@ -561,7 +583,7 @@ class filter_set:
       if key in self.filters:
          return self.filters[key]
       else:
-         raise KeyError, "filter ID %s not found" % (key)
+         raise KeyError("filter ID %s not found" % (key))
 
    def __setitem__(self, key, value):
       self.filters[key] = value
@@ -585,11 +607,11 @@ class observatory:
 
    def list_telescopes(self):
       for tel in self.telescopes:
-         print "\t"+self.telescopes[tel].name
+         print("\t"+self.telescopes[tel].name)
 
    def list_filters(self):
       for tel in self.telescopes:
-         print "\t"+self.telescopes[tel].name
+         print("\t"+self.telescopes[tel].name)
          self.telescopes[tel].list_filters()
 
    def __getattr__(self, attr):
@@ -616,12 +638,12 @@ class telescope:
 
    def add_filter(self, filter_object):
       if not isinstance(filter_object, filter):
-         raise TypeError, "Error: filter_object must be a filter type"
+         raise TypeError("Error: filter_object must be a filter type")
       self.filters[filter_object.name] = filter_object
 
    def list_filters(self):
       for f in self.filters:
-         print "\t\t'%s':  %s" % (f, self.filters[f].comment)
+         print("\t\t'%s':  %s" % (f, self.filters[f].comment))
 
    def __getattr__(self, attr):
       if attr in self.__dict__['filters']:
@@ -631,7 +653,7 @@ class telescope:
 
    def __str__(self):
       ret = "telescope %s with filters: " % (self.name)
-      for k in self.filters.keys():
+      for k in list(self.filters.keys()):
          ret += "%s, " % (k)
       return ret
 
@@ -654,13 +676,14 @@ for dir in dirs:
    for line in lines:
       if line[0] == "#":  continue
       l = line.split()
-      standards[sname].add_SED(spectrum(l[0], os.path.join(stand_base,sname,l[1]),
-                             string.join(l[3:]), load=0))
+      standards[sname].add_SED(spectrum(l[0], 
+         os.path.join(stand_base,sname,l[1]), "".join(l[3:]), load=0))
       standard_mags[sname][l[0]] = {}
       if os.path.isfile(os.path.join(stand_base,sname,l[2])):
          f2 = open(os.path.join(stand_base,sname,l[2]))
-         lines2 = f2.readlines()
-         lines2 = map(string.split, lines2)
+         #lines2 = f2.readlines()
+         #lines2 = list(map(string.split, lines2))
+         lines2 = [line.split() for line in f2.readlines()]
          for i in range(len(lines2)):
             if lines2[i][0] == "#":  continue
             standard_mags[sname][l[0]][lines2[i][0]] = float(lines2[i][1])
@@ -694,33 +717,34 @@ for obs in obsdirs:
          l = line.split()
          if l[2].find('=') >= 0:
             # We have a std=mag format
-            std,mag = map(string.strip, l[2].split('='))
+            std,mag = [item.strip() for item in l[2].split('=')]
+            #std,mag = list(map(string.strip, l[2].split('=')))
             if std  in standards:
                try:
                   m = float(mag)
                except:
-                  raise ValueError, \
-                        "Could not convert standard magnitude for filter %s" %\
-                        l[0]
-               newf = filter(l[0], os.path.join(dir,l[1]), 0.0, string.join(l[3:]))
+                  raise ValueError("Could not convert standard magnitude for filter %s" %\
+                        l[0])
+               newf = filter(l[0], os.path.join(dir,l[1]), 0.0, 
+                  "".join(l[3:]))
                newf.zp = newf.compute_zpt(standards[std], m)
                fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
             else:
-               raise ValueError, \
-                     "Could not find standard %s for filter %s" % (std,l[0])
+               raise ValueError("Could not find standard %s for filter %s" % (std,l[0]))
 
 
          elif l[2] == 'AB':
             # We have an AB system, so in principle there is no standard. The
             # zero-point is derived from the filter function alone. See
             # documentation.
-            newf = filter(l[0], os.path.join(dir,l[1]), 0.0, string.join(l[3:]))
+            newf = filter(l[0], os.path.join(dir,l[1]), 0.0, 
+               "".join(l[3:]))
             newf.zp = 16.84692 + 2.5*num.log10(
                   scipy.integrate.trapz(newf.resp/newf.wave, x=newf.wave))
             fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
          else:
             fset.observatories[obs_name].telescopes[tel_name].add_filter(
                          filter(l[0], os.path.join(dir,l[1]),
-                             float(l[2]), string.join(l[3:])))
+                             float(l[2]), " ".join(l[3:])))
       f.close()
 fset.cache_filters()
