@@ -573,8 +573,8 @@ class mangler:
       gids = num.alltrue(ggids, axis=0)
       if not num.alltrue(gids):
          bad = ",".join([bands[i] for i in range(len(gids)) if not gids[i]])
-         print "Warning! The following filters were not covered by the SED:"
-         print bad
+         print("Warning! The following filters were not covered by the SED:")
+         print(bad)
       self.bands = [bands[i] for i in range(len(gids)) if gids[i]]
       mags = mags[gids]
 
