@@ -70,7 +70,7 @@ class spectrum:
       self.resp_data = flux    # response
       self.comment = comment   # any words?
       self.fluxed = fluxed     # indicates the spectrum is in physical units
-      if file is not None and load==1:  self.read()
+      if filename is not None and load==1:  self.read()
 
    def __str__(self):
       return "%s:  %s" % (self.name, self.comment)
