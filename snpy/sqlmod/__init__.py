@@ -567,7 +567,7 @@ class sql_csp2(sqlbase):
             return 'V1'
          else:
             return 'V'
-      print "Warning: don't know filter", name
+      print("Warning: don't know filter {}".format(name))
       return name[-1]
 
 class sql_SBS_csp2(sql_csp2):
