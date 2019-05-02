@@ -3,7 +3,7 @@ import sys,os,glob
 
 if '-h' in sys.argv or '-help' in sys.argv:
    from snpy.sqlmod import databases
-   print '''
+   print('''
 SNooPy Startup Script.
 
 Usage:  snpy [-gui gui] [-nc] [database]
@@ -17,9 +17,9 @@ Usage:  snpy [-gui gui] [-nc] [database]
         database:  Choose a database to query via SQL. Options listed below
 
 Available Databases:
-'''
+''')
    for key in databases:
-      print "   %-10s:      %s" % (key,databases[key][1])
+      print("   %-10s:      %s" % (key,databases[key][1]))
    sys.exit(0)
 
 gui = 'tk'
@@ -51,9 +51,9 @@ if sys.platform.find('linux') >= 0:
             root = Tkinter.Tk()
             root.withdraw()
          except:
-            print "Your python's Tkinter isn't installed or is broken.  Please"
-            print "fix it.  You might try setting TCL_LIBRARY and TK_LIBRARY"
-            print "appropriately."
+            print("Your python's Tkinter isn't installed or is broken.  Please")
+            print("fix it.  You might try setting TCL_LIBRARY and TK_LIBRARY")
+            print("appropriately.")
             sys.exit(1)
 
 
@@ -65,8 +65,8 @@ except:
    try:
       from IPython.frontend.terminal.embed import InteractiveShellEmbed
    except:
-      print "You don't have an up-to-date version of ipython."
-      print "SNooPy requires version 0.12 or greater"
+      print("You don't have an up-to-date version of ipython.")
+      print("SNooPy requires version 0.12 or greater")
       sys.exit(1)
 
 ipshell=InteractiveShellEmbed(banner1='Welcome to SNooPy')
@@ -82,11 +82,11 @@ for key in sqlmod.databases:
 if not nc:
    upgrade,message = check_version()
    if upgrade:
-      print "**********************************"
-      print "New version of SNooPy is Available"
-      print "**********************************"
+      print("**********************************")
+      print("New version of SNooPy is Available")
+      print("**********************************")
       for line in message:
          sys.stdout.write(line)
-      print ""
-      print "Use update-snpy to install this new version"
+      print("")
+      print("Use update-snpy to install this new version")
 ipshell()

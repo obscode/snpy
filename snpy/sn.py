@@ -2368,7 +2368,11 @@ def check_version():
       import urllib.request as urllib
    else:
       import urllib
-   from distutils.version import LooseVersion
+   #from distutils.version import LooseVersion
+   try:
+      from packaging import version as LooseVersion
+   except:
+      from distutils.version import LooseVersion
    try:
       u = urllib.urlopen(
             'ftp://ftp.obs.carnegiescience.edu/pub/cburns/snpy/latest',
@@ -2378,8 +2382,10 @@ def check_version():
    if not u:
       return None,None
    lines = u.readlines()
+   ver = lines[0].strip()
    u.close()
-   ver = LooseVersion(lines[0].strip())
+   if six.PY3: ver = str(ver, 'utf-8')
+   ver = LooseVersion(ver)
    if ver > LooseVersion(__version__):
       return True,lines[1:]
    else:
