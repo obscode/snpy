@@ -273,15 +273,16 @@ class f_Bspline(function):
       nf = len(bs)            
       args = {}
       if nf == 2: 
-         # only linear allowed
+         # this gives a smooth transition from one level to another
          k = 2
-         Nknots = 2
-         self.knots = num.array([fset[bs[0]].wave[0], fset[bs[1]].wave[-1]])
+         Nknots = 3
+         self.knots = num.linspace(fset[bs[0]].wave[0], fset[bs[1]].wave[-1], 3)
+         #self.knots = num.array([fset[bs[0]].wave[0], fset[bs[1]].wave[-1]])
          args['gradient'] = False
          args['zeroslope'] = True
          if self.verbose: print("   setting k= 2, nograd, zeroslope ")
       elif nf == 3 and self.k > 1:
-         k = 2
+         k = 3
          Nknots = 3
          self.knots = num.array([fset[bs[0]].wave[0], 
             fset[bs[1]].ave_wave, fset[bs[-1]].wave[-1]])
@@ -301,7 +302,9 @@ class f_Bspline(function):
             [fset[b].ave_wave for b in bs[1:-1]], [fset[bs[-1]].wave[-1]]])
          if self.gradient:
             args['gradient'] = True
+            args['zeroslope'] = False
          else:
+            args['gradient'] = False
             args['zeroslope'] = True
          if self.verbose: 
             print("   setting k= 3, grad={}, zeroslope={} ".format(

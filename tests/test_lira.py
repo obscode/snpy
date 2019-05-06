@@ -18,11 +18,11 @@ def snobj():
 
 def test_lira_noparams(snobj):
    EBV,eEBV,slope,eslope = snobj.lira('B','V', deredden=False)
-   assert (round(EBV,3) == round(0.018255257,3) and
+   assert (round(EBV,3) == round(0.047189,3) and
            round(eEBV,3) == round(0.0047719719,3))
 
 def test_lira_interp_model(snobj, interpolate=True):
    EBV,eEBV,slope,eslope = snobj.lira('B','V', deredden=False, interpolate=True)
-   assert (round(EBV,3) == round(0.01825152,3) and
+   assert (round(EBV,3) == round(0.047188,3) and
            round(eEBV,3) == round(0.00477197,3))
 
