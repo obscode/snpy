@@ -112,7 +112,7 @@ class timespec:
                        mags(floag array): synthetic magnitudes
       '''
       if not isinstance(band, filter) and not isinstance(band, basestring):
-         raise ValueError, "band must be string or filters.filter instance"
+         raise ValueError("band must be string or filters.filter instance")
       if isinstance(band, basestring):
          band = fset[band]
       mags = array([band.synth_mag(spec,z=z,zeropad=zeropad) \
