@@ -113,31 +113,32 @@ class sqlbase:
          else:
             self.c2 = self.c
          self.connected = 1
-         self.name = name
          # Collect info about the SN_TABLE and PHOTO_TABLE:
          self.SN_table_info = self.get_table_info(self.SN_TABLE)
          self.PHOTO_table_info = self.get_table_info(self.PHOTO_TABLE)
 
-         # See if the SN object exists
-         if self.SN_ID2 is not None:
-            slct = '''SELECT %s,%s from %s where %s = %%s %s''' % \
-                (self.SN_ID,self.SN_ID2,self.SN_TABLE, self.SN_ID, self.SN_COND)
-         else:
-            slct = '''SELECT %s from %s where %s = %%s %s''' % \
-                (self.SN_ID,self.SN_TABLE, self.SN_ID, self.SN_COND)
-         N = self.c.execute(slct, (self.name))
-         if N == 0:
-            return 0
-         if N > 1:
-            print("Warning!  %s is not unique in the database, taking first" %\
-                  (self.name))
-            return N
-         if self.SN_ID2 is not None:
-            l = self.c.fetchall()[0]
-            self.name2 = l[1]
-         else:
-            self.name2 = None
-         return 1
+      self.name = name
+
+      # See if the SN object exists
+      if self.SN_ID2 is not None:
+         slct = '''SELECT %s,%s from %s where %s = %%s %s''' % \
+             (self.SN_ID,self.SN_ID2,self.SN_TABLE, self.SN_ID, self.SN_COND)
+      else:
+         slct = '''SELECT %s from %s where %s = %%s %s''' % \
+             (self.SN_ID,self.SN_TABLE, self.SN_ID, self.SN_COND)
+      N = self.c.execute(slct, (self.name))
+      if N == 0:
+         return 0
+      if N > 1:
+         print("Warning!  %s is not unique in the database, taking first" %\
+               (self.name))
+         return N
+      if self.SN_ID2 is not None:
+         l = self.c.fetchall()[0]
+         self.name2 = l[1]
+      else:
+         self.name2 = None
+      return 1
 
    def get_table_info(self, table):
       '''Gets info from the table and returns it as a dictionary of dictionaries
