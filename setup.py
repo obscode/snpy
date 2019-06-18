@@ -4,6 +4,11 @@
 
 import os,sys, string
 from pkg_resources import parse_version
+try:
+   import numpy
+except ImportError:
+   print("Error:  setup.py requires numpy")
+   sys.exit(1)
 from numpy.distutils.core import setup
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.system_info import get_info
@@ -71,10 +76,10 @@ def dosetup():
             'Programming Language :: Python :: 2.6',
             'Programming Language :: Python :: 2.7',
             'Topic :: Scientific/Engineering :: Astronomy'],
-         setup_requires=['pytest-runner'],
+         setup_requires=['numpy','pytest-runner'],
          tests_require=['pytest'],
          install_requires=[
-            'NumPy (>=1.7)',
+            'numpy',
             'scipy',
             'pymysql',
             'matplotlib',
