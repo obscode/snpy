@@ -8,13 +8,19 @@ source:
 
 requirements:
    build:
-      - python
+      - python=3.6
       - setuptools
       - numpy
       - gcc
+      - scipy
+      - pymysql
+      - matplotlib
+      - ipython
+      - pymc
+      - astropy
 
    run:
-      - python
+      - python=3.6
       - numpy
       - scipy
       - pymysql
