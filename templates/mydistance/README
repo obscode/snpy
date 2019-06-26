@@ -1,0 +1,16 @@
+This is a small module that contains an anisotropic euclidean distance
+function that can be used with pymc's GP package. In this case, given
+two N-vecctors positions x[i,k] and y[i,k], with k being the dimension
+index:
+
+D[i] = sum((x - y)*scale, axis=1)
+
+where scale[0] == 1 and the rest of the N-1 dimensions can have 
+arbitrary positive scales.
+
+You can update the covariance functions to use this metric as in the following:
+
+from pymc.gp.cov_funs import matern
+from mydistances import aniso_euclidean_s
+matern.add_distance_metric('aniso_euclidean_s', 'mydistances',
+                            with_x=False)
