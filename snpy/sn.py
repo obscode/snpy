@@ -2370,7 +2370,7 @@ def check_version():
       import urllib
    #from distutils.version import LooseVersion
    try:
-      from packaging import version as LooseVersion
+      from packaging.version import parse as LooseVersion
    except:
       from distutils.version import LooseVersion
    try:
