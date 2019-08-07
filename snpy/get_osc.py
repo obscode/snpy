@@ -128,15 +128,19 @@ warning_message = {
       'upperlims':'Warning: Data with upper-limits not imported',
       }
 
-def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
+OSC_template = '''https://sne.space/astrocats/astrocats/supernovae/output/json/{}.json'''
+
+def get_obj(url, full_data=True, allow_no_errors=False, missing_error=0.01):
    '''Attempt to build a SNooPy object from a Open Supernova Catalog server
    URL.'''
+
+   if url.find('osc:') == 0:
+      # Try to construct a url based only on a name.
+      url = OSC_template.format(url.split(':')[1])
 
    try:
       uf = urllib.urlopen(url)
    except:
-      if full_data:
-         return None, "Invalid URL", None
       return None,"Invalid URL"
    try:
       d = json.load(uf)
@@ -152,8 +156,6 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
    d = list(d.values())[0]
    name = d['name']
    if 'redshift' not in d or 'ra' not in d or 'dec' not in d:
-      if full_data:
-         return None,"No redshift, RA, or DEC found",d
       return None,"No redshift, RA, or DEC found"
    zhel = float(d['redshift'][0]['value'])
    ra = Angle(" ".join([d['ra'][0]['value'],d['ra'][0]['u_value']])).degree
@@ -355,7 +357,14 @@ def get_obj(url, full_data=False, allow_no_errors=False, missing_error=0.01):
       snobj.sdata.sids = sids
 
    if full_data:
-      return(snobj, 'Success', d)
+      # make a dictionary of the remaining OSC meta data and make it a member 
+      # variable
+      snobj.osc_meta = {}
+      for key in d.keys():
+         if d not in ['name','redshift','ra','dec','sources','photometry',
+               'spectra']:
+            snobj.osc_meta[key] = d[key]
+
    return(snobj,'Success')
 
 def to_osc(s, ref=None, bibcode=None, source=1):

@@ -32,68 +32,47 @@ has_conda = sys.version.lower().find('anaconda') >= 0 or\
             sys.version.lower().find('continuum analytics') > 0 
 
 if realprefix is None and baseprefix is None and not has_conda:
-   print fallback
-   print instructions
+   print(fallback)
+   print(instructions)
    sys.exit(1)
 
 
 # The prefix is the virtualenv on
 snpy_src = os.path.join(sys.prefix, 'snpy')
 if not os.path.isdir(snpy_src):
-   print fallback2 % snpy_src
-   print instructions
+   print(fallback2 % snpy_src)
+   print(instructions)
    sys.exit(1)
 
 os.chdir(snpy_src)
-if os.path.isdir('.svn'):
-   print "Trying to update from SVN repository..."
-   p = subprocess.Popen(['svn','update','--accept','theirs-full'],
-         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-   p.wait()
-   if p.returncode != 0:
-      print "SVN command failed.  Check your internet connection"
-      sys.exit(1)
-   print "Success!"
-
-   of = open('SNooPy.build.log','w')
-   print "Building updated SNooPy source code..."
-   p = subprocess.Popen([os.path.join(sys.prefix, 'bin','python'),'setup.py',
-      'install'], stdout=of, stderr=subprocess.STDOUT)
-   p.wait()
-   if p.returncode != 0:
-      print "Failed to build the updated SNooPy source code!"
-      print "Check the output SNooPy.build.log file to see what went wrong"
-      of.close()
-      sys.exit(1)
-   print "Success!  SNooPy is now up to date"
-elif os.path.isdir('.git'):
-   print "Trying to update from GIT repository..."
+if os.path.isdir('.git'):
+   print("Trying to update from GIT repository...")
    p = subprocess.Popen(['git','pull'],
          stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
    p.wait()
    if p.returncode != 0:
-      print "GIT pull command failed.  Here's what we got:"
-      print p.stdout.readlines()
-      print p.stderr.readlines()
+      print("GIT pull command failed.  Here's what we got:")
+      print(p.stdout.readlines())
+      print(p.stderr.readlines())
       sys.exit(1)
-   print "Success!"
+   print("Success!")
 
    of = open('SNooPy.build.log','w')
-   print "Building updated SNooPy source code..."
+   print("Building updated SNooPy source code...")
    p = subprocess.Popen([os.path.join(sys.prefix, 'bin','python'),'setup.py',
       'install'], stdout=of, stderr=subprocess.STDOUT)
    p.wait()
    if p.returncode != 0:
-      print "Failed to build the updated SNooPy source code!"
-      print "Check the output SNooPy.build.log file to see what went wrong"
+      print("Failed to build the updated SNooPy source code!")
+      print("Check the output SNooPy.build.log file to see what went wrong")
       of.close()
       sys.exit(1)
-   print "Success!  SNooPy is now up to date"
+   print("Success!  SNooPy is now up to date")
 
 
 else:
    # find the correct pip command to update....
-   print "Sorry, the SNooPy source does not appear to be an SVN working"
-   print "copy.  You'll need to update by hand."
-   print instructions
+   print("Sorry, the SNooPy source does not appear to be an SVN working")
+   print("copy.  You'll need to update by hand.")
+   print(instructions)
    

@@ -368,6 +368,104 @@ class sn(object):
       else:
          return(ret_data)
 
+   def color_stretch(self, Bband, Vband, interpolate=True, plot=False, 
+         Nboot=10, method=None, **args):
+      '''Given two filters, compute a [Bband]-[Vband] color curve, 
+      fit with interpolator, and measure the time of maximum (reddest) color.
+      If Tmax is defined for this SN, comptute the color-stretch (sBV).
+      
+      Args:
+         Bband (str):  the observed filter corresponding to B-band
+         Vband (str):  the observed filter corresponding to V-band
+         interpolate (bool):  If true, and a model or interpolator exists,
+                              interpolate missing data to compute colors
+         Nboot (int):  Number of bootstrap iterations to get an error.
+                      default: 10
+         plot (bool): Make a plot of the fit
+         method (str): interpolation method to use (default: GP or spline)
+         args (dict):  arguments to be sent to fit1dcurve.
+
+      Returns:
+         2-tuple:  sBV, e_sBV
+
+         sBV:  color stretch ((time of B-V maximum) - Tmax)/30
+         e_sBV:  uncertainty (through bootstrapping)
+
+         Values set to None if no maximum is found
+      '''
+      from .utils.fit1dcurve import Interpolator,functions
+
+      if method is None:
+         if 'gp' in functions:
+            method='gp'
+         else:
+            method='spline2'
+
+      if Bband not in self.data:
+         raise ValueError("Bband filter {} not found".format(Bband))
+      if Vband not in self.data:
+         raise ValueError("Vband filter {} not found".format(Vband))
+
+      # See if we can figure out a Tmax
+      if self.data[Bband].Tmax is not None and self.data[Bband].Tmax > 0:
+         Tmax = self.data[Bband].Tmax
+      elif getattr(self, 'Tmax', None) is not None:
+         Tmax = self.Tmax
+      else:
+         print("Warning:  no Tmax found")
+         Tmax = 0
+
+      t,BV,eBV,flags = self.get_color(Bband, Vband, interp=interpolate)
+      gids = less(flags, 2) 
+
+      interp = Interpolator(method, t[gids], BV[gids], eBV[gids], **args)
+
+      tmaxs,maxs,dirs = interp.find_extrema()
+
+      if plot:
+         ts = linspace(t[gids].min(), t[gids].max(), 100)
+         ys = interp(ts)[0]
+
+      nids = less(dirs, 0)   # concave-down (i.e., maxima)
+      if not sometrue(nids):
+         return None,None
+
+      idx = argmax(maxs[nids])  # take the true maximum
+
+      tBVmax = tmaxs[nids][idx]
+
+      # Now bootstrap
+      tBVmaxs = []
+      if plot: yys = []
+      for i in range(Nboot):
+         interp.draw()
+         btmaxs,bmaxs,bdirs = interp.find_extrema()
+         if plot: yys.append(interp(ts)[0])
+         if len(bdirs) == len(dirs) and alltrue(bdirs == dirs):
+            # same maxima
+            tBVmaxs.append(btmaxs[nids][idx])
+         else:
+            bnids = less(bdirs, 0)
+            if sometrue(bnids):
+               bidx = argmax(bmaxs[bnids])
+               if absolute(btmaxs[bnids][bidx] - tBVmax) < 10.0:
+                  tBVmaxs.append(btmaxs[bnids][bidx])
+      # Do the stats
+      if len(tBVmaxs) < Nboot:
+         print("Warning, {}% of iterations failed".format(
+            (Nboot - len(tBVmaxs))/Nboot*100))
+
+      stBVmax = std(tBVmaxs)
+      sBV = (tBVmax - Tmax)/(1+self.z)/30.0
+      e_sBV = stBVmax/(1+self.z)/30.0
+      if plot:
+         eys = std(array(yys), axis=0)
+         plotmod.plot_sBV(self, t[gids], BV[gids], eBV[gids], tBVmax, stBVmax, 
+               ts, ys, eys, Tmax)
+
+      return(sBV,e_sBV)
+
+
    def lira(self, Bband, Vband, interpolate=0, tmin=30, tmax=90, plot=0,
          dokcorr=True, kcorr=None, B14=False, deredden=True):
       '''Use the Lira Law to derive a color excess.  [Bband] and [Vband] 
@@ -998,7 +1096,7 @@ class sn(object):
          MJD,ms,ems,flags = self.interp_table([band1,band2], use_model=True,
             model_float=model_float, dokcorr=dokcorr)
       else:
-         raise RutimeError("You asked for interpolation, but there are no"\
+         raise RuntimeError("You asked for interpolation, but there are no"\
                " models or interpolators defined")
 
       # We really don't care which one flags conditions
@@ -2352,7 +2450,8 @@ def get_sn(str, sql=None, **kw):
             s = import_lc(str)
          except RuntimeError:
             raise RuntimeError("Could not load %s into SNPY" % str)
-   elif str.find('http://') == 0 or str.find('https://') == 0:
+   elif str.find('http://') == 0 or str.find('https://') == 0 or \
+         str.find('osc:') == 0:
       from . import get_osc
       s,message = get_osc.get_obj(str)
       if s is None:
