@@ -179,7 +179,8 @@ def get_obj(url, full_data=True, allow_no_errors=False, missing_error=0.01):
    known_unknowns = []
    unknown_unknowns = []
    warnings = []
-   for p in d['photometry']:
+   photometry = d.get('photometry', [])
+   for p in photometry:
       if p.get('upperlimit',False):
          continue
       t = (p.get('band',''),p.get('system',''),p.get('telescope',''),
@@ -361,7 +362,7 @@ def get_obj(url, full_data=True, allow_no_errors=False, missing_error=0.01):
       # variable
       snobj.osc_meta = {}
       for key in d.keys():
-         if d not in ['name','redshift','ra','dec','sources','photometry',
+         if key not in ['name','redshift','ra','dec','sources','photometry',
                'spectra']:
             snobj.osc_meta[key] = d[key]
 
