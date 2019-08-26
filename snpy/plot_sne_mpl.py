@@ -414,10 +414,10 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
    linewidth=kwargs.get('linewidth', 1)
    SNR = kwargs.get('SNR_flag', None)
 
-   if not single:
-      ax.mylabels.append(ax.text(0.9, 0.9, label, transform=ax.transAxes, 
-         horizontalalignment='right', fontsize=kwargs.get('fsize', 12), 
-         verticalalignment='top'))
+   #if not single:
+   #   ax.mylabels.append(ax.text(0.9, 0.9, label, transform=ax.transAxes, 
+   #      horizontalalignment='right', fontsize=kwargs.get('fsize', 12), 
+   #      verticalalignment='top'))
    if kwargs.get('mask', False):
       x = obj.data[filt].MJD[obj.data[filt].mask]
       if not flux:
@@ -436,10 +436,14 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
          ey = obj.data[filt].e_flux
 
 
+   label = filt
+   if single:
+      label = label + '+'+'%.1f' % delt
+      
    ax.errorbar(x-Toff, y, yerr=ey, barsabove=True, capsize=0,
          elinewidth=1, fmt=symbol, ms=msize, 
-         mfc=color, label=filt+'+'+'%.1f' % delt, linestyle='None',
-           ecolor='black')
+         mfc=color, label=label, linestyle='None')
+           #ecolor='black')
    if kwargs.get('label_bad', False):
       gids = equal(obj.data[filt].mask, 0)
       if sometrue(gids):
@@ -492,8 +496,8 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
       ax.plot(t[gids] - Toff, y[gids], color='k',
             linewidth=linewidth)
 
-   if single and kwargs.get('legend', True):
-      ax.legend(loc='upper right', numpoints=1,ncol=2, prop={'size':'small'})
+   #if single and kwargs.get('legend', True):
+   ax.legend(loc='upper right', numpoints=1,ncol=2, prop={'size':'small'})
 
 
 def plot_sn(self, **kwargs):
@@ -519,6 +523,11 @@ def plot_sn(self, **kwargs):
       - JDoffset: If true, compute a JD offset and put it in the x-axis label
                   (useful if x-labels are crowded)
       - SNR_flag: If a tuple, SNR levels to flag in the plot
+      - filtsep:  If not none, filters with wavelengths that differ by less
+                  than this value are grouped into a single panel (for
+                  multi-panel plots).
+      - combfilt: If true, combine filters that have the same prefix letter
+                  (e.g., g, g2, g_p will all be plotted in the same panel)
       - overplot: specify another SN object to plot along with this one.
                   restbands will be used to match filters if there isn't
                   a one-to-one correspondence.
@@ -541,6 +550,15 @@ def plot_sn(self, **kwargs):
    rows = kwargs.get('rows', None)
    prunex = kwargs.get('prunex', None)
    pruney = kwargs.get('pruney', None)
+   filtsep = kwargs.get('filtsep', None)
+   combfilt = kwargs.get('combfilt', False)
+
+   if single: 
+      grp = False  # Doesn't make sense
+   elif filtsep is not None or combfilt:
+      grp = True
+   else:
+      grp = False
 
    # See  what filters we're going to use:
    if self.filter_order is not None:
@@ -573,12 +591,54 @@ def plot_sn(self, **kwargs):
             Toff = float(JDoff)
          except:
             raise ValueError("JDOffset must be Boolean, 'auto', or number")
-   #else:
-   #   Toff = 0
+
+   # Figure out logic of where stuff gets plotted. Some filters may be
+   # combined because they have the same rest-band (so in some sense are
+   # "close").
+   if grp:   # group by filter kind
+      rbs = []    # list of "rest-bands"
+      bidx = {}   # index of panel for each filter
+      if combfilt:
+         for band in bands:
+            if band[0] not in rbs:
+               rbs.append(band[0])
+            bidx[band] = rbs.index(band[0])
+      elif filtsep is not None:
+         waves = array([fset[band].ave_wave for band in bands])
+         sids = argsort(waves)
+         filts = [bands[idx] for idx in sids]
+         seps = waves[sids][1:] - waves[sids][:-1]
+         rbs.append(filts[0])
+         idx = 0
+         bidx[filts[0]] = 0
+         for i in range(1,len(filts)):
+            if seps[i-1] > filtsep:
+               rbs.append(filts[i])
+               idx += 1
+            bidx[filts[i]] = idx
+
+      else:
+         for band in bands:
+            if band not in self.restbands:
+               rbs.append(band)
+               bidx[band] = rbs.index(band)
+            else:
+               if self.restbands[band] not in rbs:
+                  rbs.append(self.restbands[band])
+               bidx[band] = rbs.index(self.restbands[band])
+      n_plots = len(rbs)
+   else:
+      bidx = {}
+      for i in range(len(bands)):
+         bidx[bands[i]] = i
+      n_plots = len(bands)
 
    for b in bands:
-      if not single:
+      if not single and not grp:
          colors[b] = 'blue'
+         symbols[b] = 'o'
+      elif not single and grp:
+         colors[b] = None
          symbols[b] = 'o'
       else:
          if b not in colors:  colors[b] = 'black'
@@ -590,9 +650,8 @@ def plot_sn(self, **kwargs):
          rel_off = min(self.data[bands[0]].mag)
    else:
       rel_off = 0
-   
-   n_plots = len(bands)
-   # SHould we plot the y-axis upside-down?
+
+   # Should we plot the y-axis upside-down?
    if not flux:
       flip = 1
       ylabel = 'magnitude'
@@ -651,7 +710,7 @@ def plot_sn(self, **kwargs):
       if offset and single:
          delt = delt + offsets[i]
       if not single:
-         ax = p.axes[i]
+         ax = p.axes[bidx[filt]]
          # make a reference to the lightcruve we are plotting.
          ax.lc = self.data[filt]
       else:
@@ -683,12 +742,12 @@ def plot_sn(self, **kwargs):
          # Figure out the pairing
          if filt in bands:
             # one-to-one
-            i = bands.index(filt)
+            #i = bands.index(filt)
+            i = bidx[filt]
          elif filt in list(self.restbands.dict.values()):
-            i = -1
             for band in self.restbands:
                if self.restbands[band] == filt and band in bands:
-                  i = bands.index(band)
+                  i = bidx[filt]
                   break
          else:
             i = -1
@@ -721,6 +780,24 @@ def plot_lira(t, t2, t_maxes, BV, eBV, BV2, tmin, tmax, c):
    ax.legend(prop={'size':12})
    p.canvas.draw()
    return p
+
+def plot_sBV(self, t, BV, eBV, tBVmax, etBVmax, ts, ys, eys, Tmax):
+   p = pyplot.figure(115)
+   p.clear()
+   ax = p.add_subplot(111)
+   ax.set_xlabel('t - t(Bmax) (days)')
+   ax.set_ylabel('B-V')
+
+   ax.errorbar(t-Tmax, BV, yerr=eBV, fmt='o', capsize=0, color='black')
+   ax.plot(ts-Tmax, ys, '-', color='blue')
+   ax.fill_between(ts-Tmax, ys-eys, ys+eys, facecolor='blue', alpha=0.2, 
+         edgecolor='none')
+   ax.axvline(tBVmax-Tmax, color='red')
+   ax.axvspan(tBVmax-Tmax-etBVmax, tBVmax-Tmax+etBVmax, color='red', alpha=0.5)
+   p.tight_layout()
+   p.canvas.draw()
+   return p
+
 
 def plot_color(self, f1, f2, epoch=True, deredden=True, interp=False, 
       dokcorr=False, outfile=None, clear=True):

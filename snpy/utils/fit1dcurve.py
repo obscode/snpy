@@ -17,14 +17,22 @@ try:
    from numpy import polynomial
 except:
    polynomial = None
+
+gp = None
 try:
    import pymc
    from pymc import gp as GP
    import os
    if 'OMP_NUM_THREADS' not in os.environ:
       os.environ['OMP_NUM_THREADS'] = '1'
+   gp = 'pymc'
 except:
-   pymc = None
+   try:
+      from sklearn.gaussian_process import GaussianProcessRegressor
+      from sklearn.gaussian_process.kernels import Matern
+      gp = 'sklearn'
+   except:
+      pass
 
 try:
    from . import InteractiveFit
@@ -920,7 +928,7 @@ class Spline(oneDcurve):
 
 functions['spline'] = (Spline, "Dierckx style splines (FITPACK)")
 
-if pymc is not None:
+if gp == 'pymc':
    class GaussianProcess(oneDcurve):
    
       def __init__(self, x, y, dy, mask=None, **args):
@@ -1126,6 +1134,204 @@ if pymc is not None:
          ret = num.array(ret)
          return ret
    functions['gp'] = (GaussianProcess, "Gaussian Process (pymc.GP)")
+elif gp == 'sklearn':
+   class GaussianProcess(oneDcurve):
+   
+      def __init__(self, x, y, dy, mask=None, **args):
+         '''Fit a GP (Gaussian Process) spline to the data.  [args] can be any argument
+         recognized by Matern kernel'''
+   
+         oneDcurve.__init__(self, x, y, dy, mask)
+   
+         self.pars = {
+               'diff_degree':None,
+               'scale':None,
+               'amp':None}
+         for key in args:
+            if key not in self.pars and key != "mean":
+               raise TypeError("%s is an invalid keyword argument for this method" % key)
+            if key != "mean": self.pars[key] = args[key]
+         if 'mean' in args:
+            self.mean = args['mean']
+         else:
+            self.mean = lambda x:  x*0 + num.median(self.y)
+   
+         # Make sure the data conform to the spine requirements
+         self.median = num.median(self.y)
+         self._setup()
+         self.realization = None
+   
+      def __str__(sef):
+         return "Gaussian Process"
+
+      #def __getstate__(self):
+      #   # we need to define this because Mean and Cov are not pickleable
+      #   dict = self.__dict__.copy()
+      #   if 'M' in dict:  del dict['M']
+      #   if 'C' in dict:  del dict['C']
+      #   if 'mean' in dict: dict['mean'] = None
+      #   # Setting setup to None will force re-generation of M and C
+      #   #  when we are unpickled
+      #   dict['setup'] = False
+      #   return dict
+
+      def help(self):
+         print("scale:       Scale over which the function varies")
+         print("amp:         Amplitude of typical function variations")
+         print("diff_degree: Roughly, the degree of differentiability")
+
+   
+      def _setup(self):
+         '''Given the current set of params, setup the interpolator.'''
+   
+         x,y,dy = self._regularize()
+         if self.diff_degree is None:
+            self.diff_degree = 2
+   
+         if self.amp is None:
+            self.amp = num.std(y - self.mean(x))
+   
+         if self.scale is None:
+            #self.scale = (self.x.max() - self.x.min())/2
+            self.scale = 30
+            
+         self.kernel = Matern(length_scale=self.scale, nu=self.diff_degree+0.5)
+         Y = y - self.mean(x)
+         X = array([x]).T
+         self.gpr = GaussianProcessRegressor(kernel=self.kernel, 
+               alpha=dy).fit(X,Y)
+         self.setup = True
+         self.realization = None
+   
+      def __call__(self, x):
+         '''Interpolate at point [x].  Returns a 3-tuple: (y, mask) where [y]
+         is the interpolated point, and [mask] is a boolean array with the same
+         shape as [x] and is True where interpolated and False where extrapolated'''
+         if not self.setup:
+            self._setup()
+   
+         if len(num.shape(x)) < 1:
+            scalar = True
+         else:
+            scalar = False
+   
+         x = num.atleast_1d(x)
+         if self.realization is not None:
+            res = self.realization(x)
+         else:
+            res = self.gpr.predict(x)
+         res = res + self.mean(x)
+   
+         if scalar:
+            return res[0],self.x.min() <= x[0] <= self.x.max()
+         else:
+            return res,num.greater_equal(x, self.x.min())*\
+                  num.less_equal(x, self.x.max())
+         
+      def domain(self):
+         return (self.x.min(),self.x.max())
+
+      def error(self, x):
+         '''Returns the error in the interpolator at points [x].'''
+         if not self.setup:
+            self._setup()
+   
+         if len(num.shape(x)) < 1:
+            scalar = True
+         else:
+            scalar = False
+   
+         x = num.atleast_1d(x)
+         res,sigma = self.gpr.predict(x, return_std=True)
+   
+         if scalar:
+            return sigma[0]
+         else:
+            return sigma
+   
+      def draw(self):
+         '''Generate a random realization of the spline, based on the data.'''
+         if not self.setup:
+            self._setup()
+         self.realization = self.gpr.sample_y
+    
+      def reset_mean(self):
+         self.realization = None
+   
+      def rchisquare(self):
+         chisq = self.chisquare()
+         if len(self.x) < 5:
+            return -1
+         return chisq/(len(self.x) - 4)
+   
+      def deriv(self, x, n=1):
+         '''Returns the nth derivative of the function at x.'''
+         if len(num.shape(x)) < 1:
+            scalar = True
+         else:
+            scalar = False
+         xs = num.atleast_1d(x)
+         f = lambda x:  self.__call__(x)[0]
+         res = deriv(f, xs, dx=self.scale/100., n=n)
+   
+         if scalar:
+            return res[0]
+         else:
+            return res
+   
+      def find_extrema(self, xmin=None, xmax=None):
+         '''Find the position and values of the maxima/minima.  Returns a tuple:
+            (roots,vals,ypps) where roots are the x-values where the extrema
+            occur, vals are the y-values at these points, and ypps are the
+            2nd derivatives.  Optionally, only search for roots between
+            xmin and xmax'''
+         #evaluate the 1st derivative at sacle/10 intervals (that should be 
+         #   enough)
+         if xmin is None:  xmin = self.x.min()
+         if xmax is None:  xmax = self.x.max()
+         dx = min(self.scale*1.0/20, (xmax-xmin)/5.0)
+         xs = num.arange(xmin, xmax, dx)
+         dys = self.deriv(xs, n=1)
+         pids = num.greater(dys, 0)
+         inds = num.nonzero(num.logical_xor(pids[1:],pids[:-1]))[0]
+   
+         if len(inds) == 0:
+            return (num.array([]), num.array([]), num.array([]))
+         ret = []
+         for i in range(len(inds)):
+            try:
+               res = brentq(self.deriv, xs[inds[i]], xs[inds[i]+1])
+               ret.append(res)
+            except:
+               continue
+         if len(ret) == 0:
+            return (num.array([]), num.array([]), num.array([]))
+         ret = num.array(ret)
+         vals = self.__call__(ret)[0]
+         curvs = self.deriv(ret, n=2)
+         curvs = num.where(curvs > 0, 1, curvs)
+         curvs = num.where(curvs < 0, -1, curvs)
+   
+         return ret,vals,curvs
+   
+      def intercept(self, y):
+         '''Find the value of x for which the interpolator goes through [y]'''
+   
+         xs = num.arange(self.x.min(), self.x.max(), self.scale/10)
+         f = lambda x:  self.__call__(x)[0] - y
+         ys = f(xs)
+   
+         pids = num.greater(ys, 0)
+         if num.alltrue(pids) or num.alltrue(-pids):
+            return None
+   
+         ret = []
+         inds = num.nonzero(pids[1:] - pids[:-1])[0]
+         for i in range(len(inds)):
+            ret.append(brentq(f, xs[inds[i]], xs[inds[i]+1]))
+         ret = num.array(ret)
+         return ret
+   functions['gp'] = (GaussianProcess, "Gaussian Process (sklearn.GaussianProcess)")
 else:
    GaussianProcess = None
 

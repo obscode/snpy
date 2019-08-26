@@ -2082,6 +2082,10 @@ class sn(object):
                           label (useful if x-labels are crowded) default: False
          flux (bool): If True, plot in flux units
          epoch (bool): If True, plot time relative to Tmax
+         filtsep (float): If not None, filters whose average wavelength differ
+                          by filtsep will be plotted in the same panel.
+         combfilt (bool):  If true, filters starting with the same letter will
+                          be plotted in the same panel (e.g., g, g2 g_p).
          outfile (str):  optional file name to save the plot
          plotmodel (bool): if True and both a model and spline are present,
                            plot the model instead of spline.
