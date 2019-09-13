@@ -677,7 +677,7 @@ for dir in dirs:
       if line[0] == "#":  continue
       l = line.split()
       standards[sname].add_SED(spectrum(l[0], 
-         os.path.join(stand_base,sname,l[1]), "".join(l[3:]), load=0))
+         os.path.join(stand_base,sname,l[1]), " ".join(l[3:]), load=0))
       standard_mags[sname][l[0]] = {}
       if os.path.isfile(os.path.join(stand_base,sname,l[2])):
          f2 = open(os.path.join(stand_base,sname,l[2]))
@@ -726,7 +726,7 @@ for obs in obsdirs:
                   raise ValueError("Could not convert standard magnitude for filter %s" %\
                         l[0])
                newf = filter(l[0], os.path.join(dir,l[1]), 0.0, 
-                  "".join(l[3:]))
+                  " ".join(l[3:]))
                newf.zp = newf.compute_zpt(standards[std], m)
                fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
             else:
@@ -738,7 +738,7 @@ for obs in obsdirs:
             # zero-point is derived from the filter function alone. See
             # documentation.
             newf = filter(l[0], os.path.join(dir,l[1]), 0.0, 
-               "".join(l[3:]))
+               " ".join(l[3:]))
             newf.zp = 16.84692 + 2.5*num.log10(
                   scipy.integrate.trapz(newf.resp/newf.wave, x=newf.wave))
             fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
