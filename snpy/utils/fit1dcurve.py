@@ -9,6 +9,7 @@ from snpy.utils import fit_spline
 from scipy.interpolate import splrep,splev,sproot
 from scipy.optimize import brentq, newton
 from scipy.misc import derivative as deriv
+import six
 try:
    from snpy.spline2 import spline2, evalsp,eval_extrema,eval_x
 except:
@@ -18,21 +19,43 @@ try:
 except:
    polynomial = None
 
+
+# Both pymc and sklearn take a long time to import, so we'll start doing it
+# on-demand. We'll check for their existence, but that's it.
+
 gp = None
-try:
-   import pymc
-   from pymc import gp as GP
-   import os
-   if 'OMP_NUM_THREADS' not in os.environ:
-      os.environ['OMP_NUM_THREADS'] = '1'
-   gp = 'pymc'
-except:
-   try:
-      from sklearn.gaussian_process import GaussianProcessRegressor
-      from sklearn.gaussian_process.kernels import Matern
-      gp = 'sklearn'
-   except:
-      pass
+if six.PY2:
+   import pkgutil
+   loader = pkgutil.find_loader('pymc')
+   if loader is not None:
+      gp = 'pymc'
+   else:
+      loader = pkgutil.find_loader('sklearn')
+      if loader is not None:
+         gp = 'sklearn'
+else:
+   import importlib
+   spec = importlib.util.find_spec('pymc')
+   if spec is not None:
+      gp = 'pymc'
+   else:
+      spec = importlib.util.find_spec('sklearn')
+      if spec is not None:
+         gp = 'sklearn'
+#   try:
+#      import pymc
+#      from pymc import gp as GP
+#      import os
+#      if 'OMP_NUM_THREADS' not in os.environ:
+#         os.environ['OMP_NUM_THREADS'] = '1'
+#      gp = 'pymc'
+#   except:
+#      try:
+#         from sklearn.gaussian_process import GaussianProcessRegressor
+#         from sklearn.gaussian_process.kernels import Matern
+#         gp = 'sklearn'
+#      except:
+#         pass
 
 try:
    from . import InteractiveFit
@@ -980,6 +1003,8 @@ if gp == 'pymc':
    
       def _setup(self):
          '''Given the current set of params, setup the interpolator.'''
+         import pymc.gp as GP
+         globals()['GP'] = GP
    
          x,y,dy = self._regularize()
          if self.diff_degree is None:
@@ -1164,17 +1189,6 @@ elif gp == 'sklearn':
       def __str__(sef):
          return "Gaussian Process"
 
-      #def __getstate__(self):
-      #   # we need to define this because Mean and Cov are not pickleable
-      #   dict = self.__dict__.copy()
-      #   if 'M' in dict:  del dict['M']
-      #   if 'C' in dict:  del dict['C']
-      #   if 'mean' in dict: dict['mean'] = None
-      #   # Setting setup to None will force re-generation of M and C
-      #   #  when we are unpickled
-      #   dict['setup'] = False
-      #   return dict
-
       def help(self):
          print("scale:       Scale over which the function varies")
          print("amp:         Amplitude of typical function variations")
@@ -1183,6 +1197,10 @@ elif gp == 'sklearn':
    
       def _setup(self):
          '''Given the current set of params, setup the interpolator.'''
+         from sklearn.gaussian_process import GaussianProcessRegressor
+         from sklearn.gaussian_process.kernels import Matern
+         globals()['GaussianProcessRegressor'] = GaussianProcessRegressor
+         globals()['Matern'] = Matern
    
          x,y,dy = self._regularize()
          if self.diff_degree is None:
