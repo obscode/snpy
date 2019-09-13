@@ -15,7 +15,7 @@ from snpy import kcorr
 import types, string
 from snpy.filters import fset
 from snpy import mangle_spectrum
-from snpy.utils import InteractiveFit
+#from snpy.utils import InteractiveFit
 
 #rcParams['font.family'] = 'serif'
 rcParams['font.size'] = 12
@@ -1198,6 +1198,8 @@ def draw_lc_params(self, ax):
 
 def launch_int_fit(self, fitflux=False):
    '''Launch an interacive interpolator.'''
+   from snpy.utils import InteractiveFit
+
    if not fitflux:
       ylabel = 'mag'
    else:
