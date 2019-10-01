@@ -1,85 +1,42 @@
-#!/usr/bin/env python
-import sys,os,glob
+#!/bin/bash
 
-if '-h' in sys.argv or '-help' in sys.argv:
-   from snpy.sqlmod import databases
-   print('''
+# Start up an iPython session with the correct environment. We check to
+# see if a snpy profile exists and if so, use it. Otherwise set one up
+# first
+
+SCRIPT_VERSION=1.0
+
+HELP=$(cat << END
 SNooPy Startup Script.
 
 Usage:  snpy [-gui gui] [-nc] [database]
 
-        -gui gui:  select gui to use.  By default, 'tk' is
-                   used on Linux and 'osx' on Macs.  You
-                   can try 'tk' on Mac, but it tends to be 
+        -gui gui:  select gui to use.  By default, \'tk\' is
+                   used on Linux and \'osx\' on Macs.  You
+                   can try \'tk\' on Mac, but it tends to be 
                    less reliable
-        -nc:  Don't check for newer versions at startup. Speeds up
+        -nc:  Don\'t check for newer versions at startup. Speeds up
               the startup time and good when no internet is available
         database:  Choose a database to query via SQL. Options listed below
 
-Available Databases:
-''')
-   for key in databases:
-      print("   %-10s:      %s" % (key,databases[key][1]))
-   sys.exit(0)
+        Available Databases:
+END
+)
 
-gui = 'tk'
-if '-gui' in sys.argv:
-   id = sys.argv.index('-gui')+1
-   gui = sys.argv[id]
-nc = '-nc' in sys.argv
-
-if sys.platform.find('linux') >= 0:
-   if getattr(sys, 'real_prefix', False):
-      import Tkinter
-      # Try out the tkinter
-      try:
-         root = Tkinter.Tk()
-         root.withdraw()
-      except:
-         # Probably can't find init.tcl.  See if we can find it
-         libdir = os.path.join(sys.real_prefix,'lib')
-         tclver = Tkinter.tkinter.TCL_VERSION
-         test_dirs = [os.path.join(libdir,'tcl'+tclver),
-                      os.path.join(libdir,'tcl',tclver),
-                      os.path.join(libdir,'tcl')]
-         for dir in test_dirs:
-            if os.path.isfile(os.path.join(dir,'init.tcl')):
-               os.environ['TCL_LIBRARY'] = dir
-               os.environ['TK_LIBRARY'] = dir.replace('tck','tk')
-               break
-         try:
-            root = Tkinter.Tk()
-            root.withdraw()
-         except:
-            print("Your python's Tkinter isn't installed or is broken.  Please")
-            print("fix it.  You might try setting TCL_LIBRARY and TK_LIBRARY")
-            print("appropriately.")
-            sys.exit(1)
-
+STARTUP=$(cat << END2
+from snpy import version
+print(" version {}".format(version.__version__))
 
 from numpy import *
-
-try:
-   from IPython.terminal.embed import InteractiveShellEmbed
-except:
-   try:
-      from IPython.frontend.terminal.embed import InteractiveShellEmbed
-   except:
-      print("You don't have an up-to-date version of ipython.")
-      print("SNooPy requires version 0.12 or greater")
-      sys.exit(1)
-
-ipshell=InteractiveShellEmbed(banner1='Welcome to SNooPy')
-ipshell.enable_pylab(gui=gui)
+from matplotlib.pyplot import *
 from snpy import *
+import os
 
-for key in sqlmod.databases:
-   if key in sys.argv:
-      sqlmod.setSQL(key)
-      del sys.argv[sys.argv.index(key)]
+if os.environ['SNPY_DATABASE'] in sqlmod.databases:
+   sqlmod.setSQL(os.environ['SNPY_DATABASE'])
 
-# Check for newer version
-if not nc:
+
+if os.environ['SNPY_NOCHECK'] == "False":
    upgrade,message = check_version()
    if upgrade:
       print("**********************************")
@@ -89,4 +46,60 @@ if not nc:
          sys.stdout.write(line)
       print("")
       print("Use update-snpy to install this new version")
-ipshell()
+END2
+)
+
+database="default"
+nocheck=False
+gui="tk"
+
+function show_help {
+   echo -e "$HELP"
+   echo -n "           "
+   python -c "import snpy.sqlmod;print(','.join(snpy.sqlmod.databases.keys()))"
+   }
+
+while [[ $# -gt 0 ]] ; do
+   key="$1"
+
+   case $key in
+      -h)
+         show_help
+         exit 0
+         ;;
+      -nc)
+         nocheck="True"
+         shift
+         ;;
+      -gui)
+         gui=$1
+         shift
+         ;;
+      *)
+         database=$1
+         shift
+         ;;
+   esac
+done
+
+# Now we check for snpy profile
+loc=$(ipython locate profile snpy)
+if [ $? -eq 1 ] ; then
+   echo "Setting up a SNooPy profile for the first time..."
+   ipython profile create snpy > /dev/null 2&>1
+   loc=$(ipython profile locate snpy)
+   echo "c.InteractiveShell.banner1 = ''" >> $loc/ipython_config.py
+   echo "c.InteractiveShell.banner2 = 'Welcome to SNooPy'" >> $loc/ipython_config.py
+   echo "$STARTUP" > $loc/startup/00snpy_${SCRIPT_VERSION}.py
+   echo "Done! Saved in $loc"
+fi
+
+if [ ! -f ${loc}/startup/00snpy_${SCRIPT_VERSION}.py ] ; then
+   # Can't find the version we want. We probably need to update
+   echo "Updating profile to latest version..."
+   rm -f ${loc}/startup/00snpy*
+   echo "$STARTUP" > ${loc}/startup/00snpy_${SCRIPT_VERSION}.py
+   echo "Done!"
+fi
+
+SNPY_NOCHECK=$nocheck SNPY_DATABASE=$database ipython --profile=snpy --gui=${gui} -i
