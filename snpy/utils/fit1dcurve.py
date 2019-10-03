@@ -1198,9 +1198,10 @@ elif gp == 'sklearn':
       def _setup(self):
          '''Given the current set of params, setup the interpolator.'''
          from sklearn.gaussian_process import GaussianProcessRegressor
-         from sklearn.gaussian_process.kernels import Matern
+         from sklearn.gaussian_process.kernels import Matern, ConstantKernel
          globals()['GaussianProcessRegressor'] = GaussianProcessRegressor
          globals()['Matern'] = Matern
+         globals()['ConstantKernel'] = ConstantKernel
    
          x,y,dy = self._regularize()
          if self.diff_degree is None:
@@ -1213,11 +1214,12 @@ elif gp == 'sklearn':
             #self.scale = (self.x.max() - self.x.min())/2
             self.scale = 30
             
-         self.kernel = Matern(length_scale=self.scale, nu=self.diff_degree+0.5)
+         self.kernel = ConstantKernel(self.amp)*\
+               Matern(length_scale=self.scale, nu=self.diff_degree+0.5)
          Y = y - self.mean(x)
-         X = array([x]).T
+         X = num.array([x]).T
          self.gpr = GaussianProcessRegressor(kernel=self.kernel, 
-               alpha=dy).fit(X,Y)
+               alpha=dy*dy).fit(X,Y)
          self.setup = True
          self.realization = None
    
@@ -1235,9 +1237,9 @@ elif gp == 'sklearn':
    
          x = num.atleast_1d(x)
          if self.realization is not None:
-            res = self.realization(x)
+            res = self.realization(x.reshape(-1,1),random_state=self._seed)[:,0]
          else:
-            res = self.gpr.predict(x)
+            res = self.gpr.predict(x.reshape(-1,1))
          res = res + self.mean(x)
    
          if scalar:
@@ -1260,7 +1262,7 @@ elif gp == 'sklearn':
             scalar = False
    
          x = num.atleast_1d(x)
-         res,sigma = self.gpr.predict(x, return_std=True)
+         res,sigma = self.gpr.predict(x.reshape(-1,1), return_std=True)
    
          if scalar:
             return sigma[0]
@@ -1272,6 +1274,7 @@ elif gp == 'sklearn':
          if not self.setup:
             self._setup()
          self.realization = self.gpr.sample_y
+         self._seed = num.random.randint(2**32-1)
     
       def reset_mean(self):
          self.realization = None
