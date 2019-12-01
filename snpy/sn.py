@@ -1838,7 +1838,7 @@ class sn(object):
       if tracefile is not None:
          d = dict(samples=samples, vinfo=vinfo, pos=pos, prob=prob, state=state,
                pars=pars)
-         f = open(tracefile+"_full", 'w')
+         f = open(tracefile+"_full", 'wb')
          pickle.dump(d, f)
          f.close()
          f = open(tracefile, 'w')
@@ -1867,7 +1867,7 @@ class sn(object):
       if plot_triangle:
          if triangle is None:
             print("Sorry, but if you want a triangle plot, you have to install")
-            print("the triangle module (http://github.com/dfm/triangle.py)")
+            print("the corner module (https://github.com/dfm/corner.py)")
          else:
             triangle.corner(samples, labels=pars, truths=meds)
 
