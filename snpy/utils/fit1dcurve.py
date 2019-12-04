@@ -1217,7 +1217,7 @@ elif gp == 'sklearn':
          self.kernel = ConstantKernel(self.amp)*\
                Matern(length_scale=self.scale, nu=self.diff_degree+0.5)
          Y = y - self.mean(x)
-         X = array([x]).T
+         X = num.array([x]).T
          self.gpr = GaussianProcessRegressor(kernel=self.kernel, 
                alpha=dy*dy).fit(X,Y)
          self.setup = True
@@ -1237,9 +1237,9 @@ elif gp == 'sklearn':
    
          x = num.atleast_1d(x)
          if self.realization is not None:
-            res = self.realization(x)
+            res = self.realization(x.reshape(-1,1),random_state=self._seed)[:,0]
          else:
-            res = self.gpr.predict(x)
+            res = self.gpr.predict(x.reshape(-1,1))
          res = res + self.mean(x)
    
          if scalar:
@@ -1262,7 +1262,7 @@ elif gp == 'sklearn':
             scalar = False
    
          x = num.atleast_1d(x)
-         res,sigma = self.gpr.predict(x, return_std=True)
+         res,sigma = self.gpr.predict(x.reshape(-1,1), return_std=True)
    
          if scalar:
             return sigma[0]
@@ -1274,6 +1274,7 @@ elif gp == 'sklearn':
          if not self.setup:
             self._setup()
          self.realization = self.gpr.sample_y
+         self._seed = num.random.randint(2**32-1)
     
       def reset_mean(self):
          self.realization = None
