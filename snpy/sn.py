@@ -1838,7 +1838,7 @@ class sn(object):
       if tracefile is not None:
          d = dict(samples=samples, vinfo=vinfo, pos=pos, prob=prob, state=state,
                pars=pars)
-         f = open(tracefile+"_full", 'w')
+         f = open(tracefile+"_full", 'wb')
          pickle.dump(d, f)
          f.close()
          f = open(tracefile, 'w')
