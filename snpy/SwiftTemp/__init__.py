@@ -185,8 +185,8 @@ class st_template:
       # Apply a stretch consistent with fits to dm15
       evm = self.interp[band](evt/self.st)
       eevm = num.zeros(evm.shape)   # No uncertainties
-      mask = -num.isnan(evm)
-      evm[-mask] = -1.0
+      mask = ~num.isnan(evm)
+      evm[~mask] = -1.0
       if mag:
          return evm,eevm,mask
       else:

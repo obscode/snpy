@@ -165,9 +165,15 @@ def get_obj(url, full_data=True, allow_no_errors=False, missing_error=0.01):
    # All primary sources
    all_sources_dict = [item for item in d['sources'] \
                            if not item.get('secondary',False)]
+   all_sources_dict2 = [item for item in d['sources'] \
+                           if item.get('secondary',False)]
    all_sources = {}
    for source in all_sources_dict:
       all_sources[source['alias']] = (source.get('bibcode',''),
+                                       source.get('reference',''))
+   all_sources2 = {}
+   for source in all_sources_dict2:
+      all_sources2[source['alias']] = (source.get('bibcode',''),
                                        source.get('reference',''))
 
    # Next, the photometry.
@@ -193,6 +199,11 @@ def get_obj(url, full_data=True, allow_no_errors=False, missing_error=0.01):
          if s in all_sources:
             this_source = all_sources[s]
             break
+      if this_source is None:
+         for s in ss:
+            if s in all_sources2:
+               this_source = all_sources2[s]
+
       if this_source is None:
          print("Warning:  no primary source, skipping")
          continue

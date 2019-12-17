@@ -9,6 +9,7 @@ from snpy.filters import filter
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Button,CheckButtons
 import scipy
+import six
 
 cyc = plt.rcParams['axes.prop_cycle']
 colors = cyc.by_key()['color']
@@ -111,9 +112,10 @@ class timespec:
          (MJD, mags):  MJD(float array): epochs of the light-curve
                        mags(floag array): synthetic magnitudes
       '''
-      if not isinstance(band, filter) and not isinstance(band, basestring):
+      if not isinstance(band, filter) and not \
+            isinstance(band, six.string_types):
          raise ValueError("band must be string or filters.filter instance")
-      if isinstance(band, basestring):
+      if isinstance(band, six.string_types):
          band = fset[band]
       mags = array([band.synth_mag(spec,z=z,zeropad=zeropad) \
             for spec in self.spectra])
@@ -223,7 +225,7 @@ class InteractiveSpec:
       MJD = self.series.MJD[ID]
       label = '{:.1f}'.format(MJD)
       if self.series.parent.Tmax > 0:
-         label += " ({:.1f})".format(MJD-self.series.parent.Tamx)
+         label += " ({:.1f})".format(MJD-self.series.parent.Tmax)
       if clear:
          ll = self._l + self._pline + self._pfill
          for l in ll:
@@ -289,11 +291,11 @@ class InteractiveSpec:
    def bind_key(self, key, callback, helpmsg):
       '''Bind the function [callback] when [key] is pressed. [helpmsg]
       is the help message to pring when self.help() is called.'''
-      if not isinstance(key, basestring) or len(key) != 1:
+      if not isinstance(key, six.string_types) or len(key) != 1:
          raise TypeError("key must be a single character")
       if not callable(callback):
          raise TypeError("callback must be callable")
-      if not isinstance(helpmsg, basestring):
+      if not isinstance(helpmsg, six.string_types):
          raise ValueError("callback must be a string")
       self._binding_help[key] = helpmsg
       self._bindings[key] = callback
@@ -363,3 +365,4 @@ class InteractiveSpec:
          line.set_visible(not line.get_visible())
       for line in self._ellines_z[label]:
          line.set_visible(not line.get_visible())
+      plt.draw()

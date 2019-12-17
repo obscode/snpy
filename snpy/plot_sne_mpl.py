@@ -307,7 +307,7 @@ class ButtonClick:
          l = l[0]
          xs,ys = l.get_data()
          id = argmin(power(event.xdata-xs,2) + power(event.ydata-ys,2))
-         lc.mask[id] = -lc.mask[id]
+         lc.mask[id] = ~lc.mask[id]
          replot_lc(lc)
          return
 
@@ -904,7 +904,7 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
            ecolor='black', picker=True)
    if not alltrue(self.mask):
       # Plot any masked out data s red filled symbols
-      p._x, = p.plot(self.MJD[-self.mask] - epoch*Tmax, y[-self.mask], 'o', 
+      p._x, = p.plot(self.MJD[~self.mask] - epoch*Tmax, y[~self.mask], 'o', 
             color='red')
    else:
       p._x = None
@@ -941,7 +941,7 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
             mfc='blue', capsize=0, elinewidth=1, barsabove=True, ecolor='black',
             picker=True)
       if not alltrue(self.mask):
-         p2._x, = p2.plot(x[-self.mask] - epoch*Tmax, y[-self.mask], 'o', 
+         p2._x, = p2.plot(x[~self.mask] - epoch*Tmax, y[~self.mask], 'o', 
                color='red')
       else:
          p2._x = None
@@ -974,7 +974,7 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
          capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
          ecolor='black', picker=True)
       if not alltrue(self.mask):
-         p2._x, = p2.plot(x[-self.mask] - epoch*Tmax, y[-self.mask], 'o',
+         p2._x, = p2.plot(x[~self.mask] - epoch*Tmax, y[~self.mask], 'o',
                color='red')
       else:
          p2._x = None
@@ -1009,7 +1009,7 @@ def replot_lc(self):
          if p._x:  p._x.remove()
          if not alltrue(self.mask):
             xx,yy = p.lines[0].get_data()
-            p._x, = p.plot(xx[-self.mask], yy[-self.mask], 'o', color='red')
+            p._x, = p.plot(xx[~self.mask], yy[~self.mask], 'o', color='red')
             self.mp.fig.canvas.draw()
       return
 
@@ -1052,9 +1052,9 @@ def replot_lc(self):
       capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
       ecolor='black')
    if not alltrue(self.mask):
-      p._x, = p.plot(self.MJD[-self.mask] - epoch*Tmax, yy[-self.mask], 'o', 
+      p._x, = p.plot(self.MJD[~self.mask] - epoch*Tmax, yy[~self.mask], 'o', 
             color='red')
-      p2._x, = p2.plot(x[-self.mask] - epoch*Tmax, y[-self.mask], 'o',
+      p2._x, = p2.plot(x[~self.mask] - epoch*Tmax, y[~self.mask], 'o',
             color='red')
    else:
       p._x = None

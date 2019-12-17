@@ -101,6 +101,13 @@ class dict_def:
    def keys(self):
       return list(self.dict.keys())
 
+   def values(self):
+      vals = []
+      for key in list(self.parent.data.keys()):
+         val = self.__getitem__(key)
+         if val not in vals: vals.append(val)
+      return vals
+
 class sn(object):
    '''This class is the heart of SNooPy.  Create a supernova object by 
    calling the constructor with the name of the superova as the argument.  
@@ -253,9 +260,13 @@ class sn(object):
 
    def __ne__(self, other):
       return not self.__eq__(other)
+
+   def allbands(self):
+      '''Returns all filters except those beginning with a "_"'''
+      return [b for b in list(self.data.keys()) if b[0] != "_"]
       
 
-   def choose_model(self, name, stype='st', **kwargs):
+   def choose_model(self, name, stype='st', set_restbands=True, **kwargs):
       '''A convenience function for selecting a model from the model module.
       [name] is the model to use.  The model will be used when self.fit() is 
       called and will contain all the parameters and errors. Refer to
@@ -284,6 +295,8 @@ class sn(object):
       self.model = model.__dict__[name](self, stype=stype, **kwargs)
       self.template_bands = [b for b in self.model.rbs \
             if b not in ['Bs','Vs','Rs','Is']]
+      if set_restbands:
+         self.set_restbands()
      
    def get_mag_table(self, bands=None, dt=1.0, outfile=None):
       '''This routine returns a table of the photometry, where the data from
@@ -635,18 +648,21 @@ class sn(object):
          return (result[0][0],result[1][0],result[2][0],result[3][0])
       return result
 
-   def scorr(self, bands=None, SED='H3'):
+   def scorr(self, bands=None, SED='H3', merge=False):
       '''Compute the S-corrections for the named filters. The underlying
       SED is taken as the same that was used to compute k-corretions. If
       k-corrections have not been computed, we simply used the SED
       specified with no mangling.
 
       Args:
-         bands (list or Noen): List of filter so S-correct or all if None
+         bands (list or None): List of filters to S-correct or all if None
                                (default: None)
          SED (string):  If k-corrections have not been computed, we fall
                         back on using the SED spedified here. See 
                         kcorr.get_SED().
+         merge (bool):  If True, then after computing the s-corrections,
+                        merge all photometry with the same rest-band into
+                        the same LC instances.
 
          Returns:
             None
@@ -657,9 +673,11 @@ class sn(object):
 
             * self.Ss:       dictionary of S-corrections indexed by filter
             * self.Ss_mask:  dictionary indicating valid S-corrections
+            * if merge, self.data is updated to merge filters to a common set
+              and keep the old ones with a '_' prefix.
       '''
       if bands is None:
-         bands = list(self.data.keys())
+         bands = self.allbands()
 
       self.Ss = {}
       self.Ss_mask = {}
@@ -695,6 +713,87 @@ class sn(object):
                self.Ss_mask[band].append(f)
             self.Ss[band] = array(self.Ss[band])
             self.Ss_mask[band] = array(self.Ss_mask[band])
+      if merge:
+         self.merge_filters(bands, method='scorr')
+
+   def merge_filters(self, bands=None, method='scorr'):
+      '''For all filters defined in self.data, merge those with the same
+      restband (as defined by self.restbands) into a single filter
+      instance.
+
+      Args:
+         bands (list)   filters to consider merging. If None, all filters
+                        defined in self.data.
+         method (str):  If 'scorr' (default), s-correct before merging.
+                        If 'kcorr', do a cross-band k-correction before merging.
+                        Any other string:  no correction is made.
+         Returns:
+            None
+         
+         Effects:
+            Upon successful completion, all filters in bands will be merged
+            into filter instances defined by self.restbands. Either K- or 
+            S-corrections will be applied, so self.Ss and self.Ks will be
+            nullified.'''
+      if bands is None:
+         bands = self.allbands()
+      for b in bands:
+         if method == 'scorr' and (getattr(self, 'Ss', None) is None or\
+               b not in self.Ss):
+            raise ValueError("Error:  s-corrections for {} not found".format(b))
+         elif method == 'kcorr' and b not in self.Ks:
+            raise ValueError("Error:  k-corrections for {} not found".format(b))
+
+      # merge all filters with the same restband
+      rbs = list(self.restbands.values())
+      for rb in rbs:
+         # list of bands to merge
+         bs = [b for b in bands if self.restbands[b] == rb]
+         lcs = [self.data[b] for b in bs]
+         MJDs = concatenate([lc.MJD for lc in lcs])
+         if method=='kcorr':
+            mags = concatenate([self.data[b].magnitude - self.ks[b] \
+                  for b in bs])
+            masks = concatenate([self.data[b].mask & self.ks_mask[b] \
+                  for b in bs])
+         elif method=='scorr':
+            mags = concatenate([self.data[b].magnitude - self.Ss[b] \
+                  for b in bs])
+            masks = concatenate([self.data[b].mask & self.Ss_mask[b] \
+                  for b in bs])
+         else:
+            mags = concatenate([self.data[b].magnitude for b in bs])
+            masks = ~isnan(mags)
+
+         emags = concatenate([lc.e_mag for lc in lcs])
+         SNRs = concatenate([lc.SNR for lc in lcs])
+         sids = concatenate([lc.sids for lc in lcs])
+
+         # Book-keeping
+         for b in bs:
+            if method == 'kcorr':
+               del self.ks[b]
+               del self.ks_mask[b]
+               del self.ks_tck[b]
+            elif method == 'scorr':
+               del self.Ss[b]
+               del self.Ss_mask[b]
+            del self.data[b]
+            if self.filter_order is not None and  b in self.filter_order:
+               del self.filter_order[self.filter_order.index(b)]
+            if b in self.restbands: del self.restbands[b]
+
+         del self.ks[rb]
+         del self.ks_mask[rb]
+         del self.ks_tck[rb]
+         if getattr(self, 'Ss', None) is not None and rb in self.Ss:
+            del self.Ss[rb]
+            del self.Ss_mask[rb]
+
+         # Create the LC
+         self.data[rb] = lc(self, rb, MJDs, mags, emags, 
+               SNR=SNRs, sids=sids)
+         self.data[rb].mask[:] = masks[:]
          
     
    def kcorr(self, bands=None, mbands=None, mangle=1, interp=1, use_model=0, 
@@ -2457,7 +2556,7 @@ def get_sn(str, sql=None, **kw):
    elif str.find('http://') == 0 or str.find('https://') == 0 or \
          str.find('osc:') == 0:
       from . import get_osc
-      s,message = get_osc.get_obj(str)
+      s,message = get_osc.get_obj(str, **kw)
       if s is None:
          print(message)
          return None
