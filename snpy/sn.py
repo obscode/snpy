@@ -733,7 +733,7 @@ class sn(object):
          Effects:
             Upon successful completion, all filters in bands will be merged
             into filter instances defined by self.restbands. Either K- or 
-            S-corrections will be applied, so self.Ss and self.Ks will be
+            S-corrections will be applied, so self.Ss and self.ks will be
             nullified.'''
       if bands is None:
          bands = self.allbands()
@@ -741,7 +741,7 @@ class sn(object):
          if method == 'scorr' and (getattr(self, 'Ss', None) is None or\
                b not in self.Ss):
             raise ValueError("Error:  s-corrections for {} not found".format(b))
-         elif method == 'kcorr' and b not in self.Ks:
+         elif method == 'kcorr' and b not in self.ks:
             raise ValueError("Error:  k-corrections for {} not found".format(b))
 
       # merge all filters with the same restband
@@ -781,19 +781,22 @@ class sn(object):
             del self.data[b]
             if self.filter_order is not None and  b in self.filter_order:
                del self.filter_order[self.filter_order.index(b)]
+               if len(self.filter_order) == 0:
+                  self.filter_order = None
             if b in self.restbands: del self.restbands[b]
 
-         del self.ks[rb]
-         del self.ks_mask[rb]
-         del self.ks_tck[rb]
-         if getattr(self, 'Ss', None) is not None and rb in self.Ss:
-            del self.Ss[rb]
-            del self.Ss_mask[rb]
+         #del self.ks[rb]
+         #del self.ks_mask[rb]
+         #del self.ks_tck[rb]
+         #if getattr(self, 'Ss', None) is not None and rb in self.Ss:
+         #   del self.Ss[rb]
+         #   del self.Ss_mask[rb]
 
          # Create the LC
          self.data[rb] = lc(self, rb, MJDs, mags, emags, 
                SNR=SNRs, sids=sids)
          self.data[rb].mask[:] = masks[:]
+         self.data[rb].time_sort()
          
     
    def kcorr(self, bands=None, mbands=None, mangle=1, interp=1, use_model=0, 
@@ -1514,12 +1517,15 @@ class sn(object):
                self.data[filt].mag[i], self.data[filt].e_mag[i]))
       fout.close()
 
-   def to_salt(self, outfile=None):
+   def to_salt(self, bands=None, outfile=None, stock=True):
       '''Output a LC file that can be fed into SALT.
       
       Args:
          outfile (str or None): Output file that SALT2 will input. If
                                 None, default to {SN}.list
+         bands (list of str): List of bands to export. All if None.
+         stock (bool): Do we use the stock SALT2 filter/magsys (True)
+                       or the improved CSP definitaions (False)?
       
       Returns:
          None
@@ -1527,24 +1533,34 @@ class sn(object):
       Effects: 
          Creates output file with all SN info needed by SALT2 to fit.
       '''
+      from .salt_filters import snpy_to_salt,snpy_to_salt0
 
       if outfile is None:
          outfile = self.name+".list"
+      if bands is None:
+         bands = self.data.keys()
+
       fout = open(outfile, 'w')
       fout.write('@SN %s\n' % self.name)
       fout.write('@RA %f\n' % self.ra)
       fout.write('@DEC %f\n' % self.decl)
       fout.write('@Z_HELIO %f\n' % self.z)
-      if self.Tmax > 1.0:
-         fout.write('@DayMax %f\n' % self.Tmax)
       fout.write('@MWEBV %f\n' % self.EBVgal)
-      fout.write('#Date :\n#Flux :\n#Fluxerr :\n#ZP :\n#Filter :\n#MagSys :\n#end\n') 
-      fmt = "%.2f %.6f %.6f %.6f SWOPE2::%s VEGA2\n"
-      for filt in self.data:
-         if filt not in ['u','g','r','i','B','V']: continue
+      fout.write('#Date :\n#Flux :\n#Fluxerr :\n#ZP :\n#Filter :\n#MagSys :\n#end\n')
+      fmt = "{:.2f} {:.6f} {:.6f} {:.6f} {}::{} {}\n"
+      if stock:
+         s2s = snpy_to_salt
+      else:
+         s2s = snpy_to_salt0
+      for filt in bands:
+         if filt not in s2s:
+            print("Warning: SALT2 filter not found for {}".format(filt))
+            continue
+         inst,f,magsys = s2s[filt]
          l = self.data[filt]
          for i in range(len(l.mag)):
-            fout.write(fmt % (l.MJD[i],l.flux[i],l.e_flux[i],l.filter.zp,filt))
+            fout.write(fmt.format(
+               l.MJD[i],l.flux[i],l.e_flux[i],l.filter.zp,inst,f,magsys))
       fout.close()
 
    def update_sql(self, attributes=None, dokcorr=1):
