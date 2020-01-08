@@ -1533,7 +1533,7 @@ class sn(object):
       Effects: 
          Creates output file with all SN info needed by SALT2 to fit.
       '''
-      from .salt_filters import snpy_to_salt,snpy_to_salt0
+      from .salt_utils import snpy_to_salt,snpy_to_salt0
 
       if outfile is None:
          outfile = self.name+".list"
@@ -1549,9 +1549,9 @@ class sn(object):
       fout.write('#Date :\n#Flux :\n#Fluxerr :\n#ZP :\n#Filter :\n#MagSys :\n#end\n')
       fmt = "{:.2f} {:.6f} {:.6f} {:.6f} {}::{} {}\n"
       if stock:
-         s2s = snpy_to_salt
-      else:
          s2s = snpy_to_salt0
+      else:
+         s2s = snpy_to_salt
       for filt in bands:
          if filt not in s2s:
             print("Warning: SALT2 filter not found for {}".format(filt))
