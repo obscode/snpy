@@ -1,5 +1,6 @@
 '''A database of SALT filters and how to convert them to SNooPy filters.'''
 import os
+from numpy import array
 
 
 snpy_to_salt = {
@@ -19,12 +20,22 @@ snpy_to_salt = {
    'g2':('SWOPE3','g','BD17-CSP'),
    'r2':('SWOPE3','r','BD17-CSP'),
    'i2':('SWOPE3','i','BD17-CSP'),
+   #Swift UVOT
+   'U_UVOT':('UVOT','U','VEGA-CSP'),
+   'B_UVOT':('UVOT','B','VEGA-CSP'),
+   'V_UVOT':('UVOT','V','VEGA-CSP'),
    # Standard
    'Us':('STANDARD','U','VEGA2'),
    'Bs':('STANDARD','B','VEGA2'),
    'Vs':('STANDARD','V','VEGA2'),
    'Rs':('STANDARD','R','VEGA2'),
    'Is':('STANDARD','I','VEGA2'),
+   # KAIT is also Standard
+   'Ukait':('STANDARD','U','VEGA2'),
+   'Bkait':('STANDARD','B','VEGA2'),
+   'Vkait':('STANDARD','V','VEGA2'),
+   'Rkait':('STANDARD','R','VEGA2'),
+   'Ikait':('STANDARD','I','VEGA2'),
    # SDSS
    'u_s':('SDSS','u','AB_B12'),
    'g_s':('SDSS','g','AB_B12'),
@@ -37,6 +48,16 @@ snpy_to_salt = {
    'uk':('KEPLERCAM','u','VEGA2'),
    'rk':('KEPLERCAM','r','VEGA2'),
    'ik':('KEPLERCAM','i','VEGA2'),
+   'Bk1':('KEPLERCAM','B','VEGA2'),
+   'Vk1':('KEPLERCAM','V','VEGA2'),
+   'uk1':('KEPLERCAM','u','VEGA2'),
+   'rk1':('KEPLERCAM','r','VEGA2'),
+   'ik1':('KEPLERCAM','i','VEGA2'),
+   'Bk2':('KEPLERCAM','B','VEGA2'),
+   'Vk2':('KEPLERCAM','V','VEGA2'),
+   'uk2':('KEPLERCAM','u','VEGA2'),
+   'rk2':('KEPLERCAM','r','VEGA2'),
+   'ik2':('KEPLERCAM','i','VEGA2'),
    # 4-Shooter
    'U4sh':('4SHOOTER2','U','VEGA2'),
    'B4sh':('4SHOOTER2','B','VEGA2'),
@@ -49,6 +70,17 @@ snpy_to_salt = {
    'r_40':('USNO','r','VEGA2'),
    'i_40':('USNO','i','VEGA2'),
    'z_40':('USNO','z','VEGA2'),
+   # PANSTARRS
+   'ps1_u':('PS','u','PS-AB'),
+   'ps1_g':('PS','g','PS-AB'),
+   'ps1_r':('PS','r','PS-AB'),
+   'ps1_i':('PS','i','PS-AB'),
+   'ps1_z':('PS','z','PS-AB'),
+   # ANDICAM
+   'BANDI':('ANDICAM','B','VEGA-CSP'),
+   'VANDI':('ANDICAM','V','VEGA-CSP'),
+   'RANDI':('ANDICAM','R','VEGA-CSP'),
+   'IANDI':('ANDICAM','I','VEGA-CSP'),
 }   
    
 # Stock SALT2 config
@@ -61,6 +93,18 @@ snpy_to_salt0['V0'] = ('SWOPE2','V', 'VEGA2')
 snpy_to_salt0['V'] = ('SWOPE2','V2', 'VEGA2')
 snpy_to_salt0['V1'] = ('SWOPE2','V1', 'VEGA2')
 snpy_to_salt0['V2'] = ('SWOPE2','V', 'VEGA2')
+
+salt_to_snpy = {}
+for key in snpy_to_salt:
+   inst,filt,syst = snpy_to_salt[key]
+   newkey = "{}::{} {}".format(inst,filt,syst)
+   salt_to_snpy[newkey] = key
+
+salt_to_snpy0 = {}
+for key in snpy_to_salt0:
+   inst,filt,syst = snpy_to_salt0[key]
+   newkey = "{}::{} {}".format(inst,filt,syst)
+   salt_to_snpy0[newkey] = key
 
 def parse_results(infile):
    '''Take the file output from SALT2 and parse the results into python
@@ -127,16 +171,42 @@ def parse_results(infile):
             stats[fs[0][1:]] = float(fs[1])
    return results,CovMat,stats
 
-def parse_lc(infile):
+# Convert from salt to snpy parameter names
+saltpar_to_snpy = {'X0':'X0',
+                   'X1':'X1',
+                   'Color':'Color',
+                   'RestFrameMag_0_U':'Umax',
+                   'RestFrameMag_0_B':'Bmax',
+                   'RestFrameMag_0_V':'Vmax',
+                   'RestFrameMag_0_R':'Rmax',
+                   'DayMax':'Tmax'
+                   }
 
+snpypar_to_salt = {}
+for key in saltpar_to_snpy:
+   snpypar_to_salt[saltpar_to_snpy[key]] = key
+
+def parse_lc(infile, stock=True, trans=None):
    if not os.path.isfile(infile):
       raise IOError('File not found: {}'.format(infile))
 
    with open(infile, 'r') as fin: lines = fin.readlines()
+   lines = [line for line in lines if line[0] != '@' and line[0] != '#']
+   lcs = {}
+   if trans is None:
+      if stock:
+         trans = salt_to_snpy0
+      else:
+         trans = salt_to_snpy
+   for line in lines:
+      MJD,flux,eflux,zp,filt,syst = line.strip().split()
+      filt = trans[filt+" "+syst]
+      if filt not in lcs:
+         lcs[filt] = [[float(MJD), float(flux),float(eflux), float(zp)]]
+      else:
+         lcs[filt].append([float(MJD), float(flux),float(eflux), float(zp)])
+   for filt in lcs:
+      lcs[filt] = array(lcs[filt]).T
 
-
-
-
-
-
-
+   return lcs
+      

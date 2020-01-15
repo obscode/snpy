@@ -293,9 +293,10 @@ class sn(object):
          raise ValueError(st)
 
       self.model = model.__dict__[name](self, stype=stype, **kwargs)
-      self.template_bands = [b for b in self.model.rbs \
+      if not self.model.external_fitter:
+         self.template_bands = [b for b in self.model.rbs \
             if b not in ['Bs','Vs','Rs','Is']]
-      if set_restbands:
+      if set_restbands and not self.model.external_fitter:
          self.set_restbands()
      
    def get_mag_table(self, bands=None, dt=1.0, outfile=None):
@@ -1517,7 +1518,7 @@ class sn(object):
                self.data[filt].mag[i], self.data[filt].e_mag[i]))
       fout.close()
 
-   def to_salt(self, bands=None, outfile=None, stock=True):
+   def to_salt(self, bands=None, outfile=None, stock=True, flux=False):
       '''Output a LC file that can be fed into SALT.
       
       Args:
@@ -1526,9 +1527,11 @@ class sn(object):
          bands (list of str): List of bands to export. All if None.
          stock (bool): Do we use the stock SALT2 filter/magsys (True)
                        or the improved CSP definitaions (False)?
+         flux (bool):  If True, output in flux units rather than 
+                       magnitudes.
       
       Returns:
-         None
+         dict:  mapping from SNooPy filters to SALT filters
       
       Effects: 
          Creates output file with all SN info needed by SALT2 to fit.
@@ -1546,8 +1549,13 @@ class sn(object):
       fout.write('@DEC %f\n' % self.decl)
       fout.write('@Z_HELIO %f\n' % self.z)
       fout.write('@MWEBV %f\n' % self.EBVgal)
-      fout.write('#Date :\n#Flux :\n#Fluxerr :\n#ZP :\n#Filter :\n#MagSys :\n#end\n')
-      fmt = "{:.2f} {:.6f} {:.6f} {:.6f} {}::{} {}\n"
+      if flux:
+         fout.write('#Date :\n#Flux :\n#Fluxerr :\n#ZP :\n#Filter :\n#MagSys :\n#end\n')
+         fmt = "{:.2f} {:.6f} {:.6f} {:.6f} {}::{} {}\n"
+      else:
+         fout.write('#Date :\n#Mag :\n#Magerr :\n#Filter :\n#MagSys :\n#end\n')
+         fmt = "{:.2f} {:.6f} {:.6f} {}::{} {}\n"
+      trans = {}
       if stock:
          s2s = snpy_to_salt0
       else:
@@ -1557,11 +1565,17 @@ class sn(object):
             print("Warning: SALT2 filter not found for {}".format(filt))
             continue
          inst,f,magsys = s2s[filt]
+         trans["{}::{} {}".format(inst,f,magsys)] = filt
          l = self.data[filt]
          for i in range(len(l.mag)):
-            fout.write(fmt.format(
-               l.MJD[i],l.flux[i],l.e_flux[i],l.filter.zp,inst,f,magsys))
+            if flux:
+               fout.write(fmt.format(
+                  l.MJD[i],l.flux[i],l.e_flux[i],l.filter.zp,inst,f,magsys))
+            else:
+               fout.write(fmt.format(
+                  l.MJD[i], l.mag[i], l.e_mag[i], inst,f,magsys))
       fout.close()
+      return trans
 
    def update_sql(self, attributes=None, dokcorr=1):
       '''Updates the current information in the SQL database, creating a new SN
@@ -1777,6 +1791,14 @@ class sn(object):
          will be generated with the fit. self.ks will be filled in with
          k-corrections.
       '''
+
+      if self.model.external_fitter:
+         # We're going to skipp all stuff and just run the fitter and plot
+         if bands is None:
+            bands = list(self.data.keys())
+         self.model.fit(bands, **args)
+         if self.replot: self.plot()
+         return
 
       if kcorr is not None:
          warnings.warn("Use of kcorr argument is deprecated. Use dokcorr "

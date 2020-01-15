@@ -12,10 +12,13 @@ import os,string
 from snpy import ubertemp
 from snpy import kcorr
 from snpy.utils import redlaw
+from snpy import salt_utils
+from snpy.filters import fset
 from numpy.linalg import cholesky
 from scipy import stats
 from scipy.optimize import leastsq
 from scipy.optimize import brent
+from scipy.interpolate import splrep,splev
 import scipy.interpolate
 from numpy import *
 #from numpy import median, bool, diag
@@ -44,7 +47,8 @@ class model:
    data. It has several convenience member functions for figuring out things
    like K-corrections and reddening coefficients.'''
 
-   model_in_mags = 1
+   model_in_mags = True
+   external_fitter = False
 
    def __init__(self, parent):
       '''Setup the model.
@@ -1582,3 +1586,289 @@ class color_model(model):
       systs['Tmax'] = 0.34
       systs['Bmax'] = 0.012
       return(systs)
+
+import subprocess
+class SALT_model(model):
+   '''Implement a behind-the-scenes SALT2 fitter so that it behaves just
+   like a SNooPy model. This model takes the SNooPy data, converts it into
+   SALT compatible temporary file, runs SALT2 on it, then gathers the
+   resulting parameters and fit back into SNooPy.'''
+
+   external_fitter=True
+
+   def __init__(self, parent, stype=None, workdir=None, bindir=None,
+         extra=None, calibration='JLA'):
+      '''Instantiate a SALT2 model. 
+
+      Args:
+         parent (snpy.sn instance): The parent sn class.
+         workdir (str):  The location for a working direction. If specified,
+                        the directory is created (if needed) and all temporary
+                        files are results are stored there. If None, then
+                        a temporary folder will be created and deleted 
+                        when finished.
+      '''
+      self.parent = parent
+      self.workdir = workdir
+      self.bindir = bindir
+      self.parameters = {'X0':None, 'X1':None, 'Color':None, 'Tmax':None, 
+            'Bmax':None, 'DM':None}
+      self.errors = {'X0':0, 'X1':0, 'Color':0, 'Tmax':0, 'Bmax':0, 'DM':0}
+      self._tck = None
+      self._etck = None
+
+      # Distance parameters from Betoule et al. (2014)
+      self.alphas = {'C11':0.136, 'JLA':0.140}
+      self.e_alphas = {'C11':0.009, 'JLA':0.006}
+      self.betas = {'C11':2.907, 'JLA':3.139}
+      self.e_betas = {'C11':0.095, 'JLA':0.072}
+      self.MBs = {'C11':-19.02, 'JLA':-19.04}
+      self.e_MBs = {'C11':0.02, 'JLA':0.01}
+
+      self.calibration = calibration
+      self.extra = extra
+
+   def __call__(self, band, t, extrap=False):
+      if self._tck is None or band not in self._tck:
+         return t*0, t*0+0.01, zeros(t.shape, dtype='bool')
+
+      mag = splev(t, self._tck[band])
+      emag = splev(t, self._etck[band])
+      mask = greater_equal(t, self._tck[band][0].min())*\
+             less_equal(t, self._tck[band][0].max())
+      return(mag,emag,mask)
+
+   def setup(self):
+      if self.workdir is not None:
+         self.workdir = os.path.realpath(self.workdir)
+         if not os.path.isdir(self.workdir):
+            os.mkdir(self.workdir)
+         self.cleanup = False
+      else:
+         import tempfile
+         self.workdir = tempfile.mkdtemp()
+         self.cleanup = True
+
+      # Now try to find SALT binary
+      if self.bindir is not None:
+         if os.path.isfile(os.path.join(self.bindir, 'snfit')):
+            self.snfit = os.path.join(self.bindir, 'snfit')
+         else:
+            raise ValueError('Cannot find snfit at location {}'.format(
+               self.bindir))
+      else:
+         res = subprocess.run(['which','snfit'], stdout=subprocess.PIPE)
+         if res.returncode != 0:
+            raise ValueError('snfit is not in your PATH and bindir not set')
+         self.snfit = os.path.realpath(res.stdout)
+         self.bindir = os.dirname(self.snfit)
+      self.snlc = os.path.join(self.bindir, 'snlc')
+
+      # Check if we have stock or modified SALT
+      datadir = os.path.realpath(os.path.join(self.bindir,'..','data'))
+      fitmodel = os.path.join(datadir, 'fitmodel.card')
+      if os.path.isfile(fitmodel):
+         fin = open(fitmodel, 'r')
+         cspsalt = False
+         for line in fin.readlines():
+            if line.find('@BD17-CSP') == 0:
+               cspsalt = True
+               break
+      self.cspsalt = cspsalt
+
+   def _runsalt(self, verbose=False):
+
+      # write out the SALT file
+      self.saltfile = os.path.join(self.workdir, self.parent.name+".list")
+      self._trans = self.parent.to_salt(self._fbands, outfile=self.saltfile,
+            stock=(not self.cspsalt))
+
+      # build up the command line
+      self.outfile = self.saltfile.replace('.list','.out')
+      self.modfile = self.saltfile.replace('.list','.mod')
+      self.residsfile = self.saltfile.replace('.list','.res')
+      cmd = [self.snfit, self.saltfile]
+      cmd += ['-o', self.outfile]
+      cmd += ['-R', self.residsfile]
+      for par in self.fixed:
+         if par in ['DM','Bmax']: continue
+         sp = salt_utils.snpypar_to_salt[par]
+         cmd += ['-f',sp,str(self.parameters[par])]
+
+      for par in self._free:
+         if par in ['DM','Bmax']: continue
+         sp = salt_utils.snpypar_to_salt[par]
+         cmd += ['-i', sp, str(self.parameters[par])]
+
+      if self.extra:
+         cmd += self.extra.split()
+
+      if verbose:
+         print("About to run the command:")
+         print(" ".join(cmd))
+
+      # run the command
+      res = subprocess.run(cmd, stdout=subprocess.PIPE)
+
+      if res.returncode != 0:
+         print("Error: snfit returned with status {}".format(res.returncode))
+         return False
+      if verbose:
+         print(res.stdout)
+
+      # run lc command
+      cmd = [self.snlc, self.saltfile, '-o', self.modfile, '-p', self.outfile]
+      res = subprocess.run(cmd, stdout=subprocess.PIPE)
+
+      if res.returncode != 0:
+         print("Error: snlc returned with status {}".format(res.returncode))
+         return False
+      if verbose:
+         print(res.stdout)
+
+      return True
+
+   def systematics(self, calibration='JLA', include_Ho=False):
+      systs = dict.fromkeys(list(self.parameters.keys()))
+      for key in systs:
+         systs[key] = 0.0
+      cal = calibration
+      systs['DM'] = sqrt(self.e_MBs[cal]**2 + 
+                         (self.parameters['X1']*self.e_alphas[cal])**2 +
+                         (self.parameters['Color']*self.e_betas[cal])**2)
+      return systs
+
+   def guess(self, param):
+      s = self.parent
+      if param == 'Tmax':
+         Tmaxs = []
+         for f in s.data:
+            Tmaxs.append(s.data[f].MJD[argmin(s.data[f].mag)])
+         return median(Tmaxs)
+
+      if param == 'Bmax':
+         fs = list(s.data.keys())
+         idx = argmin(absolute(array([fset[f].ave_wave for f in fs])-4378.))
+
+         return s.data[fs[idx]].mag.min()
+
+      if param == 'X0':
+         return(1.0)
+
+      if param == 'X1':
+         return(0.0)
+
+      if param == 'Color':
+         return(0.0)
+
+      return(0.0)
+
+   def fit(self, bands, epsfcn=0, **args):
+
+      self.args = args.copy()
+      if debug:  print("model.fit() called with args = ", args)
+
+      for b in bands:
+         if b not in self.parent.data:
+            raise ValueError("band %s not defined in this SN object" % (b))
+
+      self._fbands = bands
+
+      # Get everything ready
+      self.setup()
+
+      # build up the fixed variables
+      self.fixed = []
+      for key in list(args.keys()):
+         if key in self.parameters:
+            # check that it is a valid float
+            if key == 'DM':
+               print(\
+                  "Warning:  DM is a derived quantity, so cannot be held fixed")
+               continue
+            try:
+               testvalue = 1.0*args[key]
+            except TypeError:
+               raise ValueError("You are trying to hold %s fixed, but with an illegal value or type: %s" % (key, str(args[key])))
+            self.parameters[key] = args[key]
+            self.fixed.append(key)
+            del args[key]
+      # build up list of free variables:
+      self._free = [p for p in list(self.parameters.keys()) if p not in self.fixed]
+
+      result = self._runsalt()
+      if not result:
+         raise RuntimeError("SALT2 failed to run, bailing!")
+
+      # Parse the results
+      self._results = salt_utils.parse_results(self.outfile)
+      self._lcs = salt_utils.parse_lc(self.modfile, stock=(not self.cspsalt),
+            trans=self._trans)
+
+      self.chisquare = self._results[2]['CHI2_LC']
+      self.dof = self._results[2]['NDF_LC']
+      self.rchisquare = self.chisquare/self.dof
+      
+      # update errors and covariance matrix
+      self.C = {}
+      covar = self._results[1]['Salt2Model']
+      for p in self._free:
+         if p == 'DM': continue
+         sp = salt_utils.snpypar_to_salt[p]
+         self.C[p] = {}
+         self.parameters[p] = self._results[0]['Salt2Model'][sp][0]
+         self.errors[p] = self._results[0]['Salt2Model'][sp][1]
+
+         for p2 in self._free:
+            if p2 == 'DM': continue
+            sp2 = salt_utils.snpypar_to_salt[p2]
+            self.C[p][p2] = covar[sp][sp2]
+
+      # DM is a derived quantity:
+      alpha = self.alphas[self.calibration]
+      beta = self.betas[self.calibration]
+      MB = self.MBs[self.calibration]
+      self.parameters['DM'] = self.Bmax - MB + alpha*self.X1 - beta*self.Color
+      # NOw the fun part, including all the covariances.
+      var = 0
+      self.C['DM'] = {}
+      if 'Bmax' in self._free: 
+         var += self.errors['Bmax']**2
+         self.C['DM']['Bmax'] = self.errors['Bmax']**2
+         if 'X1' in self._free:
+            var += 2*alpha*self.C['Bmax']['X1']
+            self.C['DM']['Bmax'] += alpha*self.C['X1']['Bmax']
+         if 'Color' in self._free:
+            var -= 2*beta*self.C['Bmax']['Color']
+            self.C['DM']['Bmax'] -= beta*self.C['Color']['Bmax']
+
+      if 'X1' in self._free:
+         var += (alpha*self.errors['X1'])**2 
+         self.C['DM']['X1'] = alpha*self.errors['X1']**2
+         if 'Bmax' in self._free:
+            self.C['DM']['X1'] += self.C['Bmax']['X1']
+         if 'Color' in self._free:
+            var -= 2*alpha*beta*self.C['X1']['Color']
+            self.C['DM']['X1'] -= beta*self.C['X1']['Color']
+      if 'Color' in self._free:
+         var += (beta*self.errors['Color'])**2
+         self.C['DM']['Color'] = -beta*self.errors['Color']**2
+         if 'Bmax' in self._free:
+            self.C['DM']['Color'] += self.C['Bmax']['Color']
+         if 'X1' in self._free:
+            self.C['DM']['Color'] += alpha*self.C['X1']['Color']
+
+      self.errors['DM'] = sqrt(var)
+      self.C['DM']['X0'] = 0
+      for key in self.C['DM']: self.C[key]['DM'] = self.C['DM'][key]
+
+      # setup interpolators for the models
+      self._tck = {}
+      self._etck = {}
+      for f in self._lcs:
+         MJD = self._lcs[f][0]
+         mags = -2.5*log10(self._lcs[f][1]) + self._lcs[f][3]
+         emags = 1.0857*self._lcs[f][2]/self._lcs[f][1]
+         self._tck[f] = splrep(MJD, mags, k=1, s=0)
+         self._etck[f] = splrep(MJD, emags, k=1, s=0)
+
