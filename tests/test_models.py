@@ -1,6 +1,11 @@
 import pytest
 from snpy import get_sn
 import numpy as num
+import os
+
+# Test if SALT2 is available
+havesalt = pytest.mark.skipif('SALTPATH' not in os.environ,
+      reason="SALTPATH environment variable not set (SALT2 not installed?)")
 
 @pytest.fixture
 def snobj():
@@ -38,7 +43,15 @@ results = {
             'EBVhost': 0.040,
             'Rv': 3.1,
             'Tmax': 827.565,
-            'st': 0.962}}
+            'st': 0.962},
+}
+SALT_results = {
+            'X0':0.018,
+            'X1':0.121,
+            'Color':-0.105,
+            'Tmax':827.981,
+            'Bmax':15.011,
+}
 
 @pytest.mark.parametrize("model,result", list(results.items()))
 def test_model(snobj, model, result):
@@ -56,4 +69,14 @@ def test_model(snobj, model, result):
 
    res = [round(snobj.model.parameters[key],3) == round(result[key],3) \
          for key in result]
+   assert num.alltrue(res)
+
+@havesalt
+def test_SALT(snobj):
+   snobj.replot=False
+   snobj.choose_model('SALT_model', workdir='temp')
+   snobj.fit()
+
+   res = [round(snobj.model.parameters[key],3) == round(SALT_results[key],3) \
+         for key in SALT_results]
    assert num.alltrue(res)

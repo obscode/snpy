@@ -1657,11 +1657,19 @@ class SALT_model(model):
             raise ValueError('Cannot find snfit at location {}'.format(
                self.bindir))
       else:
-         res = subprocess.run(['which','snfit'], stdout=subprocess.PIPE)
-         if res.returncode != 0:
-            raise ValueError('snfit is not in your PATH and bindir not set')
-         self.snfit = os.path.realpath(res.stdout)
-         self.bindir = os.dirname(self.snfit)
+         if 'SALTPATH' in os.environ:
+            bindir = os.path.join(os.path.dirname(os.environ['SALTPATH']),'bin')
+            if os.path.isfile(os.path.join(bindir, 'snfit')):
+               self.snfit = os.path.join(bindir, 'snfit')
+               self.bindir = bindir
+            else:
+               raise ValueError('Error: snfit not found relative to SALTPATH')
+         else:
+            res = subprocess.run(['which','snfit'], stdout=subprocess.PIPE)
+            if res.returncode != 0:
+               raise ValueError('snfit is not in your PATH and bindir not set')
+            self.snfit = os.path.realpath(res.stdout)
+            self.bindir = os.dirname(self.snfit)
       self.snlc = os.path.join(self.bindir, 'snlc')
 
       # Check if we have stock or modified SALT
