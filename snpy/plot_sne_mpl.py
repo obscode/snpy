@@ -471,19 +471,20 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
          filt in obj.model._fbands:
       t = arange(-10,70,1.0) + obj.Tmax
       mag,err,gids = obj.model(filt, t)
-      if not flux:
-         y = mag + delt
-      else:
-         zp = fset[filt].zp
-         y = power(10, -0.4*(mag - zp + delt))
-      ax.plot(compress(gids,t-Toff), compress(gids,y), 
-            color='k', linewidth=linewidth)
-      l = ax.plot(compress(gids,t-Toff), compress(gids,y+err), 
-            '--',color='k', linewidth=linewidth)
-      l[0].autoscale=False
-      l = ax.plot(compress(gids,t-Toff), compress(gids,y-err), 
-            '--',color='k', linewidth=linewidth)
-      l[0].autoscale=False
+      if sometrue(gids):
+         if not flux:
+            y = mag + delt
+         else:
+            zp = fset[filt].zp
+            y = power(10, -0.4*(mag - zp + delt))
+         ax.plot(compress(gids,t-Toff), compress(gids,y), 
+               color='k', linewidth=linewidth)
+         l = ax.plot(compress(gids,t-Toff), compress(gids,y+err), 
+               '--',color='k', linewidth=linewidth)
+         l[0].autoscale=False
+         l = ax.plot(compress(gids,t-Toff), compress(gids,y-err), 
+               '--',color='k', linewidth=linewidth)
+         l[0].autoscale=False
    elif obj.data[filt].interp is not None:
       d = obj.data[filt].interp.domain()
       t = arange(d[0], d[1]+1.0, 1.0)
