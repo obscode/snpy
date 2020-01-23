@@ -7,6 +7,9 @@ import os
 havesalt = pytest.mark.skipif('SALTPATH' not in os.environ,
       reason="SALTPATH environment variable not set (SALT2 not installed?)")
 
+havemlcs = pytest.mark.skipif('MLCS2K2_BASEDIR' not in os.environ,
+    reason="MLCS2K2_BASEDIR environment variable not set (MLCS not installed?")
+
 @pytest.fixture
 def snobj():
    import snpy
@@ -53,6 +56,14 @@ SALT_results = {
             'Bmax':15.011,
 }
 
+MLCS_results = {
+      'del':-0.107,
+      'av0':0.099,
+      'DM':34.548,
+      'Tmax':827.31,
+      'Vmax':15.084
+}
+
 @pytest.mark.parametrize("model,result", list(results.items()))
 def test_model(snobj, model, result):
    if model == 'EBV_model':  
@@ -79,4 +90,14 @@ def test_SALT(snobj):
 
    res = [round(snobj.model.parameters[key],3) == round(SALT_results[key],3) \
          for key in SALT_results]
+   assert num.alltrue(res)
+
+@havemlcs
+def test_MLCS(snobj):
+   snobj.replot=False
+   snobj.choose_model('MLCS_model')
+   snobj.fit()
+
+   res = [round(snobj.model.parameters[key],3) == round(MLCS_results[key],3) \
+         for key in MLCS_results]
    assert num.alltrue(res)

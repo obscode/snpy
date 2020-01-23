@@ -1,4 +1,4 @@
-'''A database of SALT filters and how to convert them to SNooPy filters.'''
+'''A module of convenience functions to deal with SALT2 <--> SNooPy.'''
 import os
 from numpy import array
 
@@ -63,7 +63,7 @@ snpy_to_salt = {
    'B4sh':('4SHOOTER2','B','VEGA2'),
    'V4sh':('4SHOOTER2','V','VEGA2'),
    'R4sh':('4SHOOTER2','R','VEGA2'),
-   'I4sh':('4SHOOTER2','U','VEGA2'),
+   'I4sh':('4SHOOTER2','I','VEGA2'),
    #USNO
    'u_40':('USNO','u','VEGA2'),
    'g_40':('USNO','g','VEGA2'),

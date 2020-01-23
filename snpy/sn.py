@@ -1477,46 +1477,90 @@ class sn(object):
       fout.write(st)
       fout.close()
 
-   def to_mlcs(self, Tmax=None, spec_sample='hsiao', prior='rv19', 
-         vector='rv19-early-smix'):
+   def to_mlcs(self, bands=None, sninfo='sn.info', outfile=None, Tmax=None, 
+         spec_sample='hsiao', prior='rv19', vector='rv19-early-smix',
+         stock=True):
       '''Output the LC data to formats suitable for fitting with MLCS2k2.
       
       Args:
+         bands (list of str): List of bands to export. If None, all filters
+                              that have a MLCS2k2 passband are exported.
+         sinfo (str): File to update with SN info (default: sn.info)
+         outfile (str): The light-curve data file to output. If None,
+                         SN name + '.dat'
          Tmax (float or None): Time of maximum (initial guess for MLCS). If 
                                None, try to get from fits or splines.
          spec_sample (str): The spetroscopic sample to use for k-corrections.
                             (See MLCS documentation)
          prior (str):  Reddening prior for MLCS (see MLCS documentation)
          vector (str):  Vector to use for MLCS (see MLCS documentation)
+         stock (bool):  If True, assume MLCS2k2 doesn't have CSP mods.
+
       Returns:
-         None
+         trans (dict):  a translation between SNooPy filters and MLCS filters
+                        that were exported.
 
       Effects:
          Creates (or appends to) an output file named sn.info with the SN
-         information needed by MLCS. Also creates a file named {SN}.dat
+         information needed by MLCS. Also creates a file named `outfile`
          with the light-curve data. Both are used to fit in MLCS
       '''
+      from .mlcs_utils import snpy_to_mlcs,snpy_to_mlcs0
+      if bands is None:
+         bands = self.data.keys()
       if Tmax is None:
          if self.Tmax > 1.0:
             Tmax = self.Tmax
          else:
-            raise ValueError("No Tmax defined. Fit a model or template first")
+            # Try to get max from closest filter to B
+            bands = list(self.data.keys())
+            diffs = [abs(self.data[band].filter.ave_wave-fset['B'].ave_wave) \
+                  for band in bands]
+            B = bands[argmin(diffs)]
+            Tmax = self.data[B].MJD[argmin(self.data[B].mag)]
+
+      if outfile is None:
+         outfile = self.name+".dat"
 
       # First sn.info 
-      fout = open('sn.info','a')
-      fout.write("%-23s %6.4f %10.4f    %6.4f     %s    %s   %s\n" % \
-            (self.name, self.z, Tmax, self.EBVgal, spec_sample, prior, vector))
+      fin = open(sninfo, 'r')
+      lines = fin.readlines()
+      names = [line.split()[0] for line in lines]
+      if self.name in names:
+         idx = names.index(self.name)
+      else:
+         idx = None
+      fin.close()
+
+      l = "%-23s %6.4f %10.4f    %6.4f     %s    %s   %s\n" % \
+            (self.name, self.z, Tmax, self.EBVgal, spec_sample, prior, vector)
+      fout = open(sninfo,'w')
+      if idx is not None:
+         lines[idx] = l
+      else:
+         lines.append(l)
+      for line in lines:
+         fout.write(line)
       fout.close()
 
       fmt = "%-11s %10.4f     %5.3f    %4.3f\n"
-      fout = open(self.name+".dat", 'w')
+      fout = open(outfile, 'w')
+      trans = {}
+      if stock:
+         s2s = snpy_to_mlcs0
+      else:
+         s2s = snpy_to_mlcs
       for filt in self.data:
-         if filt not in ['u','g','r','i','B','V']:
+         if filt not in s2s:
+            print("Warning: MLCS2k2 passband not found for {}".format(filt))
             continue
+
+         trans[s2s[filt]] = filt
          for i in range(len(self.data[filt].MJD)):
-            fout.write(fmt % (filt[0]+"_CSP", self.data[filt].MJD[i], 
+            fout.write(fmt % (s2s[filt], self.data[filt].MJD[i], 
                self.data[filt].mag[i], self.data[filt].e_mag[i]))
       fout.close()
+      return trans
 
    def to_salt(self, bands=None, outfile=None, stock=True, flux=False):
       '''Output a LC file that can be fed into SALT.

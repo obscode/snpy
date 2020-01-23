@@ -13,6 +13,7 @@ from snpy import ubertemp
 from snpy import kcorr
 from snpy.utils import redlaw
 from snpy import salt_utils
+from snpy import mlcs_utils
 from snpy.filters import fset
 from numpy.linalg import cholesky
 from scipy import stats
@@ -24,6 +25,7 @@ from numpy import *
 #from numpy import median, bool, diag
 from numpy.linalg import inv
 import pickle
+from glob import glob
 
 Ia_w,Ia_f = kcorr.get_SED(0, 'H3')
 gconst = -0.5*log(2*pi)
@@ -1608,7 +1610,7 @@ class SALT_model(model):
                         a temporary folder will be created and deleted 
                         when finished.
       '''
-      self.parent = parent
+      model.__init__(self, parent)
       self.workdir = workdir
       self.bindir = bindir
       self.parameters = {'X0':None, 'X1':None, 'Color':None, 'Tmax':None, 
@@ -1880,3 +1882,192 @@ class SALT_model(model):
          self._tck[f] = splrep(MJD, mags, k=1, s=0)
          self._etck[f] = splrep(MJD, emags, k=1, s=0)
 
+class MLCS_model(model):
+   '''Implement a behind-the-scenes MLCS2k2 fitter so that it behaves just
+   like a SNooPy model. This model takes the SNooPy data, converts it into
+   MLCS compatible temporary file, runs MLCS2k2 on it, then gathers the
+   resulting parameters and fit back into SNooPy.'''
+
+   external_fitter=True
+
+   def __init__(self, parent, stype=None, idl=None,
+         spec_sample='hsiao', prior='rv19', vector='rv19-early-smix'):
+      '''Instantiate a MLCS2k2 model. 
+
+      Args:
+         parent (snpy.sn instance): The parent sn class.
+         idl (str):  IDL command-line. If not specified, try PATH
+         spec_sample (str): spectrosopic sample to use for K-corrections
+                            (see MLCS docs)
+         prior (str):  priors on parameters (see MLCS docs)
+         vector (str):  LC vector (see MLCS docs)
+
+      '''
+      model.__init__(self, parent)
+      self.idl = idl
+      self.spec_sample = spec_sample
+      self.vector = vector
+      self.prior = prior
+      self.parameters = {'del':None, 'av0':None, 'DM':None, 'Tmax':None, 
+            'Rv':None, 'Vmax':None, 'p0':None}
+      self.errors = {'del':0, 'av0':0, 'DM':0, 'Tmax':0, 'Rv':0, 'Vmax':0,
+            'p0':None}
+      self._tck = None
+      self._etck = None
+
+   def __call__(self, band, t, extrap=False):
+      if self._tck is None or band not in self._tck:
+         return t*0, t*0+0.01, zeros(t.shape, dtype='bool')
+
+      mag = splev(t, self._tck[band])
+      emag = splev(t, self._etck[band])
+      mask = greater_equal(t, self._tck[band][0].min())*\
+             less_equal(t, self._tck[band][0].max())
+      return(mag,emag,mask)
+
+   def setup(self):
+      # Now try to find IDL binary
+      if self.idl is not None:
+         if not os.path.isfile(self.idl):
+            raise ValueError('Cannot find IDL at location {}'.format(
+               self.idl))
+      else:
+         if 'IDL_DIR' in os.environ:
+            tes = os.path.join(os.environ['IDL_DIR'],'bin','idl')
+            if os.path.isfile(tes):
+               self.idl = tes
+            else:
+               raise ValueError("IDL_DIR set but can't find idl command")
+         else:
+            res = subprocess.run(['which','idl'], stdout=subprocess.PIPE)
+            if res.returncode != 0:
+               raise ValueError('idl is not in your PATH and self.idl not set')
+            self.idl = os.path.realpath(res.stdout)
+
+      # Now check for MLCS
+      if 'MLCS2K2_BASEDIR' not in os.environ:
+         raise ValueError('MLCS2K2_BASEDIR is not defined in environment')
+      self.mlcs_base = os.environ['MLCS2K2_BASEDIR']
+      # Check if we have stock or modified MLCS
+      datadir = os.path.join(self.mlcs_base,'aux','passbands')
+      self.stock = not os.path.isfile(os.path.join(datadir,'B_CSP2.fits'))
+      self.curdir = os.path.realpath(os.curdir)   # so we can get back!
+      self.workdir = os.path.join(self.mlcs_base, 'pro')
+      self.fitdir = os.path.join(self.mlcs_base, 'fit','out',self.parent.name)
+      self.sninfo = os.path.join(self.mlcs_base,'fit','sn.info')
+      self.datadir = os.path.join(self.mlcs_base, 'data')
+      self.outfile = os.path.join(self.datadir, self.parent.name+".dat")
+
+   def _runmlcs(self, verbose=False):
+
+      # write out the MLCS files
+      if verbose:
+         print('Updating {}'.format(self.sninfo))
+         print('Writing {}'.format(self.outfile))
+      self._trans = self.parent.to_mlcs(self._fbands, 
+            sninfo=self.sninfo, outfile=self.outfile, prior=self.prior,
+            vector=self.vector, spec_sample=self.spec_sample, stock=self.stock)
+
+      # Clear out any previous fits
+      if os.path.isdir(self.fitdir):
+         files = glob(os.path.join(self.fitdir,'*'))
+         for fil in files:
+            os.unlink(fil)
+
+      # build up the command line
+      if verbose: print('Changing dir to {}'.format(self.workdir))
+      os.chdir(self.workdir)
+
+      # run the command
+      inp = 'fit,"{}"'.format(self.parent.name)
+      res = subprocess.run([self.idl], stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, input=bytes(inp, 'utf-8'))
+
+
+      if res.returncode != 0:
+         print("Error: IDL returned with status {}".format(res.returncode))
+         os.chdir(self.curdir)
+         return False
+      if verbose:
+         [print(line) for line in res.stdout.split(b'\n')]
+         [print(line) for line in res.stderr.split(b'\n')]
+
+      self._stdout = [line for line in res.stdout.split(b'\n')]
+      self._stderr = [line for line in res.stderr.split(b'\n')]
+      os.chdir(self.curdir)
+      return True
+
+   def systematics(self, calibration='JLA', include_Ho=False):
+      systs = dict.fromkeys(list(self.parameters.keys()))
+      for key in systs:
+         systs[key] = 0.0
+      return systs
+
+   def fit(self, bands, epsfcn=0, **args):
+
+      self.args = args.copy()
+      if debug:  print("model.fit() called with args = ", args)
+
+      for b in bands:
+         if b not in self.parent.data:
+            raise ValueError("band %s not defined in this SN object" % (b))
+
+      self._fbands = bands
+
+      # Get everything ready
+      self.setup()
+
+      # build up the fixed variables
+      self.fixed = []
+      for key in list(args.keys()):
+         if key in self.parameters:
+            raise ValueError("Error: MLCS2k2 doesn't support fixing parameters")
+      # build up list of free variables:
+      self._free = [p for p in list(self.parameters.keys()) if p not in self.fixed]
+
+      result = self._runmlcs()
+      if not result:
+         raise RuntimeError("MLCS2k2 failed to run, bailing!")
+
+      # Parse the results
+      self._results,self._stats = mlcs_utils.parse_results(self.fitdir)
+      if self._results is None:
+         raise RuntimeError("MLCS2k2 failed to run. Check model.stderr")
+
+
+      self._lcs = mlcs_utils.parse_lc(self.fitdir, stock=self.stock, 
+            trans=self._trans)
+
+      # For now, take the "last" iteration
+      iters = list(self._results.keys())
+      iters.sort()
+      it = iters[-1]
+
+      self.chisquare = self._stats[it]['chisq']
+      self.dof = self._stats[it]['ndof']
+      self.rchisquare = self._stats[it]['rchisq']
+      
+      # update errors and covariance matrix
+      self.C = {}
+      for p in self._free:
+         sp = mlcs_utils.snpypar_to_mlcs[p]
+         self.C[p] = {}
+         self.parameters[p] = self._results[it][sp][0]
+         self.errors[p] = self._results[it][sp][1]
+
+         for p2 in self._free:
+            sp2 = mlcs_utils.snpypar_to_mlcs[p2]
+            if p == p2:
+               self.C[p][p2] = self.errors[p]**2
+            else:
+               self.C[p][p2] = 0.0
+
+      # setup interpolators for the models
+      self._tck = {}
+      self._etck = {}
+      for f in self._lcs[it]:
+         MJD = self._lcs[it][f][0]
+         mags = self._lcs[it][f][1]
+         emags = self._lcs[it][f][2]
+         self._tck[f] = splrep(MJD, mags, k=1, s=0)
+         self._etck[f] = splrep(MJD, emags, k=1, s=0)
