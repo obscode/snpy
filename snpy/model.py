@@ -1667,10 +1667,13 @@ class SALT_model(model):
             else:
                raise ValueError('Error: snfit not found relative to SALTPATH')
          else:
-            res = subprocess.run(['which','snfit'], stdout=subprocess.PIPE)
-            if res.returncode != 0:
+            p = subprocess.Popen(['which','snfit'], stdout=subprocess.PIPE)
+            so,se = p.communicate()
+            res = p.returncode
+            #res = subprocess.run(['which','snfit'], stdout=subprocess.PIPE)
+            if p.returncode != 0:
                raise ValueError('snfit is not in your PATH and bindir not set')
-            self.snfit = os.path.realpath(res.stdout)
+            self.snfit = os.path.realpath(so)
             self.bindir = os.dirname(self.snfit)
       self.snlc = os.path.join(self.bindir, 'snlc')
 
@@ -1718,23 +1721,30 @@ class SALT_model(model):
          print(" ".join(cmd))
 
       # run the command
-      res = subprocess.run(cmd, stdout=subprocess.PIPE)
+      #res = subprocess.run(cmd, stdout=subprocess.PIPE)
+      p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+      so,se = p.communicate()
 
-      if res.returncode != 0:
-         print("Error: snfit returned with status {}".format(res.returncode))
+      if p.returncode != 0:
+         print("Error: snfit returned with status {}".format(p.returncode))
+         print(se)
          return False
       if verbose:
-         print(res.stdout)
+         print(so)
 
       # run lc command
       cmd = [self.snlc, self.saltfile, '-o', self.modfile, '-p', self.outfile]
-      res = subprocess.run(cmd, stdout=subprocess.PIPE)
+      #res = subprocess.run(cmd, stdout=subprocess.PIPE)
+      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      so,se = p.communicate()
 
-      if res.returncode != 0:
-         print("Error: snlc returned with status {}".format(res.returncode))
+      if p.returncode != 0:
+         print("Error: snlc returned with status {}".format(p.returncode))
+         print(se)
          return False
       if verbose:
-         print(res.stdout)
+         print(so)
 
       return True
 
@@ -1939,10 +1949,13 @@ class MLCS_model(model):
             else:
                raise ValueError("IDL_DIR set but can't find idl command")
          else:
-            res = subprocess.run(['which','idl'], stdout=subprocess.PIPE)
-            if res.returncode != 0:
+            #res = subprocess.run(['which','idl'], stdout=subprocess.PIPE)
+            p = subprocess.Popen(['which','idl'], stdout=subprocess.PIPE,
+                  stderr=subprocess.PIPE)
+            so,se = p.communicate()
+            if p.returncode != 0:
                raise ValueError('idl is not in your PATH and self.idl not set')
-            self.idl = os.path.realpath(res.stdout)
+            self.idl = os.path.realpath(so.strip())
 
       # Now check for MLCS
       if 'MLCS2K2_BASEDIR' not in os.environ:
@@ -1980,20 +1993,23 @@ class MLCS_model(model):
 
       # run the command
       inp = 'fit,"{}"'.format(self.parent.name)
-      res = subprocess.run([self.idl], stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, input=bytes(inp, 'utf-8'))
+      #res = subprocess.run([self.idl], stdout=subprocess.PIPE, 
+      #      stderr=subprocess.PIPE, input=bytes(inp, 'utf-8'))
+      if six.PY3: inp = bytes(inp, 'utf-8')
+      p = subprocess.Popen([self.idl], stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+      so,se = p.communicate(input=inp)
 
-
-      if res.returncode != 0:
-         print("Error: IDL returned with status {}".format(res.returncode))
+      if p.returncode != 0:
+         print("Error: IDL returned with status {}".format(p.returncode))
          os.chdir(self.curdir)
+         print(se)
          return False
       if verbose:
-         [print(line) for line in res.stdout.split(b'\n')]
-         [print(line) for line in res.stderr.split(b'\n')]
+         [print(line) for line in so.split(b'\n')]
 
-      self._stdout = [line for line in res.stdout.split(b'\n')]
-      self._stderr = [line for line in res.stderr.split(b'\n')]
+      self._stdout = [line for line in so.split(b'\n')]
+      self._stderr = [line for line in se.split(b'\n')]
       os.chdir(self.curdir)
       return True
 
