@@ -3,7 +3,6 @@ from snpy import get_sn
 from snpy.utils import fit1dcurve
 
 allresults = {'chebyshev': 828.730,
-           'gp': 827.172,
            'hermite': 828.730,
            'hermiteE': 828.730,
            'hyperspline': 827.426,
@@ -11,6 +10,11 @@ allresults = {'chebyshev': 828.730,
            'polynomial': 828.730,
            'spline': 827.290,
            'spline2': 827.426}
+
+if fit1dcurve.gp == 'pymc':
+   allresults['gp'] = 827.172
+elif fit1dcurve.gp == 'sklearn':
+   allresults['gp'] = 827.115
 
 @pytest.fixture
 def snobj():
