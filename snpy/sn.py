@@ -1513,10 +1513,10 @@ class sn(object):
             Tmax = self.Tmax
          else:
             # Try to get max from closest filter to B
-            bands = list(self.data.keys())
+            allbands = list(self.data.keys())
             diffs = [abs(self.data[band].filter.ave_wave-fset['B'].ave_wave) \
-                  for band in bands]
-            B = bands[argmin(diffs)]
+                  for band in allbands]
+            B = allbands[argmin(diffs)]
             Tmax = self.data[B].MJD[argmin(self.data[B].mag)]
 
       if outfile is None:
@@ -1550,7 +1550,7 @@ class sn(object):
          s2s = snpy_to_mlcs0
       else:
          s2s = snpy_to_mlcs
-      for filt in self.data:
+      for filt in bands:
          if filt not in s2s:
             print("Warning: MLCS2k2 passband not found for {}".format(filt))
             continue
