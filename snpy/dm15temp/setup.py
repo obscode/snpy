@@ -2,13 +2,13 @@ def configuration(parent_package='', top_path=None):
    from numpy.distutils.misc_util import Configuration
 
    config = Configuration('dm15temp', parent_package, top_path)
-   config.add_extension('dm15tempc',
-                        sources=['dm15temp_wrap.c','dm15temp_CRB.c'],
-                        libraries=['m']
-                        )
-   config.add_data_files('dm15temps.dat')
+   #config.add_extension('dm15tempc',
+   #                     sources=['dm15temp_wrap.c','dm15temp_CRB.c'],
+   #                     libraries=['m']
+   #                     )
+   #config.add_data_files('dm15temps.dat')
    config.add_data_files('tck.pickle')
-   config.add_data_dir('templates')
+   #config.add_data_dir('templates')
    return config
 
 if __name__ == '__main__':
