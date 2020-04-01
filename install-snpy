@@ -1,0 +1,134 @@
+#!/bin/bash
+
+# This script will install SNooPy in the "best" way possible. In order, we
+# will try to do the following:
+# 1) Check for anaconda (conda) environment and install into that
+# 2) Create a new conda environment and install into that
+# 3) Create a venv and install into that using pip
+
+if [ "$1" = "-h" ] ; then
+   echo "Usage:  install-snpy [location]"
+   echo "  Install SNooPy into a virtual environment called [location]."
+   echo "  [location] is optional, default is 'snpy'"
+   exit
+fi
+
+if [ $# -lt 1 ] ; then
+   location="snpy"
+else
+   location=$1
+fi
+
+mandatory_packages="numpy scipy astropy ipython matplotlib"
+optional_packages="pymc emcee pymysql"
+
+
+echo "Checking for conda..."
+CONDA=$(which conda 2> /dev/null)
+if [ $? -eq 1 ] ; then
+   echo "conda not found, falling back on venv"
+   PY=$(which python 2> /dev/null)
+   if [ $? -eq 1 ] ; then
+      echo "No python found! Install python before you run this script."
+      exit 1
+   fi
+   version=$($PY -V)
+   if [ $(echo -e "Python 3.0.0\n${version}" | sort -V -r | head -1) = "Python 3.0.0" ] ; then
+      echo "You must be running Python 3 to use this script"
+      exit 1
+   fi
+
+   # Now check to see if we are already in an environment
+   base=$($PY -c "import sys;print(sys.exec_prefix)")
+   if [ -f ${base}/pyvenv.cfg ] ; then
+      echo "You already seem to be in a virtual environment."
+      while true; do
+         read -p "Should I install SNooPy into this venv? (y/n)" yn
+         case $yn in
+            [Yy]* ) break;;
+            [Nn]* ) exit ;;
+            * ) echo "answer y/n";;
+
+         esac
+      done
+   else
+      echo "Creating new venv environment in $location"
+      $PY -m venv $location
+      source $location/bin/activate
+      base=$($PY -c "import sys;print(sys.exec_prefix)")
+   fi
+   
+   PIP=$(which pip 2> /dev/null)
+   if [ $? -eq 1 ] ; then
+      echo "I can't find pip. Please install it and re-run this script"
+      exit 1
+   fi
+
+   for package in $mandatory_packages ; do
+      echo "Installing $package..."
+      $PIP install $package > ${package}.log 2>&1 || echo "$package failed to install, abort!"; exit
+   done
+
+   for package in $optional_packages ; do
+      echo "Installing $package..."
+      $PIP install $package > ${package}.log 2>&1 || echo "optional $package failed to install"
+   done
+
+else
+   # We have a conda environment. Yay! Check to see if we have the env
+   # already
+
+   # To access conda functionality we need to do some initialization
+   #source $(conda info --base)/etc/profile.d/conda.sh
+   eval "$(conda shell.bash hook)"
+
+   $CONDA activate $location > /dev/null 2>&1
+   if [ $? -eq 0 ] ; then
+      python -c "import snpy"
+      if [ $? -eq 0 ] ; then
+         echo "You already seem to have a version of SNooPY isntalled."
+         echo "You should probably run update-snpy to update to the latest"
+         echo "version."
+         exit
+      fi
+   else
+      echo "Creating new virtual environment $location"
+      $CONDA create -n $location -y > /dev/null 2>&1
+      echo "Done"
+      $CONDA activate $location
+      echo "Done"
+   fi
+
+   # Now we have activated the environment, install the software
+   for package in $mandatory_packages ; do
+      echo "Installing ${package}..."
+      echo $CONDA install $package > ${package}.log 2>&1 || echo "Installation of $package failed. Abort!"; exit
+   done
+
+   for package in $optional_packages ; do
+      echo "Installing ${package}..."
+      $CONDA install $package > ${package}.log 2>&1
+      if [ $? -ne 0 ] ; then
+         echo "Trying PIP..."
+         pip install $package > ${package}.log 2>&1 || echo "Installation of optional package $package failed"
+      fi
+   done
+
+fi
+
+# Okay, at this point, we should be in a proper virtual environment
+cd $(python -c "import sys;print(sys.exec_prefix)")
+echo "Downloading SNooPy from git..."
+git clone https://github.com/obscode/snpy > git.log 2>&1
+if [ $? -ne 0 ] ; then
+   echo "Downloading from git failed, abort!. Check git.log"
+   exit
+fi
+
+cd snpy
+python setup.py install > snpy.log 2>&1
+echo "Done!  With any luck, SNooPy has been successfully installed into the"
+echo "virtual environment ${location}. From now on, if you want to run"
+echo "SNooPy, you will need to activate this virtual environment first. Then"
+echo "simply run 'snpy'. You can also periodically update SNooPy by running"
+echo "'update-snpy' on the command-line."
