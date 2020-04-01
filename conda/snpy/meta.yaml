@@ -1,32 +1,32 @@
+{% set version = "2.5.3" %}
+
 package:
   name: snpy
-  version: 2.5.2
+  version: {{ version }}
 
 source:
-   git_tag: 2.5.2
+   git_tag: {{ version }}
    git_url: https://github.com/obscode/snpy.git
 
 requirements:
    build:
-      - python=3.6
+      - python
       - setuptools
       - numpy
-      - gcc
-      - scipy
-      - pymysql
-      - matplotlib
-      - ipython
-      - pymc
-      - astropy
+      - {{ compiler('c') }}
+      - {{ compiler('gfortran') }}
+
+   host:
+      - python
+      - numpy
 
    run:
-      - python=3.6
-      - numpy
+      - python
       - scipy
       - pymysql
       - matplotlib
       - ipython
-      - pymc
+      - scikit-learn
       - astropy
 
 test:
@@ -35,7 +35,10 @@ test:
    source_files:
       - tests
    commands:
-      - cd tests; pytest
+      - cd tests
+      - echo $(pwd)
+      - echo $(which pytest)
+      - pytest
 
 about:
    home: http://csp.obs.carnegiescience.edu/data/snpy
