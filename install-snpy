@@ -20,7 +20,7 @@ else
 fi
 
 mandatory_packages="numpy scipy astropy ipython matplotlib"
-optional_packages="pymc emcee pymysql"
+optional_packages="scikit-learn emcee pymysql"
 
 
 echo "Checking for conda..."
@@ -81,8 +81,7 @@ else
    # To access conda functionality we need to do some initialization
    #source $(conda info --base)/etc/profile.d/conda.sh
    eval "$(conda shell.bash hook)"
-
-   $CONDA activate $location > /dev/null 2>&1
+   conda activate $location > /dev/null 2>&1
    if [ $? -eq 0 ] ; then
       python -c "import snpy"
       if [ $? -eq 0 ] ; then
@@ -93,21 +92,20 @@ else
       fi
    else
       echo "Creating new virtual environment $location"
-      $CONDA create -n $location -y > /dev/null 2>&1
+      conda create -n $location -y python=3.7 > /dev/null 2>&1
       echo "Done"
-      $CONDA activate $location
-      echo "Done"
+      conda activate $location
    fi
 
    # Now we have activated the environment, install the software
    for package in $mandatory_packages ; do
       echo "Installing ${package}..."
-      echo $CONDA install $package > ${package}.log 2>&1 || echo "Installation of $package failed. Abort!"; exit
+      conda install -y $package > ${package}.log 2>&1 || (echo "Installation of $package failed. Abort!"; exit)
    done
 
    for package in $optional_packages ; do
       echo "Installing ${package}..."
-      $CONDA install $package > ${package}.log 2>&1
+      conda install -y $package > ${package}.log 2>&1
       if [ $? -ne 0 ] ; then
          echo "Trying PIP..."
          pip install $package > ${package}.log 2>&1 || echo "Installation of optional package $package failed"
