@@ -5,8 +5,9 @@ package:
   version: {{ version }}
 
 source:
-   git_tag: {{ version }}
-   git_url: https://github.com/obscode/snpy.git
+   #git_tag: {{ version }}
+   #git_url: https://github.com/obscode/snpy.git
+   path: /home/cburns/src/snpy
 
 requirements:
    build:
