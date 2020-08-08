@@ -750,6 +750,8 @@ class sn(object):
       for rb in rbs:
          # list of bands to merge
          bs = [b for b in bands if self.restbands[b] == rb]
+         if len(bs) == 0:
+            continue
          lcs = [self.data[b] for b in bs]
          MJDs = concatenate([lc.MJD for lc in lcs])
          if method=='kcorr':
@@ -780,7 +782,8 @@ class sn(object):
                del self.Ss[b]
                del self.Ss_mask[b]
             del self.data[b]
-            if self.filter_order is not None and  b in self.filter_order:
+            if self.filter_order is not None and  b in self.filter_order \
+                  and b != rb:
                del self.filter_order[self.filter_order.index(b)]
                if len(self.filter_order) == 0:
                   self.filter_order = None
@@ -1859,8 +1862,8 @@ class sn(object):
          if band not in self.Robs:
             self.Robs[band] = fset[band].R(self.Rv_gal, Ia_w, Ia_f, z=self.z)
 
-      if self.z <= 0:
-         raise ValueError("The heliocentric redshift is zero.  Fix this before you fit")
+      #if self.z <= 0:
+      #   raise ValueError("The heliocentric redshift is zero.  Fix this before you fit")
 
       # Check to make sure we have filters we can fit:
       for filt in bands:
