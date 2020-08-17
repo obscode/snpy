@@ -436,9 +436,11 @@ class EBV_model(model):
 
       if param == 'DM':
          # Quick DM based on Ho = 72
-         if s.z < 1e-10:
-            raise ValueError("SN redshift is too close to zero.  Set it properly.")
-         return 43.11 + 5*log10(s.z)
+         if s.zcmb < 2e-4:
+            print("Warning: SN CMB redshift is very small or negative. "\
+                  "Setting initial distance to DM = 25.0")
+            return 25.0
+         return 43.11 + 5*log10(s.zcmb)
 
       if param == 'dm15':
          # choose just the average dm15:
@@ -670,9 +672,11 @@ class EBV_model2(model):
 
       if param == 'DM':
          # Quick DM based on Ho = 72
-         if s.z < 0.0001:
-            return 0
-         return 43.11 + 5*log10(s.z)
+         if s.zcmb < 2e-4:
+            print("Warning: SN CMB redshift is very small or negative. "\
+                  "Setting initial distance to DM = 25.0")
+            return 25.0
+         return 43.11 + 5*log10(s.zcmb)
 
       if param == 'dm15':
          # choose just the average dm15:
@@ -882,9 +886,11 @@ class max_model(model):
             M0 = self.M0s[param.replace('max','')]
          else:
             M0 = -19
-         if s.z < 1e-6:
-            return M0
-         return 43.11 + 5*log10(s.z) + M0
+         if s.zcmb < 2e-4:
+            print("Warning:  SN CMB redshift is very small or negative. "\
+                  "Setting initial {}max guess assuming DM = 25.0".format(filt))
+            return M0 + 25.0
+         return 43.11 + 5*log10(s.zcmb) + M0
       
       if param == 'dm15':
          # choose just the average dm15:
@@ -1085,9 +1091,11 @@ class max_model2(model):
 
       elif param.find('max') > 0:
          M0 = self.M0s[param.replace('max','')]
-         if s.z < 1e-6:
-            return M0
-         return 43.11 + 5*log10(s.z) + M0
+         if s.zcmb < 2e-4:
+            print("Warning:  SN CMB redshift is very small or negative. "\
+                  "Setting initial {}max guess assuming DM = 25.0".format(filt))
+            return M0 + 25
+         return 43.11 + 5*log10(s.zcbm) + M0
       
       if param == 'dm15':
          # choose just the average dm15:
@@ -1264,9 +1272,11 @@ class Rv_model(model):
          return median(Tmaxs)
 
       if param == 'Bmax':
-         if s.z < 0.0001:
-            return self.M0['B'][self.calibration]
-         return 43.11 + 5*log10(s.z) + self.M0['B'][self.calibration]
+         if s.zcmb < 2e-4:
+            print("Warning: SN CMB redshfit is very small or negative. "\
+                  "Setting initial Bmax guess assuming DM=25.0")
+            return self.M0['B'][self.calibration] + 25
+         return 43.11 + 5*log10(s.zcmb) + self.M0['B'][self.calibration]
 
       if param == 'dm15':
          # choose just the average dm15:
