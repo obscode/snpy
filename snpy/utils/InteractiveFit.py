@@ -77,9 +77,9 @@ class InteractiveFit:
 
    def setup_graph(self, draw=True):
 
-      self.mp = PanelPlot(1,2, pheights=[0.2,0.6], pwidths=[0.8],
-            figsize=self.figsize, num=self.fignum, rect=(0,0,0.8,1))
-      self.mp.right_pad=0.20
+      self.mp = PanelPlot(1,2, pheights=[0.2,0.6], #pwidths=[0.8],
+            figsize=self.figsize, num=self.fignum) #, rect=(0,0,0.8,1))
+      #self.mp.right_pad=0.20
 
       if self.title is None:
          self.mp.title("Fitting %s\ntype '?' for help" % str(self.interp))
@@ -274,7 +274,10 @@ class InteractiveFit:
       label = ""
       for par in self.interp.pars:
          if par == 't':  continue
-         label += " "+str(self.interp.pars[par])+"\n"
+         this_lab = str(self.interp.pars[par])
+         if len(this_lab) > 6:
+            this_lab = "{:.3f}".format(self.interp.pars[par])
+         label += " "+this_lab+"\n"
       id = getattr(self, '_parsid', None)
       ax = self.mp.axes[1]
       if id is None:

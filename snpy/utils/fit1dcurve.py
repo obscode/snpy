@@ -1214,8 +1214,9 @@ elif gp == 'sklearn':
             #self.scale = (self.x.max() - self.x.min())/2
             self.scale = 30
             
-         self.kernel = ConstantKernel(self.amp)*\
-               Matern(length_scale=self.scale, nu=self.diff_degree+0.5)
+         self.kernel = ConstantKernel(self.amp, constant_value_bounds='fixed')*\
+               Matern(length_scale=self.scale, nu=self.diff_degree+0.5,
+                     length_scale_bounds='fixed')
          Y = y - self.mean(x)
          X = num.array([x]).T
          self.gpr = GaussianProcessRegressor(kernel=self.kernel, 
@@ -1321,7 +1322,7 @@ elif gp == 'sklearn':
          ret = []
          for i in range(len(inds)):
             try:
-               res = brentq(self.deriv, xs[inds[i]], xs[inds[i]+1])
+               res = brentq(self.deriv, xs[inds[i]-1], xs[inds[i]+1])
                ret.append(res)
             except:
                continue

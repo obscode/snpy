@@ -14,7 +14,7 @@ allresults = {'chebyshev': 828.730,
 if fit1dcurve.gp == 'pymc':
    allresults['gp'] = 827.172
 elif fit1dcurve.gp == 'sklearn':
-   allresults['gp'] = 827.115
+   allresults['gp'] = 827.202
 
 @pytest.fixture
 def snobj():
