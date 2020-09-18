@@ -1238,7 +1238,8 @@ elif gp == 'sklearn':
    
          x = num.atleast_1d(x)
          if self.realization is not None:
-            res = self.realization(x.reshape(-1,1),random_state=self._seed)[:,0]
+            #res = self.realization(x.reshape(-1,1),random_state=self._seed)[:,0]
+            res = splev(x, self.realization)
          else:
             res = self.gpr.predict(x.reshape(-1,1))
          res = res + self.mean(x)
@@ -1274,8 +1275,13 @@ elif gp == 'sklearn':
          '''Generate a random realization of the spline, based on the data.'''
          if not self.setup:
             self._setup()
-         self.realization = self.gpr.sample_y
-         self._seed = num.random.randint(2**32-1)
+         # scikit-learn seems to have a bug. We have to make a realization
+         # and make a smoothing spline to approximate it.
+         tmin,tmax = self.domain()
+         t = num.arange(tmin, tmax+1, 1.0)
+         seed = num.random.randint(2**32)
+         y = self.gpr.sample_y(t.reshape(-1,1), random_state=seed)[:,0]
+         self.realization = splrep(t, y, k=3, s=0)
     
       def reset_mean(self):
          self.realization = None
