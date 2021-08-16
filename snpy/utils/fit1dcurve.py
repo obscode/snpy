@@ -1279,6 +1279,8 @@ elif gp == 'sklearn':
          # and make a smoothing spline to approximate it.
          tmin,tmax = self.domain()
          t = num.arange(tmin, tmax+1, 1.0)
+         if len(t) < 5:
+            t = num.linspace(tmin, tmax, 5)
          seed = num.random.randint(2**32)
          y = self.gpr.sample_y(t.reshape(-1,1), random_state=seed)[:,0]
          self.realization = splrep(t, y, k=3, s=0)
