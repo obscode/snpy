@@ -7,7 +7,8 @@ def configuration(parent_package='', top_path=None):
    from numpy.distutils.misc_util import Configuration
 
    config = Configuration('CSPtemp', parent_package, top_path)
-   config.add_data_files('templates.dat','tck.pickle','bs_error.pickle')
+   config.add_data_files('templates.dat','tck.pickle','bs_error.pickle',
+                         'SN2012fr_mean.json')
    config.add_data_dir('templates')
    config.add_data_dir('fits')
    config.add_scripts('generate_surf.py')
