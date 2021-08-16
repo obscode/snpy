@@ -181,6 +181,7 @@ class sn(object):
       self.get_restbands()     # based on z, assign rest-frame BVRI filters to 
                                # data
       self.k_version = 'H3'
+      self.k_extrapolate = False   # Extrapolate SED beyond the ends?
 
    def __getattr__(self, name):
       if 'data' in self.__dict__:
@@ -777,7 +778,7 @@ class sn(object):
             if method == 'kcorr':
                del self.ks[b]
                del self.ks_mask[b]
-               del self.ks_tck[b]
+               if b in self.ks_tck: del self.ks_tck[b]
             elif method == 'scorr':
                del self.Ss[b]
                del self.Ss_mask[b]
@@ -878,9 +879,10 @@ class sn(object):
             # days since Bmax in the frame of the SN
             days = (x - self.Tmax)/(1+self.z)/s
             days = days.tolist()
+            kextrap = getattr(self, 'k_extrapolate', False)
             self.ks[band],self.ks_mask[band] = list(map(array,kcorr.kcorr(days, 
                self.restbands[band], band, self.z, self.EBVgal, 0.0,
-               version=self.k_version)))
+               version=self.k_version, extrapolate=kextrap)))
             self.ks_mask[band] = self.ks_mask[band].astype(bool)
             #self.ks_tck[band] = scipy.interpolate.splrep(x, self.ks[band], k=1, s=0)
             if len(x) > 1:
@@ -933,9 +935,11 @@ class sn(object):
       t = res['MJD'] - self.Tmax
       if not sometrue(greater_equal(t, -19)*less(t, 70)):
          raise RuntimeError("Error:  your epochs are all outside -20 < t < 70.  Check self.Tmax")
+      kextrap = getattr(self, 'k_extrapolate', False)
       kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle(t/(1+self.z)/s, bands, 
             mags, masks, restbands, self.z, 
-            colorfilts=mbands, version=self.k_version, full_output=1, **mopts)
+            colorfilts=mbands, version=self.k_version, full_output=1, 
+            extrapolate=kextrap, **mopts)
       mask = greater(mask, 0)
       kcorrs = array(kcorrs)
       Rts = array(Rts)
@@ -985,7 +989,9 @@ class sn(object):
       if self.ks_mopts[band][i] is None:
          return(None,None,None,None)
       epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
-      wave,flux = kcorr.get_SED(int(epoch), version=self.k_version)
+      kextrap = getattr(self, 'k_extrapolate', False)
+      wave,flux = kcorr.get_SED(int(epoch), version=self.k_version, 
+            extrapolate=kextrap)
       if self.ks_mopts[band][i]:
          man_flux = mangle_spectrum.apply_mangle(wave,flux, 
                **self.ks_mopts[band][i])[0]
@@ -2509,12 +2515,21 @@ def save(instance, file):
    pickle.dump(instance, f)
    f.close()
 
-def load(file):
+def load(fname):
+   '''Load a pickle file which has a SNooPy instance stored. If this can't
+   be done, return None and issue an error message. This function also tries
+   to migrate previous saves.'''
    try:
-      f = open(file, 'r')
-      inst = pickle.load(f)
+      f = open(fname, 'rb')
+      if six.PY3:
+         inst = pickle.load(f, encoding='iso-8859-1')
+      else:
+         inst = pickle.load(f)
       f.close()
+      if getattr(inst, 'k_extrapolate', None) is None:
+         inst.k_extrapolate = False
    except:
+      print("Error:  could not load pickle file {}".format(fname))
       inst = None
    return(inst)
 
@@ -2626,14 +2641,8 @@ def get_sn(str, sql=None, **kw):
    object (or default_sql if sql=None), in which case all keyword arguments
    are sent as options to the sql module.'''
    if os.path.isfile(str):
-      try:
-         f = open(str, 'rb')
-         if six.PY3:
-            s = pickle.load(f, encoding='iso-8859-1')
-         else:
-            s = pickle.load(f)
-         return s
-      except:
+      s = load(str)
+      if s is None:
          try:
             s = import_lc(str)
          except RuntimeError:

@@ -424,7 +424,7 @@ class EBV_model(model):
          cal = self.calibration
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
                self.Rv_host[cal], self.parent.Rv_gal, self.parent.k_version,
-               redlaw=self.parent.redlaw)
+               redlaw=self.parent.redlaw, extrapolate=self.parent.k_extrapolate)
       
    def guess(self, param):
       s = self.parent
@@ -467,7 +467,8 @@ class EBV_model(model):
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, t, self.EBVhost,
                self.parent.EBVgal, self.Rv_host[self.calibration], 
                self.parent.Rv_gal, self.parent.k_version, 
-               redlaw=self.parent.redlaw)
+               redlaw=self.parent.redlaw,
+               extrapolate=self.parent.k_extrapolate)
          temp = temp + self.Robs[band]*(self.EBVhost + self.parent.EBVgal)
       else:
          # Apply Robs*EBVgal:
@@ -495,7 +496,8 @@ class EBV_model(model):
             if self.do_Robs:
                Robs = kcorr.R_obs(band, self.parent.z, x0, self.EBVhost, 
                      self.parent.EBVgal, self.Rv_host[self.calibration], 
-                     self.parent.Rv_gal, 'H3', redlaw=self.parent.redlaw)
+                     self.parent.Rv_gal, 'H3', redlaw=self.parent.redlaw,
+                     extrapolate=self.parent.k_extrapolate)
                mmax = mmax + Robs*(self.EBVhost + self.parent.EBVgal)
             else:
                # Apply Robs*EBVgal:
@@ -510,11 +512,13 @@ class EBV_model(model):
                                   self.Rv_host[self.calibration], 
                                   self.parent.Rv_gal,
                                   self.parent.k_version,
-                                  redlaw=self.parent.redlaw)
+                                  redlaw=self.parent.redlaw,
+                                  extrapolate=self.parent.k_extrapolate)
                EBV = max(self.EBVhost, 0.01)
                Robs = kcorr.R_obs(band, self.parent.z, 0, EBV,
                      0, self.Rv_host[self.calibration], self.parent.Rv_gal,
-                     self.parent.k_version, redlaw=self.parent.redlaw)
+                     self.parent.k_version, redlaw=self.parent.redlaw,
+                     extrapolate=self.parent.k_extrapolate)
                mmax = mmax + Robs*self.EBVhost + R*self.parent.EBVgal
          Mmaxs.append(mmax)
          eMmaxs.append(self.errors['DM'])
@@ -557,7 +561,8 @@ class EBV_model(model):
          Robs = kcorr.R_obs(band, self.parent.z, 0, self.EBVhost,
                self.parent.EBVgal, self.Rv_host[calibration], 
                self.parent.Rv_gal, self.parent.k_version, 
-               redlaw=self.parent.redlaw)
+               redlaw=self.parent.redlaw, 
+               extrapolate=self.parent.k_extrapolate)
          dRobs = Robs*self.dRv_host[calibration]/self.Rv_host[calibration]
          syst_DM.append(power(ddm15*self.db[calibration],2)+\
                         power(ddm15*self.dcolor_slopes[rb],2)+\
@@ -660,7 +665,8 @@ class EBV_model2(model):
       for band in self._fbands:
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
                self.Rv_host[self.calibration], self.parent.Rv_gal, 
-               self.parent.k_version, redlaw=self.parent.redlaw)
+               self.parent.k_version, redlaw=self.parent.redlaw,
+               extrapolate=self.parent.k_extrapolate)
       
    def guess(self, param):
       s = self.parent
@@ -704,7 +710,8 @@ class EBV_model2(model):
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, t, self.EBVhost,
                self.parent.EBVgal, self.Rv_host[self.calibration], 
                self.parent.Rv_gal, self.parent.k_version,
-               redlaw=self.parent.redlaw)
+               redlaw=self.parent.redlaw, 
+               extrapolate=self.parent.k_extrapolate)
          temp = temp + self.Robs[band]*(self.EBVhost + self.parent.EBVgal)
       else:
          # Apply Robs*EBVgal:
@@ -732,7 +739,8 @@ class EBV_model2(model):
             if self.do_Robs:
                Robs = kcorr.R_obs(band, self.parent.z, x0, self.EBVhost, 
                      self.parent.EBVgal, self.Rv_host[self.calibration], 
-                     self.parent.Rv_gal, 'H3', redlaw=self.parent.redlaw)
+                     self.parent.Rv_gal, 'H3', redlaw=self.parent.redlaw,
+                     extrapolate=self.parent.k_extrapolate)
                mmax = mmax + Robs*(self.EBVhost + self.parent.EBVgal)
             else:
                # Apply Robs*EBVgal:
@@ -746,11 +754,13 @@ class EBV_model2(model):
                   R = kcorr.R_obs(band, self.parent.z, 0, 0, EBV,
                                   self.Rv_host[self.calibration], 
                                   self.parent.Rv_gal, self.parent.k_version,
-                                  redlaw=self.parent.redlaw)
+                                  redlaw=self.parent.redlaw,
+                                  extrapolate=self.parent.k_extrapolate)
                EBV = max(self.EBVhost, 0.01)
                Robs = kcorr.R_obs(band, self.parent.z, 0, EBV,
                      0, self.Rv_host[self.calibration], self.parent.Rv_gal,
-                     self.parent.k_version, redlaw=self.parent.redlaw)
+                     self.parent.k_version, redlaw=self.parent.redlaw,
+                     extrapolate=self.parent.k_extrapolate)
                mmax = mmax + Robs*self.EBVhost + R*self.parent.EBVgal
          Mmaxs.append(mmax)
          eMmaxs.append(self.errors['DM'])
@@ -790,7 +800,8 @@ class EBV_model2(model):
          Robs = kcorr.R_obs(band, self.parent.z, 0, self.EBVhost,
                self.parent.EBVgal, self.Rv_host[calibration], 
                self.parent.Rv_gal, self.parent.k_version,
-               redlaw=self.parent.redlaw)
+               redlaw=self.parent.redlaw,
+               extrapolate=self.parent.k_extrapolate)
          dRobs = Robs*self.eRv_host[calibration]/self.Rv_host[calibration]
          syst_DM.append(power(dst*self.eb[calibration][rb],2)+\
                         power(self.EBVhost*dRobs, 2)+\
@@ -958,7 +969,8 @@ class max_model(model):
             else:
                R = kcorr.R_obs(band, self.parent.z, int(floor(x0)), 0.0, 
                      self.parent.EBVgal, self.parent.Rv_gal, 
-                     version=self.parent.k_version, redlaw=self.parent.redlaw)
+                     version=self.parent.k_version, redlaw=self.parent.redlaw,
+                     extrapolate=self.parent.k_extrapolate)
 
             mmax = mmax + R*self.parent.EBVgal
          Mmaxs.append(mmax)
@@ -1095,7 +1107,7 @@ class max_model2(model):
             print("Warning:  SN CMB redshift is very small or negative. "\
                   "Setting initial {}max guess assuming DM = 25.0".format(filt))
             return M0 + 25
-         return 43.11 + 5*log10(s.zcbm) + M0
+         return 43.11 + 5*log10(s.zcmb) + M0
       
       if param == 'dm15':
          # choose just the average dm15:
@@ -1152,7 +1164,8 @@ class max_model2(model):
             else:
                R = kcorr.R_obs(band, self.parent.z, int(floor(x0)), 0.0, 
                      self.parent.EBVgal, self.parent.Rv_gal, 
-                     version=self.parent.k_version, redlaw=self.parent.redlaw)
+                     version=self.parent.k_version, redlaw=self.parent.redlaw,
+                     extrapolate=self.parent.k_extrapolate)
 
             mmax = mmax + R*self.parent.EBVgal
          Mmaxs.append(mmax)
@@ -1342,7 +1355,8 @@ class Rv_model(model):
                   Rmw = self.parent.Robs[band]
             Rhost = kcorr.R_obs(rband, 0, x0, self.EBVhost, 
                      self.parent.EBVgal, self.Rv_host, self.parent.Rv_gal, 'H3',
-                     redlaw=self.parent.redlaw)
+                     redlaw=self.parent.redlaw,
+                     extrapolate=self.parent.k_extrapolate)
             mmax = mmax + Rhost*self.EBVhost + Rmw*self.parent.EBVgal
          Mmaxs.append(mmax)
          eMmaxs.append(self.errors['Bmax'])
@@ -1582,7 +1596,8 @@ class color_model(model):
                   Rmw = self.parent.Robs[band]
             Rhost = kcorr.R_obs(rband, 0, x0, self.EBVhost, 
                      self.parent.EBVgal, self.Rv_host, self.parent.Rv_gal, 'H3',
-                     redlaw=self.parent.redlaw)
+                     redlaw=self.parent.redlaw,
+                     extrapolate=self.parent.k_extrapolate)
             mmax = mmax + Rhost*self.EBVhost + Rmw*self.parent.EBVgal
          Mmaxs.append(mmax)
          eMmaxs.append(self.errors['Bmax'])
