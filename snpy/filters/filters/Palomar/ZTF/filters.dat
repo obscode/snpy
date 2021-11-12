@@ -1,0 +1,3 @@
+ztf_g ztf_g_band.dat AB "ZTF g band obtained from SVO Filter Profile Service V2"
+ztf_r ztf_r_band.dat AB "ZTF r band obtained from SVO Filter Profile Service V2"
+ztf_i ztf_i_band.dat AB "ZTF i band obtained from SVO Filter Profile Service V2"
