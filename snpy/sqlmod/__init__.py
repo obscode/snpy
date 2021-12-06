@@ -585,6 +585,20 @@ class sql_SBS_csp2(sql_csp2):
    SPEC_INDEX = "FILE"
    SPEC_NAME = "SN"
 
+class sql_SBS_POISE(sql_csp2):
+   host = 'obsns09.obs.carnegiescience.edu'
+   user = 'CSP'
+
+   PHOTO_DB = "POISE"
+   SPEC_DB = "POISE"
+   SPEC_TABLE = "SPECTRA"
+   SPEC_INFO = "SP_INFO"
+   SPEC_JD = "JD"
+   SPEC_LAMB = "LAMBDA"
+   SPEC_FLUX = "FLUX"
+   SPEC_INDEX = "FILE"
+   SPEC_NAME = "SN"
+
 class sql_csp2_pub(sql_csp2):
    PHOTO_DB = "PubPhot"
 
@@ -597,6 +611,7 @@ class sql_SBS_csp2_pub(sql_csp2):
 databases = \
    {'default':(sql_csp2, "Working CSP2 database at LCO"),
     'SBS':(sql_SBS_csp2, "Working CSP2 database at SBS"),
+    'POISE':(sql_SBS_POISE, "POISE database at SBS"),
     'LCOpub':(sql_csp2_pub, "Published CP2 database at LCO"),
     'SBSpub':(sql_SBS_csp2_pub, "Published CSP2 database at SBS"),
     'highz':(sql_highz, "Highz database at SBS")}
