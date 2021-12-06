@@ -480,11 +480,11 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
          ax.plot(compress(gids,t-Toff), compress(gids,y), 
                color='k', linewidth=linewidth)
          l = ax.plot(compress(gids,t-Toff), compress(gids,y+err), 
-               '--',color='k', linewidth=linewidth)
-         l[0].autoscale=False
+               '--',color='k', linewidth=linewidth, scaley=False)
+         #l[0].autoscale=False
          l = ax.plot(compress(gids,t-Toff), compress(gids,y-err), 
-               '--',color='k', linewidth=linewidth)
-         l[0].autoscale=False
+               '--',color='k', linewidth=linewidth, scaley=False)
+         #l[0].autoscale=False
    elif obj.data[filt].interp is not None:
       d = obj.data[filt].interp.domain()
       t = arange(d[0], d[1]+1.0, 1.0)
