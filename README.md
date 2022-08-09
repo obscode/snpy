@@ -1,7 +1,12 @@
 PURPOSE
 -------
 
-TEST TEST BY JING
+This is a folked repo, aim to make the new NIR spectral templates 
+avaialble for the SN fitting process. 
+
+
+The following is the orginal from Chris Burns
+_______________________________________________________________________
 
 
 SNPY (or more affectionately SNooPy) is a Python package for fitting the
