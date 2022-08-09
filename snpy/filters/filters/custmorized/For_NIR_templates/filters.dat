@@ -1,0 +1,12 @@
+W1   W1.dat     VegaB=0      FIRE NIR spec templates fake filter W1 (from z_s)
+W2   W2.dat     VegaB=0      FIRE NIR spec templates fake filter W2 (from Y)
+W3   W3.dat     VegaB=0      FIRE NIR spec templates fake filter W3 (from J)
+W4   W4.dat     VegaB=0      FIRE NIR spec templates fake filter W4 (between J and H)
+W5   W5.dat     VegaB=0      FIRE NIR spec templates fake filter W5 (from H)
+W6   W6.dat     VegaB=0      FIRE NIR spec templates fake filter W6 (between H and K)
+W7   W7.dat     VegaB=0      FIRE NIR spec templates fake filter W7 (from K)
+Y106 Y106.dat   VegaB=0      Digitalized WFIRST Y filter
+J129 J129.dat   VegaB=0      Digitalized WFIRST J filter
+H158 H158.dat   VegaB=0.0      Digitalized WFIRST H filter
+F184 F184.dat   VegaB=0      Digitalized WFIRST F filter
+Kepler Kepler.dat     VegaB=0.0    From SVO http://svo2.cab.inta-csic.es/svo/theory/fps3/index.php?id=Kepler/Kepler.K
