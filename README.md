@@ -1,6 +1,9 @@
 PURPOSE
 -------
 
+TEST TEST BY JING
+
+
 SNPY (or more affectionately SNooPy) is a Python package for fitting the
 light-curves of TypeIa supernovae.  It is NOT an off-the-shelf program that
 will do all the work for you from the command line.  It is meant to be run
