@@ -180,7 +180,7 @@ class sn(object):
       self.getEBVgal()
       self.get_restbands()     # based on z, assign rest-frame BVRI filters to 
                                # data
-      self.k_version = 'H3'
+      self.k_version = 'H3+L'
       self.k_extrapolate = False   # Extrapolate SED beyond the ends?
 
    def __getattr__(self, name):
@@ -650,7 +650,7 @@ class sn(object):
          return (result[0][0],result[1][0],result[2][0],result[3][0])
       return result
 
-   def scorr(self, bands=None, SED='H3', merge=False):
+   def scorr(self, bands=None, SED='H3+L', merge=False):
       '''Compute the S-corrections for the named filters. The underlying
       SED is taken as the same that was used to compute k-corretions. If
       k-corrections have not been computed, we simply used the SED
@@ -695,10 +695,11 @@ class sn(object):
             # No k-corrections, we'll just use SED
             x = self.data[band].MJD
             # days since Bmax in the frame of the SN
-            days = (x - self.Tmax)/(1+self.z)/st
+            if self.k_version != 'H3+L':
+                days = (x - self.Tmax)/(1+self.z)/st
             days = days.tolist()
             self.Ss[band],self.Ss_mask[band] = list(map(array,kcorr.kcorr(days, 
-               self.restbands[band], band, self.z, self.EBVgal, 0.0,
+               self.restbands[band], band, self.z, st, self.EBVgal, 0.0,
                version=self.k_version, Scorr=True)))
             self.Ss_mask[band] = self.Ss_mask[band].astype(bool)
          else:
@@ -877,11 +878,14 @@ class sn(object):
          for band in bands:
             x = self.data[band].MJD
             # days since Bmax in the frame of the SN
-            days = (x - self.Tmax)/(1+self.z)/s
+            if self.k_version != 'H3+L':
+                days = (x - self.Tmax)/(1+self.z)/s
+            else:
+                days = (x - self.Tmax)/(1+self.z)
             days = days.tolist()
             kextrap = getattr(self, 'k_extrapolate', False)
             self.ks[band],self.ks_mask[band] = list(map(array,kcorr.kcorr(days, 
-               self.restbands[band], band, self.z, self.EBVgal, 0.0,
+               self.restbands[band], band, self.z, self.ks_s, self.EBVgal, 0.0,
                version=self.k_version, extrapolate=kextrap)))
             self.ks_mask[band] = self.ks_mask[band].astype(bool)
             #self.ks_tck[band] = scipy.interpolate.splrep(x, self.ks[band], k=1, s=0)
@@ -936,8 +940,12 @@ class sn(object):
       if not any(greater_equal(t, -19)*less(t, 70)):
          raise RuntimeError("Error:  your epochs are all outside -20 < t < 70.  Check self.Tmax")
       kextrap = getattr(self, 'k_extrapolate', False)
-      kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle(t/(1+self.z)/s, bands, 
-            mags, masks, restbands, self.z, 
+      if  self.k_version != 'H3+L':
+          use_t = t/(1+self.z)/s
+      else:
+          use_t = t/(1+self.z)
+      kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle(use_t, bands, 
+            mags, masks, restbands, self.z, sBV=s,
             colorfilts=mbands, version=self.k_version, full_output=1, 
             extrapolate=kextrap, **mopts)
       mask = greater(mask, 0)
@@ -988,10 +996,13 @@ class sn(object):
          raise AttributeError("Mangling info not found... try running self.kcorr()")
       if self.ks_mopts[band][i] is None:
          return(None,None,None,None)
-      epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
+      if  self.k_version != 'H3+L':
+         epoch = int(self.data[band].t[i]/(1+self.z)/self.ks_s)
+      else:
+         epoch = self.data[band].t[i]/(1+self.z)
       kextrap = getattr(self, 'k_extrapolate', False)
       wave,flux = kcorr.get_SED(int(epoch), version=self.k_version, 
-            extrapolate=kextrap)
+            sBV=self.ks_s,extrapolate=kextrap)
       if self.ks_mopts[band][i]:
          man_flux = mangle_spectrum.apply_mangle(wave,flux, 
                **self.ks_mopts[band][i])[0]

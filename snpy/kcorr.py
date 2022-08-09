@@ -12,6 +12,8 @@ from __future__ import print_function
 import os,sys,string,re
 import numpy as num
 import scipy.interpolate
+import pandas as pd
+from scipy.integrate import simps
 from .utils import deredden
 try:
    from astropy.io import fits as pyfits
@@ -67,6 +69,8 @@ n91_sed = f[0].data
 head = f[0].header
 n91_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
       head['CRPIX1'] + 1)*head['CDELT1']
+# building blocks for Lu2022 NIR template:
+df_buildingblocks = pd.read_pickle(os.path.join(spec_base, 'NIR_template_builingblocks.pkl'))
 
 def linterp(spec1, spec2, day1, day2, day):
    if day1 == day2:
@@ -83,18 +87,273 @@ def linterp(spec1, spec2, day1, day2, day):
 SED_lims = {
       'H':(-19,70),
       'H3':(-19,70),
+      'H3+L':(-19,70),
       'N':(-19,70),
       '91bg':(-13,100)}
 
-def get_SED(day, version='H3', interpolate=True, extrapolate=False):
+''' Functions needed for the new CSP2  NIR templates '''
+def GPR_predict_PC(Wbin,epoch,sBV):
+    '''Function of predicting Priciple components from the fitted GPR
+    for the NIR templates
+
+    Args:
+        Wbin (str): W1 TO W7, correspinding to z,Y,J,telluric1,H,telluric2,K band
+        epoch (float): restframe days since B-band maximum of the spectrum
+        sBV (float): color stretch of the SN
+
+    Returns:
+        2-tuple: (pred_PCs,pred_PC_sigmas)
+
+        * pred_PCs: (float array) Gaussian Process predicted pricinple compoennts
+        * pred_PC_sigmas: (float array) uncertainty ofGaussian Process
+                          predicted pricinple compoennts
+    '''
+    ## locate the df for this Wave bin
+    Wbin_ID = df_buildingblocks.loc[(df_buildingblocks.Wave_bin==Wbin)].index.values[0]
+    ## predict PCs
+    pred_PCs, pred_PC_sigmas = [],[]
+    for i in range(df_buildingblocks.GPR[Wbin_ID].shape[1]):
+        PC = 'PC'+str(i+1)
+        ## locate the original PC range and min to get the normalization factor for later
+        yrange = df_buildingblocks.GPR[Wbin_ID][PC]['yrange']
+        ymin = df_buildingblocks.GPR[Wbin_ID][PC]['ymin']
+        ## locate the fitted gp and make predictions
+        gp = df_buildingblocks.GPR[Wbin_ID][PC][0]
+        y_gp,y_sigma = gp.predict(num.array([[epoch,sBV]]), return_std=True)
+        ## unnormalize the predicted y using the y above
+        y_gp_unnorm = y_gp*yrange+ymin
+        y_sigma_unnorm = y_sigma*yrange
+        pred_PCs.append(y_gp_unnorm.flatten()[0])
+        pred_PC_sigmas.append(y_sigma_unnorm.flatten()[0])
+    return pred_PCs,pred_PC_sigmas
+
+def merge_spec(wave_b,flux_b,wave_r,flux_r,interp_option=0,normalize='blue_side',plot_ax=None):
+    '''Function of merging spectra, *_b as bluer wavelength side, *_r as
+       redder wavelength side
+
+    Args:
+        wave_b (float array): the bluer wavelength side of the spectra wavelength
+                              need to be merged
+        flux_b (float array): the bluer wavelength side of the spectra flux
+                              need to be merged
+        wave_r (float array): the redder wavelength side of the spectra wavelength
+                              need to be flux_merged
+        flux_r (float array): the redder wavelength side of the spectra flux
+                              need to be flux_merged
+
+        interp_option (int): the option of how the wavelength sampling point
+                             in the overlap region is dealed with, the options can be:
+            * 0: take both wavelength sampling points from blue and red side
+            * 1: only take the wavelength sampling points from blue side
+            * 2: only take the wavelength sampling points from red side
+
+        normalize (str): how the flux is normalized for two side of the spectra,
+                         the options can be:
+            * 'blue_side': scale the red side flux by matching the overlapped
+                           region flux to the overlapped region flux of blue side
+            * 'red_side': scale the blue side flux by matching the overlapped
+                           region flux to the overlapped region flux of red side
+            * else: no scaling, just merge smoothly by weights
+
+        plot_ax: default no plot outputs (None), can also given ax to visualize
+                 the merge process
+
+
+    Returns:
+        2-tuple: (wave_merged,flux_merged)
+
+        * wave_merged: (float array) merged wavelength
+        * flux_merged: (float array) merged flux
+    '''
+    ## converted from Eric's IDL code EYH_MERGE_SPEC
+    weight_lo=0.
+    w1 = num.where(wave_b>=min(wave_r))[0]
+    w2 = num.where(wave_r<=max(wave_b))[0]
+    if (len(w1)<2) or (len(w2)<2):
+        print('WARNING! Not enough overlap')
+        return
+    else:
+        ### decide what wavelegnth to use in the overlap region
+        if interp_option ==0: ## combine the overlap wavelengths
+            wave_overlap = num.concatenate([wave_b[w1], wave_r[w2]],axis=0)
+            wave_overlap = num.sort(wave_overlap)
+            wave_overlap = num.unique(wave_overlap)
+        elif interp_option ==1:
+            wave_overlap = wave_b[w1]
+        elif interp_option ==2:
+            wave_overlap = wave_r[w2]
+        ### decide how to normalize
+        if normalize == 'blue_side':
+            ### match the overlappen region flux based on the blue side
+            norm_b = 1
+            norm_r = simps(flux_b[w1],wave_b[w1])/simps(flux_r[w2],wave_r[w2])
+        elif normalize == 'red_side':
+            norm_b = simps(flux_r[w2],wave_r[w2])/simps(flux_b[w1],wave_b[w1])
+            norm_r = 1
+        else:
+            norm_b,norm_r = 1,1 ## let the spectra merge by weight, smooothly merging together
+
+        ### inteplate the flux in overlaped region
+        x = [min(wave_overlap), max(wave_overlap)]
+        f1 = scipy.interpolate.interp1d(x, [1.,weight_lo])
+        f2 = scipy.interpolate.interp1d(x, [weight_lo,1.])
+        weight1 = f1(wave_overlap)
+        weight2 = f2(wave_overlap)
+        f1_f = scipy.interpolate.interp1d(wave_b[w1],norm_b*flux_b[w1],fill_value="extrapolate")
+        f2_f = scipy.interpolate.interp1d(wave_r[w2],norm_r*flux_r[w2],fill_value="extrapolate")
+        flux_ol = 1./(weight1+weight2)*(f1_f(wave_overlap)*weight1 + f2_f(wave_overlap)*weight2)
+
+        ### now combine the flux
+        w1_rest = num.where(wave_b<min(wave_r))[0]
+        w2_rest = num.where(wave_r>max(wave_b))[0]
+        wave_out = num.concatenate([wave_b[w1_rest],wave_overlap,wave_r[w2_rest]],axis=0)
+        flux_out = num.concatenate([norm_b*flux_b[w1_rest],flux_ol,norm_r*flux_r[w2_rest]],axis=0)
+
+        if plot_ax is not None:
+            ax.plot(wave_b,norm_b*flux_b,'b',alpha=0.4)
+            ax.plot(wave_r,norm_r*flux_r,'r',alpha=0.4)
+            ax.plot(wave_out,flux_out,'k',alpha=0.2)
+        return wave_out,flux_out
+
+def get_single_NIR_template(epoch,sBV,return_flux_error = False):
+    '''function of getting one template spectra based on given epoch and sBV
+
+    Args:
+        epoch (float): restframe days since B-band maximum of the spectrum
+        sBV (float): color stretch of the SN
+        return_flux_error (bool): If True, template flux error are returned
+
+    Returns:
+        tuple:
+
+        if not return_flux_error: 2 tuple: (wavelength, flux)
+            * wavelength: (float array) NIR template wavelength in unit of Angstroms
+            * flux: (float array)  NIR template flux in arbitrary unit
+        if  return_flux_error: 2 tuple: (wavelength, flux, flux_error)
+            * wavelength: (float array) NIR template wavelength in unit of Angstroms
+            * flux: (float array)  NIR template flux in arbitrary unit
+            * flux_error: (float array)  NIR template flux error in arbitrary unit
+    '''
+    ## define some parameters
+    GPR_score_threshold=0.2   ## lower limit of GPR score when selecting PC
+    error_MC_time = 1000
+    ## check data type and of value is in range
+    if isinstance(epoch,list) or isinstance(epoch,num.ndarray) or isinstance(sBV,list) or isinstance(sBV,num.ndarray):
+        raise ValueError('Input single value for epoch and sBV please, one at a time :)')
+    else:
+        if (epoch < SED_lims['H3+L'][0]) or (epoch > SED_lims['H3+L'][1]):
+            raise ValueError('Epoch not in supported range, please input epoch \
+            between %d to %d'%(SED_lims['H3+L'][0],SED_lims['H3+L'][1]))
+        if (sBV < sBV_lims['H3+L'][0]) or (sBV > sBV_lims['H3+L'][1]):
+            raise ValueError('sBV not in supported range, please input sBV \
+            between %.1f to %.1f'%(sBV_lims['H3+L'][0],sBV_lims['H3+L'][1]))
+    x1,x2 = epoch,sBV
+    for i in range(df_buildingblocks.shape[0]-1):
+        ## read the pca transformation and wave grid in the adjacent blocks
+        if i==0:
+            pca_blue = df_buildingblocks.PCA[i]
+            wave_merged = num.array([col for col in df_buildingblocks.PCA_outputs[i].columns if isinstance(col,float)])
+            df_GPs = df_buildingblocks.GPR[i].copy()
+            Wbin = 'W1'
+            RC_PCs_blue,RC_PCs_sigmas_blue = GPR_predict_PC(Wbin,x1,x2)
+            if GPR_score_threshold is not None:
+                gp_scores = df_GPs.loc['gp_score'].values
+                GPR_score_threshold_bool = num.array([1. if (score >= GPR_score_threshold) else 0. for score in gp_scores])
+                RC_PCs_blue = RC_PCs_blue*GPR_score_threshold_bool
+            flux_merged = pca_blue.inverse_transform(RC_PCs_blue)
+            ## MC generate many spectrum within gp sigma and take std to the SNR
+            if return_flux_error is not False:
+                flux_merged_MC = []
+                for n in range(error_MC_time):
+                    RC_PCs_blue_random = [num.random.normal(mean,RC_PCs_sigmas_blue[nnn]) if nnn < len(RC_PCs_sigmas_blue) else mean for nnn,mean in enumerate(RC_PCs_blue)]
+                    flux_merged_MC.append(pca_blue.inverse_transform(RC_PCs_blue_random))
+                flux_merged_MC_std = num.array(flux_merged_MC).std(axis=0)
+                flux_SNR_merged = flux_merged/flux_merged_MC_std
+        pca_red = df_buildingblocks.PCA[i+1]
+        wave_red = num.array([col for col in df_buildingblocks.PCA_outputs[i+1].columns if isinstance(col,float)])
+        df_GPs_red = df_buildingblocks.GPR[i+1].copy()
+        Wbin_red = 'W'+str(i+2)
+        RC_PCs_red,RC_PCs_sigmas_red = GPR_predict_PC(Wbin_red,x1,x2)
+        if GPR_score_threshold is not None:
+            gp_scores = df_GPs_red.loc['gp_score'].values
+            GPR_score_threshold_bool = num.array([1. if (score >= GPR_score_threshold) else 0. for score in gp_scores])
+            RC_PCs_red = RC_PCs_red*GPR_score_threshold_bool
+        flux_red = pca_red.inverse_transform(RC_PCs_red)
+        ## MC generate many spectrum within gp sigma and take std to the SNR
+        if return_flux_error is not False:
+            flux_red_MC = []
+            for n in range(error_MC_time):
+                RC_PCs_red_random = [num.random.normal(mean,RC_PCs_sigmas_red[nnn]) if nnn < len(RC_PCs_sigmas_red) else mean for nnn,mean in enumerate(RC_PCs_red)]
+                flux_red_MC.append(pca_red.inverse_transform(RC_PCs_red_random))
+            flux_red_MC_std = num.array(flux_red_MC).std(axis=0)
+            flux_red_SNR = flux_red/flux_red_MC_std
+            wave_SNR_merged,flux_SNR_merged = merge_spec(wave_merged,flux_SNR_merged,wave_red,flux_red_SNR,normalize = 0,plot_ax=None)
+        ## merge the flux from the W bins
+        wave_merged,flux_merged = merge_spec(wave_merged,flux_merged,wave_red,flux_red)
+    if return_flux_error is not False:
+        flux_error = flux_merged/flux_SNR_merged
+        return wave_merged*10000,flux_merged,flux_error
+    else:
+        return wave_merged*10000,flux_merged
+
+def get_SED_H3_plus_L(epoch,sBV,extrapolate=False):
+    '''Function to substitude the NIR part of  the Hsiao template (H3) with
+       the new CSP2 NIR template (L)
+
+    args:
+        epoch (float): restframe days since B-band maximum of the spectrum
+        sBV (float): color stretch of the SN
+
+    Returns:
+        2-tuple: (wave,flux)
+
+        * wave (array):  Wavelength in Angstroms
+        * flux (array):  arbitrarily normalized flux
+    '''
+    # get the NIR template
+    wave_NIR,flux_NIR = get_single_NIR_template(epoch,sBV)
+    # get the H3 templates
+    stretched_epoch = epoch/sBV
+    # Check limits
+    if stretched_epoch <= SED_lims['H3'][0]:
+       if extrapolate:
+          day = SED_lims['H3'][0]
+       else:
+          return (None,None)
+    elif stretched_epoch > SED_lims['H3'][1]:
+       if extrapolate:
+          day = SED_lims['H3'][1]
+       else:
+          return (None,None)
+    else:
+        day = stretched_epoch
+    wave_hsiao,flux_hsiao = get_SED(day, version='H3')
+
+    ## substitude the NIR region of H3
+    w_optical = num.where(wave_hsiao<=wave_NIR[0]+200) # set overlap region to be 200A
+    wave_optical,flux_optical = wave_hsiao[w_optical],flux_hsiao[w_optical]
+    # merge the optical with NIR
+    wave_merged,flux_merged = merge_spec(wave_optical,flux_optical,wave_NIR,flux_NIR)
+    # merge with the H3 NIR tail since L NIR template only goes to 2.33um
+    w_NIRtail = num.where(wave_hsiao>=wave_NIR[-1]-200)
+    wave_tail,flux_tail = wave_hsiao[w_NIRtail],flux_hsiao[w_NIRtail]
+    wave_merged,flux_merged = merge_spec(wave_merged,flux_merged,wave_tail,flux_tail)
+
+    return wave_merged,flux_merged
+''' End of Functions needed for the new CSP2  NIR templates '''
+
+
+def get_SED(day, version='H3+L',sBV=1.0, interpolate=True, extrapolate=False):
    '''Retrieve the SED for a SN for a particular epoch.
    
    Args:
       day (int or float): The integer day w.r.t. time of B-maximum
+      sBV (float): The color stretch of the SN, only appliable to version='H3+L'
       version (str): The version of SED sequence to use:
 
          * 'H': Old Hsiao Ia SED (Hsiao, private communication)
          * 'H3': Hsiao+2007 Ia SED
+         * 'H3+L': Hsiao+2007 Ia SED + Lu+2022 NIR SED
          * 'N': Nugent+2002 Ia SED
          * '91bg': a SN1991bg Ia SED (Peter Nugent)
       interpolate(bool): If and day is not an integer, interpolate
@@ -110,6 +369,7 @@ def get_SED(day, version='H3', interpolate=True, extrapolate=False):
       * wave (array):  Wavelength in Angstroms
       * flux (array):  arbitrarily normalized flux
    '''
+   epoch = day
 
    if type(day) is type(1.0) and not interpolate:
       day = round(day)
@@ -140,6 +400,8 @@ def get_SED(day, version='H3', interpolate=True, extrapolate=False):
    elif version == '91bg':
       return (n91_wav, 
             linterp(n91_sed[day1+13, :],n91_sed[day2+13,:],day1,day2,day))
+   elif version =='H3+L':
+       return (get_SED_H3_plus_L(epoch,sBV,extrapolate=extrapolate))
    else:
       raise AttributeError("version %s not recognized" % version)
 
@@ -252,8 +514,8 @@ def S(wave, spec, f1, f2, z):
       S = mag2 - mag1 
       return (S, 1)
 
-def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1, 
-      R_host=3.1, version="H3", photons=1, Scorr=False, extrapolate=False):
+def kcorr(days, filter1, filter2, z, sBV=1.0, ebv_gal=0, ebv_host=0, R_gal=3.1, 
+      R_host=3.1, version="H3+L", photons=1, Scorr=False, extrapolate=False):
    '''Find the cross-band k-correction for a series of type Ia SED from
    SNooPy's catalog. These can be thought of as "empirical" K-corrections.
    
@@ -263,6 +525,7 @@ def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1,
       filter2 (str):  observed filter. This can be the same as filter1,
                       or another, redder, filter for cross-band K-corrections
       z (float): redshift
+      sBV (float): The color stretch of the SN, only appliable to version='H3+L'
       ebv_gal (float): restframe (foreground) color excess to be applied to
                        SED before computing K-corrections
       ebv_host (float): host-galaxy color excess to be applied to SED before
@@ -294,7 +557,8 @@ def kcorr(days, filter1, filter2, z, ebv_gal=0, ebv_host=0, R_gal=3.1,
    mask = []      # Masks the good values (1) and bad (not defined) values (0)
    # Loop through the list of days
    for day in days:
-      day = int(day)
+      if version != 'H3+L':
+          day = int(day)
       spec_wav,spec_f = get_SED(day, version, extrapolate=extrapolate)
       if spec_wav is None:
          # print "Warning:  no spectra for day %d, setting Kxy=0" % day
@@ -427,7 +691,7 @@ def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z,
       else:
          return(kcorrs,mask)
 
-def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H', 
+def kcorr_mangle(days, filts, mags, m_mask, restfilts, z,sBV = 1.0, version='H3+L', 
       colorfilts=None, full_output=0, mepoch=False, Scorr=False, 
       extrapolate=False, **mopts):
    '''Compute (cross-)band K-corrections with "mangling" using built-in library
@@ -443,6 +707,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
                               by [spectrum index,filter index]
       restfilts (list of str): Rest-frame filters corresponing to filts.
       z (float):  redshift
+      sBV (float): The color stretch of the SN, only appliable to version='H3+L'
       version (str): Specify which spectral sequence to use. See
                      :func:`.get_SED`.
       colorfilts (list of str): (optional) Sub set of filters to use in 
@@ -493,7 +758,10 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
       spec_fs = []
       sids = []
       for j in range(len(days)):
-         day = int(days[j])
+         if version != 'H3+L':
+             day = int(days[j])
+         else:
+             day = days[i]
          s,f = get_SED(day, version, extrapolate=extrapolate)
          if s is None:
             spec_wavs.append(num.arange(980.,24981.0,10.))
@@ -555,7 +823,10 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
       for j in range(len(days)):
          kcorrs.append([])
          mask.append([])
-         day = int(days[j])
+         if version != 'H3+L':
+             day = int(days[j])
+         else:
+             day = days[j]
          spec_wav,spec_f = get_SED(day, version, extrapolate=extrapolate)
          if spec_wav is None:
             # print "Warning:  no spectra for day %d, setting Kxy=0" % day
