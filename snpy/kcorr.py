@@ -95,6 +95,10 @@ SED_lims = {
       'N':(-19,70),
       '91bg':(-13,100)}
 
+sBV_lims = {
+      'H3+L':(0.4,1.3)}
+
+
 ''' Functions needed for the new CSP2  NIR templates '''
 def GPR_predict_PC(Wbin,epoch,sBV):
     '''Function of predicting Priciple components from the fitted GPR
