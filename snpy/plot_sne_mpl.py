@@ -800,7 +800,7 @@ def plot_sBV(self, t, BV, eBV, tBVmax, etBVmax, ts, ys, eys, Tmax):
    return p
 
 
-def plot_color(self, f1, f2, epoch=True, deredden=True, interp=False, 
+def plot_color(self, f1, f2, dt=0.5, epoch=True, deredden=True, interp=False, 
       dokcorr=False, outfile=None, clear=True):
    '''Plot the color ([f1]-[f2]) evolution curve for the SN.  If  [epoch]
    is True and Bmax is defined, plot relative to T(Bmax).  If [deredden]
@@ -811,7 +811,7 @@ def plot_color(self, f1, f2, epoch=True, deredden=True, interp=False,
    ax.set_xlabel('JD - JD(Bmax)')
    ax.set_ylabel('%s-%s' % (f1,f2))
 
-   MJD,BV,eBV,flag = self.get_color(f1, f2, interp=interp, use_model=0, 
+   MJD,BV,eBV,flag = self.get_color(f1, f2, dt=dt, interp=interp, use_model=0, 
          dokcorr=dokcorr)
    if epoch:
       if self.Tmax:
