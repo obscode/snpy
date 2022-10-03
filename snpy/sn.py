@@ -754,7 +754,7 @@ class sn(object):
          if len(bs) == 0:
             continue
          lcs = [self.data[b] for b in bs]
-         MJDs = concatenate([lc.MJD for lc in lcs])
+         MJDs = concatenate([l.MJD for l in lcs])
          if method=='kcorr':
             mags = concatenate([self.data[b].magnitude - self.ks[b] \
                   for b in bs])
@@ -769,9 +769,15 @@ class sn(object):
             mags = concatenate([self.data[b].magnitude for b in bs])
             masks = ~isnan(mags)
 
-         emags = concatenate([lc.e_mag for lc in lcs])
-         SNRs = concatenate([lc.SNR for lc in lcs])
-         sids = concatenate([lc.sids for lc in lcs])
+         emags = concatenate([l.e_mag for l in lcs])
+         SNRs = concatenate([l.SNR for l in lcs])
+         sids = []
+         for l in lcs:
+            if not hasattr(l, "sids"):
+               sids.append(zeros(l.mag.shape[0], dtype=int))
+            else:
+               sids.append(l.sids)
+         sids = concatenate(sids)
 
          # Book-keeping
          for b in bs:
@@ -1042,7 +1048,7 @@ class sn(object):
    #  if interactive:
 
    def interp_table(self, bands, use_model=False, model_float=False, 
-         dokcorr=False):
+         dokcorr=False, dt=1.0):
       '''For a given set of bands, construct a table of contemporaneous
       photometry, interpolating any missing data.
 
@@ -1069,7 +1075,7 @@ class sn(object):
                 * 8 - k-corrections are not valid
       '''
       # First, get a table of all photometry:
-      data = self.get_mag_table(bands)
+      data = self.get_mag_table(bands, dt=dt)
 
       ms = []
       ems = []
@@ -1133,12 +1139,14 @@ class sn(object):
 
       return (data['MJD'], ms, ems, flags)
 
-   def get_color(self, band1, band2, interp=True, use_model=False, 
+   def get_color(self, band1, band2, dt=0.5, interp=True, use_model=False, 
          model_float=False, dokcorr=False, kcorr=None):
       '''return the observed SN color of [band1] - [band2].  
       
       Args:
          band1,band2 (str):  Filters comprising the color
+         dt (float):  Max separation in days:  observations separated by less
+                      than dt are considered coincident when computing color
          interp (bool): If True, interpolate missing data in either filter
          use_model (bool): If True and both a model and interpolator are
                            defined for the filter, use the model to interpolate
@@ -1177,7 +1185,7 @@ class sn(object):
 
       if not interp:
          # easy
-         data = self.get_mag_table([band1, band2])
+         data = self.get_mag_table([band1, band2], dt=dt)
          gids = less(data[band1], 90) & less(data[band2], 90)
          mjd = data['MJD'][gids]
          col = (data[band1] - data[band2])[gids]
@@ -2094,7 +2102,7 @@ class sn(object):
       return plotmod.plot_filters(self, bands, day, outfile=outfile)
 
 
-   def plot_color(self, f1, f2, epoch=True, deredden=True, interp=False,
+   def plot_color(self, f1, f2, dt=0.5, epoch=True, deredden=True, interp=False,
          dokcorr=False, kcorr=None, outfile=None, clear=True):
       '''Plot the color curve (color versus time) given by f1 and f2.
 
@@ -2113,7 +2121,7 @@ class sn(object):
                        " instead", stacklevel=2)
          dokcorr=kcorr
 
-      return plotmod.plot_color(self, f1,f2,epoch, deredden, interp, dokcorr, 
+      return plotmod.plot_color(self, f1,f2,dt,epoch, deredden, interp, dokcorr, 
             outfile, clear)
 
    def compute_w(self, band1, band2, band3, R=None, Rv=3.1, interp=False,
