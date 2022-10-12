@@ -7,6 +7,7 @@ def configuration(parent_package='', top_path=None):
    config = Configuration('snpy', parent_package, top_path)
    config.add_subpackage('dm15temp')
    config.add_subpackage('CSPtemp')
+   config.add_subpackage('ATLAStemp')
    config.add_subpackage('filters')
    config.add_subpackage('spline2')
    config.add_subpackage('tspack')

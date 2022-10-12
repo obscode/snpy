@@ -15,10 +15,12 @@ Got rid of the MMax function, as this is now part of the model class.'''
 from . import CSPtemp as dm15temp2
 from . import SwiftTemp
 from . import dm15temp
+from . import ATLAStemp
 
 template_bands = dm15temp2.template_bands + \
                  dm15temp.template_bands +\
-                 SwiftTemp.template_bands
+                 SwiftTemp.template_bands + \
+                 ATLAStemp.template_bands
 
 class template:
 
@@ -95,6 +97,7 @@ class stemplate:
    def __init__(self):
       self.Ct = dm15temp2.st_template()
       self.St = SwiftTemp.st_template()
+      self.At = ATLAStemp.st_template()
 
       for band in ['u','B','V','g','r','i','Y','J','H','K','J_K','H_K']:
          self.__dict__[band] = self.Ct.__dict__[band]
@@ -102,12 +105,17 @@ class stemplate:
       for band in ['UVM2','UVW1','UVW2']:
          self.__dict__[band] = self.St.__dict__[band]
          self.__dict__['e'+band] = self.St.__dict__['e'+band]
+      for band in ['ATgr','ATri']:
+         self.__dict__[band] = self.At.__dict__[band]
+         self.__dict__['e'+band] = self.At.__dict__['e'+band]
 
    def __getattr__(self, name):
       if name in ['u','B','V','g','r','i','Y','J','H','H_K','J_K',
                     'eu','eB','eV','eg', 'er','ei','eY','eJ','eH','eJ_K','eH_K']:
          return self.Ct.__dict__[name]
       elif name in ['UVW1','UVW2','UVM2','eUVW1','eUVW2','eUVM2']:
+         return self.St.__dict__[name]
+      elif name in ['ATgr','ATri','eATgr','eATri']:
          return self.St.__dict__[name]
       elif name == 't':
          return self.Ct.t
@@ -121,12 +129,15 @@ class stemplate:
                'generate':generate}
       self.Ct.mktemplate(**args)
       self.St.mktemplate(**args)
+      self.At.mktemplate(**args)
 
    def domain(self, band):
       if band in ['u','B','V','g','r','i','Y','J','H','K','J_K','H_K']:
          return self.Ct.domain(band)
       elif band in ['UVW1','UVW2','UVM2']:
          return self.St.domain(band)
+      elif band in ['ATgr','ATri']:
+         return self.At.domain(band)
       else:
          raise AttributeError("Sorry, band %s not supported" % band)
 
@@ -137,12 +148,16 @@ class stemplate:
             extrap=extrap))
       elif band in ['UVW1','UVW2','UVM2']:
          return(self.St.eval(band, times, z, mag, sextrap, gen, toff))
+      elif band in ['ATgr','ATri']:
+         return(self.At.eval(band, times, z, mag, sextrap, gen, toff))
       else:
          raise AttributeError("Sorry, band %s is not supported" % band)
 
    def __setstate__(self, state):
       if 'St' not in state:
          state['St'] = SwiftTemp.st_template()
+      if 'At' not in state:
+         state['At'] = ATLAStemp.st_template()
       self.__dict__ = state
 
 
