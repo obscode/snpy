@@ -101,8 +101,8 @@ class dm15_template:
       s = dm152s(self.dm15)
       evm = self.interp[band](evt/s)
       eevm = num.zeros(evm.shape)   # No uncertainties
-      mask = -num.isnan(evm)
-      evm[-mask] = -1
+      mask = ~num.isnan(evm)
+      evm[~mask] = -1
       if mag:
          return evm,eevm,mask
       else:
