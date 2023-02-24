@@ -660,7 +660,7 @@ class EBV_model2(model):
             raise RuntimeError("Error:  to solve for EBVhost, you need to fit more than one filter")
 
       self.calibration = self.args.get('calibration',0)
-      self.gen = 2
+      self.gen = self.args.get('gen',2)
 
       for band in self._fbands:
          self.Robs[band] = kcorr.R_obs(band, self.parent.z, 0, 0.01, 0,
