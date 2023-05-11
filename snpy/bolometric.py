@@ -507,6 +507,7 @@ def bolometric_direct(sn, bands=None, tmin=None, tmax=None,
 
       # Finally!  integrate!
       fbol = trapz(flam[masks[i]], x=lam_eff[masks[i]])
+      if not len(bs) > 1: fbol = flam[masks[i]][0]
 
       filters_used.append(bs)
       boloflux.append(fbol)
