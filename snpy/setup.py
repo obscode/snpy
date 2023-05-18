@@ -9,7 +9,7 @@ def configuration(parent_package='', top_path=None):
    config.add_subpackage('CSPtemp')
    config.add_subpackage('filters')
    config.add_subpackage('spline2')
-   config.add_subpackage('tspack')
+   #config.add_subpackage('tspack')
    config.add_subpackage('utils')
    config.add_subpackage('sqlmod')
    config.add_subpackage('SwiftTemp')
