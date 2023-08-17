@@ -264,7 +264,8 @@ class InteractiveFit:
       ax = self.mp.axes[0]
       if id is None:
          bbox = self._stats_labels.get_window_extent(find_renderer(self.mp.fig))
-         bbox = bbox.inverse_transformed(ax.transAxes)
+         #bbox = bbox.inverse_transformed(ax.transAxes)
+         bbox = bbox.transformed(ax.transAxes.inverted())
          self._statsid = ax.text(bbox.x1,0.95,label, va='top', ha='left',
               transform=ax.transAxes, fontdict={'size':10})
       else:
@@ -282,7 +283,8 @@ class InteractiveFit:
       ax = self.mp.axes[1]
       if id is None:
          bbox = self._pars_labels.get_window_extent(find_renderer(self.mp.fig))
-         bbox = bbox.inverse_transformed(ax.transAxes)
+         #bbox = bbox.inverse_transformed(ax.transAxes)
+         bbox = bbox.transformed(ax.transAxes.inverted())
          self._parsid = ax.text(bbox.x1, 0.95, label, va='top', ha='left',
                transform=ax.transAxes, fontdict={'size':10})
       else:
