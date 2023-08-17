@@ -84,8 +84,6 @@ def dosetup():
             'pymysql',
             'matplotlib',
             'ipython',
-            'emcee',
-            'pymc',
             'astropy'],
          **configuration(top_path='').todict())
 
