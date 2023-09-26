@@ -2529,7 +2529,8 @@ def load(fname):
       if getattr(inst, 'k_extrapolate', None) is None:
          inst.k_extrapolate = False
    except:
-      print("Error:  could not load pickle file {}".format(fname))
+      print("Warning:  could not load pickle file {}, trying as plain "\
+            "text import".format(fname))
       inst = None
    return(inst)
 

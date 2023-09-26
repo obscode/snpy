@@ -84,7 +84,8 @@ def dosetup():
             'pymysql',
             'matplotlib',
             'ipython',
-            'astropy'],
+            'astropy',
+            'certifi'],
          **configuration(top_path='').todict())
 
 if __name__ == '__main__':
