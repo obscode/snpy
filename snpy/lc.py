@@ -44,7 +44,7 @@ class lc:
       self._eflux = None       #    "
       self.e_mag = e_mag       # error in magnitude
       self._SNR = SNR           # Signal-to-noise ratio
-      if sometrue(equal(self.e_mag,0)):
+      if any(equal(self.e_mag,0)):
          print("Warning:  you have errors that are zero:  setting them to 0.001 mag.")
          print("If you don't like that, fix your errors.")
          self.e_mag = where(equal(self.e_mag, 0), 0.001, self.e_mag)
@@ -87,9 +87,9 @@ class lc:
       '''Check to see if another lc instance is equal to this one.'''
       if self.MJD.shape != other.MJD.shape:
          return False
-      return alltrue(less(absolute(self.MJD-other.MJD),1e-5)) \
-             and alltrue(less(absolute(self.magnitude-other.magnitude),1e-5)) \
-             and alltrue(less(absolute(self.e_mag-other.e_mag),1e-5))
+      return all(less(absolute(self.MJD-other.MJD),1e-5)) \
+             and all(less(absolute(self.magnitude-other.magnitude),1e-5)) \
+             and all(less(absolute(self.e_mag-other.e_mag),1e-5))
 
    def __ne__(self, other):
       return not self.__eq__(other)
@@ -402,7 +402,7 @@ class lc:
       if self.band in self.parent.model._fbands:
          sids = argsort(x)
          m,em,f = self.parent.model(self.band, x[sids], extrap=False)
-         if not alltrue(f):
+         if not all(f):
             # need to do linear interpolation between end of template and
             # remaining points
             m0,em0,f0 = self.parent.model(self.band, self.MJD)
@@ -412,7 +412,7 @@ class lc:
             if verbose:
                print("extrapolating early data up to ",xmin)
             lids = less(x[sids], xmin)
-            if sometrue(lids):
+            if any(lids):
                m1,em1,f1 = self.parent.model(self.band, x[sids][lids],
                      extrap=True)
                m[lids] = m1
@@ -425,7 +425,7 @@ class lc:
                print("extrapolating late data from (%f,%f)" % (xmax,ymax))
 
             lids = greater(x[sids], xmax)
-            if sometrue(lids):
+            if any(lids):
                gids = greater_equal(self.MJD, xmax)
                if verbose:
                   print("   using points at", self.MJD[gids])
@@ -568,17 +568,17 @@ class lc:
       if sum(dgids)*1.0/len(dgids) < 0.8:
          print("Warning!  %f%% of MC realizations had good dm15" %\
                (sum(dgids)*100.0/len(dgids),))
-      if sometrue(Tgids):
+      if any(Tgids):
          self.Tmax = Tmaxs[0]
          self.e_Tmax = std(Tmaxs[Tgids]) 
       else:
          self.Tmax = self.e_Tmax = -1
-      if sometrue(Mgids):
+      if any(Mgids):
          self.Mmax = Mmaxs[0]
          self.e_Mmax = std(Mmaxs[Mgids]) 
       else:
          self.Mmax = self.e_Mmax = -1
-      if sometrue(dgids):
+      if any(dgids):
          self.dm15 = dm15s[0]
          self.e_dm15 = std(dm15s[dgids]) 
       else:

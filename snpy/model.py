@@ -301,7 +301,7 @@ class model:
       for band in bands:
          if debug: print(">>> calling model member function")
          mod,err,mask = self.__call__(band, self.parent.data[band].MJD)
-         if not sometrue(mask):
+         if not any(mask):
             msg = "All weights for filter %s are zero." % band
             msg += " The fitter is in a part of parameter space where the model"
             msg += " is not valid or there is no useful data."

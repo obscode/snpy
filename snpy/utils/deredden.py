@@ -37,13 +37,13 @@ def ccm(wave, strict_ccm=0):
   
    # **************************************************************
    good = num.greater(x, 0.3) * num.less(x, 1.1)   # Infrared
-   if num.sometrue(good):
+   if num.any(good):
       a = num.where(good, 0.574 * num.power(x, 1.61), a)
       b = num.where(good, -0.527 * num.power(x, 1.61), b)
   
    #****************************************************************
    good = num.greater_equal(x,1.1) * num.less(x, 3.3)        #Optical/NIR
-   if num.sometrue(good):      #Use new constants from O'Donnell (1994)
+   if num.any(good):      #Use new constants from O'Donnell (1994)
       y = x - 1.82
       if strict_ccm:
          c1 = [ 1. , 0.17699, -0.50447, -0.02427,  0.72085,     #Original
@@ -66,11 +66,11 @@ def ccm(wave, strict_ccm=0):
 
    #******************************************************************
    good = num.greater_equal(x, 3.3) * num.less(x,8)          #Mid-UV
-   if num.sometrue(good):
+   if num.any(good):
       y = 1.0*x
       good1 = num.greater(y, 5.9)
       F_a = y*0.0    ; F_b = y*0.0
-      if num.sometrue(good1) > 0:
+      if num.any(good1) > 0:
          y1 = y - 5.9
          F_a = -0.04473 * num.power(y1,2) - 0.009779 * num.power(y1,3)
          F_b = 0.2130 * num.power(y1,2)  +  0.1207 * num.power(y1,3)
@@ -85,7 +85,7 @@ def ccm(wave, strict_ccm=0):
    #   *******************************
   
    good = num.greater_equal(x, 8) * num.less_equal(x, 11)  #Far-UV
-   if num.sometrue(good):
+   if num.any(good):
       y = x - 8.0
       c1 = [ -1.073, -0.628,  0.137, -0.070 ]
       c2 = [ 13.670,  4.257, -0.420,  0.374 ]
@@ -307,11 +307,11 @@ def nataf(wave, R_V=3.1, strict_ccm=False):
 
    #******************************************************************
    good = num.greater_equal(x, 3.3) * num.less(x,8)          #Mid-UV
-   if num.sometrue(good):
+   if num.any(good):
       y = 1.0*x
       good1 = num.greater(y, 5.9)
       F_a = y*0.0    ; F_b = y*0.0
-      if num.sometrue(good1):
+      if num.any(good1):
          y1 = y - 5.9
          F_a = -0.04473 * num.power(y1,2) - 0.009779 * num.power(y1,3)
          F_b = 0.2130 * num.power(y1,2)  +  0.1207 * num.power(y1,3)
@@ -326,7 +326,7 @@ def nataf(wave, R_V=3.1, strict_ccm=False):
    #   *******************************
   
    good = num.greater_equal(x, 8) * num.less_equal(x, 11)  #Far-UV
-   if num.sometrue(good):
+   if num.any(good):
       y = x - 8.0
       c1 = [ -1.073, -0.628,  0.137, -0.070 ]
       c2 = [ 13.670,  4.257, -0.420,  0.374 ]

@@ -507,7 +507,7 @@ def kcorr_mangle(days, filts, mags, m_mask, restfilts, z, version='H',
       spec_fs = num.array(spec_fs)
       sids = num.array(sids)
       fs = [colorfilts[i] for i in range(len(colorfilts)) \
-            if num.sometrue(m_mask[:,i])]
+            if num.any(m_mask[:,i])]
       if len(fs) <=1 :
          waves,man_spec_fs,factors = spec_wavs,spec_fs,spec_wavs*0.0+1.0
          state,pars = None,None

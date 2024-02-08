@@ -26,7 +26,7 @@ def fitsvd(A, b):
    sol1 = transpose(decomp[2])
    sol2 = divz(1.0,decomp[1], tol=1e-10)
    sol3 = dot(transpose(decomp[0]),b)
-   if sometrue(sol3):
+   if any(sol3):
       solr = (sol2*sol3)
       soll = dot(sol1,solr)
       err = sqrt(sum(power(sol1*sol2, 2), axis=0))

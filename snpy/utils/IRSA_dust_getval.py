@@ -3,10 +3,13 @@
 and extract E(B-V)'''
 
 from __future__ import print_function
+import six
+if six.PY2:
+   import urllib
+else:
+   import urllib.request as urllib
 import re
-import urllib3
-import certifi
-from xml.dom.minidom import parseString as parse
+from xml.dom.minidom import parse
 
 debug = 0
 
@@ -16,19 +19,17 @@ def get_dust_RADEC(ra, dec, calibration="SF11"):
    '''Query IRSA with given ra and dec to get the E(B-V).  To remain compatible
    with dust_getval module, return a list (dust_getval results an array).
    You can specify calibration of "SF11" or "SFD98"'''
-   http = urllib3.PoolManager(cert_reqs="CERT_REQUIRED",
-                              ca_certs=certifi.where())
    if debug:
       print("get_dust_RADEC:  Querying URL:  ",BASE_URL % (ra,dec))
    try:
-      u = http.request("GET", BASE_URL % (ra,dec))
+      u = urllib.urlopen(BASE_URL % (ra,dec))
    except:
       print("Failed to connect to IRSA.  E(B-V) query failed")
       return([None],[1])
    if not u:
       print("Failed to connect to IRSA.  E(B-V) query failed")
       return([None],[1])
-   dom = parse(u.data)
+   dom = parse(u)
    u.close()
    result = None
    tag = {'SF11':'meanValueSandF',

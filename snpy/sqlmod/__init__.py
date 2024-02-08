@@ -396,14 +396,14 @@ class sqlbase:
                tol)
          num_match = numpy.sum(con, axis=1)
          # Check to see there's at least one match per requested time:
-         if not numpy.alltrue(num_match):
+         if not numpy.all(num_match):
             bids = numpy.nonzero(numpy.equal(num_match, 0))[0]
             btimes = ""
             for i in range(len(bids)):  btimes += " %.1f " % (times[bids[i]])
             raise AttributeError("No photometry entry for %s" % btimes)
 
          # check if multiple matches:
-         if numpy.sometrue(numpy.greater(num_match,1)):
+         if numpy.any(numpy.greater(num_match,1)):
             bids = numpy.nonzero(numpy.greater(num_match,1))[0]
             btimes = ""
             for i in range(len(bids)):  btimes += " %.1f " % (times[bids[i]])

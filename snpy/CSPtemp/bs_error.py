@@ -44,7 +44,7 @@ for j in range(len(bands)):
       z0 = bisplev(ts, dm15s[k], tck0)[:,0]
       for i in range(len(tcks)):
          z1 = bisplev(ts, dm15s[k], tcks[i])[:,0]
-         if sometrue(absolute(z1 - z0) > 0.15):
+         if any(absolute(z1 - z0) > 0.15):
             continue
          dzs.append(z1 - z0)
       dzs = array(dzs)

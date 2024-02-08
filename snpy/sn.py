@@ -442,7 +442,7 @@ class sn(object):
          ys = interp(ts)[0]
 
       nids = less(dirs, 0)   # concave-down (i.e., maxima)
-      if not sometrue(nids):
+      if not any(nids):
          return None,None
 
       idx = argmax(maxs[nids])  # take the true maximum
@@ -456,12 +456,12 @@ class sn(object):
          interp.draw()
          btmaxs,bmaxs,bdirs = interp.find_extrema()
          if plot: yys.append(interp(ts)[0])
-         if len(bdirs) == len(dirs) and alltrue(bdirs == dirs):
+         if len(bdirs) == len(dirs) and all(bdirs == dirs):
             # same maxima
             tBVmaxs.append(btmaxs[nids][idx])
          else:
             bnids = less(bdirs, 0)
-            if sometrue(bnids):
+            if any(bnids):
                bidx = argmax(bmaxs[bnids])
                if absolute(btmaxs[bnids][bidx] - tBVmax) < 10.0:
                   tBVmaxs.append(btmaxs[bnids][bidx])
@@ -539,7 +539,7 @@ class sn(object):
       gids = gids*greater_equal(t-Tmax, tmin)*less_equal(t-Tmax, tmax)
 
       # Now check that we actually HAVE some data left
-      if not sometrue(gids):
+      if not any(gids):
          raise RuntimeError("Sorry, no data available between t=%f and t=%f" % (tmin,tmax)) 
       
       # extract the data we want and convert to Vmax epochs
@@ -897,7 +897,7 @@ class sn(object):
       eff_waves = eff_waves[sids]
       mbands = [mbands[sids[i]] for i in range(len(sids))]
       dwaves = eff_waves[1:] - eff_waves[0:-1]
-      while sometrue(less(dwaves, min_filter_sep)):
+      while any(less(dwaves, min_filter_sep)):
          bids = less(dwaves, min_filter_sep)
          mbands = [mbands[i] for i in range(len(bids)) if not bids[i]] + mbands[-1:]
          eff_waves = array([fset[band].eff_wave(Ia_w,Ia_f) for band in mbands])
@@ -933,7 +933,7 @@ class sn(object):
       if self.Tmax is None:
          raise AttributeError("Error.  self.Tmax must be set in oder to compute K-correctsions")
       t = res['MJD'] - self.Tmax
-      if not sometrue(greater_equal(t, -19)*less(t, 70)):
+      if not any(greater_equal(t, -19)*less(t, 70)):
          raise RuntimeError("Error:  your epochs are all outside -20 < t < 70.  Check self.Tmax")
       kextrap = getattr(self, 'k_extrapolate', False)
       kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle(t/(1+self.z)/s, bands, 
@@ -1087,7 +1087,7 @@ class sn(object):
             k = 0
             kflag = 0
 
-         if not sometrue(bids):
+         if not any(bids):
             # They all good, carry on.
             ms.append(data[band]-k)
             ems.append(data['e_'+band])

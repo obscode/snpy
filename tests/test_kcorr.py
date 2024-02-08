@@ -32,5 +32,5 @@ def test_kcorr():
    delta2 = absolute((magzs[0,:]-mag0s)[0] - ks[0])
 
    # The mangling should be better and precise
-   assert alltrue(delta2 < delta1) and alltrue(delta2 < 0.01)
+   assert all(delta2 < delta1) and all(delta2 < 0.01)
    

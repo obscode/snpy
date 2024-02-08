@@ -56,7 +56,7 @@ def bspline_basis(knots, u, degree, zeroslope=False, gradient=False,
       raise ValueError("knots must be a 1d array/list")
    if knots.shape[0] < degree:
       raise ValueError("You must have at least <degree> internal knots")
-   if not np.alltrue(np.greater_equal(knots[1:] - knots[:-1],0)):
+   if not np.all(np.greater_equal(knots[1:] - knots[:-1],0)):
       raise ValueError("knots must be strictly increasing")
    kv = np.concatenate([[knots[0]]*degree,
                          knots,

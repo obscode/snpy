@@ -75,7 +75,7 @@ class MCMC_generator(pymc.MCMC):
          for i,f in enumerate(filters):
             mod,err,mask = self.model(f, self.sn.data[f].MJD)
             m = mask*self.sn.data[f].mask
-            if not np.sometrue(m):
+            if not np.any(m):
                continue
             numpts += np.sum(m)
             tau = np.power(vars[i] + np.power(self.sn.data[f].e_mag,2),-1)

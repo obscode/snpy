@@ -54,7 +54,7 @@ def getdata(filt, use_B_tmax=True, data_location='.'):
       bids = concatenate([less(absolute(dts), 2e-1),[False]])
       print bids.shape
       print this_t.shape
-      while sometrue(bids):
+      while any(bids):
          for id in nonzero(bids)[0]:
             print "combining point %d and %d for %s" % (id+1,id,s.name)
             this_flux[id+1] = (this_flux[id+1]+this_flux[id])/2
