@@ -442,7 +442,7 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
       
    ax.errorbar(x-Toff, y, yerr=ey, barsabove=True, capsize=0,
          elinewidth=1, fmt=symbol, ms=msize, 
-         mfc=color, label=label, linestyle='None')
+         mfc=color, mec=color, ecolor=color, label=label, linestyle='None')
            #ecolor='black')
    if kwargs.get('label_bad', False):
       gids = equal(obj.data[filt].mask, 0)
