@@ -1327,12 +1327,15 @@ class sn(object):
                line += "  +/- %.3f (sys)" % systs[param]
             print(line, file=out)
 
-   def dump_lc(self, epoch=0, tmin=-10, tmax=70, k_correct=0, 
+   def dump_lc(self, outdir=None, epoch=0, tmin=-10, tmax=70, k_correct=0, 
                s_correct=False, mw_correct=0):
       '''Outputs several files that contain the lc information: the data,
       uncertainties, and the models themselves.
       
       Args:
+         outdir( str or None ): To specify the directory where lighcurve files 
+                               will be dumped
+                               (default: None)
          epoch (bool): If True, output times relative to Tmax
          tmin/tmax (float): the time range over which to output the model
                             (default:  -10 days to 70 days after Tmax)
@@ -1357,7 +1360,9 @@ class sn(object):
          extra flag column that indicates if the k-corrections are valid (0) or
          invalid (1).
       '''
-      base = self.name + "_lc_"
+      if outdir is None:
+         base = self.name + "_lc_"
+      base = outdir + self.name + "_lc_"
       if not epoch:
          toff = 0
       else:
