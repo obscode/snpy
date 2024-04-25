@@ -291,9 +291,9 @@ class filter(spectrum):
          integrand = integrand*trim_wave/ch
 
       if integ_method=='simpsons':
-         result = scipy.integrate.simps(integrand, x=trim_wave, even='avg')
+         result = scipy.integrate.simps(integrand, x=trim_wave)
       elif integ_method=='trapz':
-         result = scipy.integrate.trapz(integrand, x=trim_wave)
+         result = scipy.integrate.trapezoid(integrand, x=trim_wave)
       else:
          result = (trim_wave[-1] - trim_wave[0])/(len(trim_wave)-1)*\
                sum(integrand)
@@ -304,7 +304,7 @@ class filter(spectrum):
       '''Compute the AB offset for this filter. Due to the way SNooPy stores
       the zero-points, this only depends on filter function shape.'''
       return 65.4469-48.6-self.zp + \
-            2.5*num.log10(scipy.integrate.trapz(self.flux/self.wave,self.wave))
+            2.5*num.log10(scipy.integrate.trapezoid(self.flux/self.wave,self.wave))
 
 
    def synth_mag(self, specwave, flux=None, z=0, zeropad=0):
@@ -740,7 +740,7 @@ for obs in obsdirs:
             newf = filter(l[0], os.path.join(dir,l[1]), 0.0, 
                " ".join(l[3:]))
             newf.zp = 16.84692 + 2.5*num.log10(
-                  scipy.integrate.trapz(newf.resp/newf.wave, x=newf.wave))
+                  scipy.integrate.trapezoid(newf.resp/newf.wave, x=newf.wave))
             fset.observatories[obs_name].telescopes[tel_name].add_filter(newf)
          else:
             fset.observatories[obs_name].telescopes[tel_name].add_filter(

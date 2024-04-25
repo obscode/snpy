@@ -13,7 +13,7 @@ import os,sys,string,re
 import numpy as num
 import scipy.interpolate
 import pandas as pd
-from scipy.integrate import simps
+from scipy.integrate import simpson as simps
 from .utils import deredden
 try:
    from astropy.io import fits as pyfits
