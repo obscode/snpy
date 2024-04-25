@@ -351,7 +351,7 @@ def get_SED_H3_plus_L(epoch,sBV,extrapolate=False):
 ''' End of Functions needed for the new CSP2  NIR templates '''
 
 
-def get_SED(day, version='H3+L',sBV=1.0, interpolate=True, extrapolate=False):
+def get_SED(day, version='H3',sBV=1.0, interpolate=True, extrapolate=False):
    '''Retrieve the SED for a SN for a particular epoch.
    
    Args:
@@ -523,7 +523,7 @@ def S(wave, spec, f1, f2, z):
       return (S, 1)
 
 def kcorr(days, filter1, filter2, z, sBV=1.0, ebv_gal=0, ebv_host=0, R_gal=3.1, 
-      R_host=3.1, version="H3+L", photons=1, Scorr=False, extrapolate=False):
+      R_host=3.1, version="H3", photons=1, Scorr=False, extrapolate=False):
    '''Find the cross-band k-correction for a series of type Ia SED from
    SNooPy's catalog. These can be thought of as "empirical" K-corrections.
    
@@ -699,7 +699,7 @@ def kcorr_mangle2(waves, spectra, filts, mags, m_mask, restfilts, z,
       else:
          return(kcorrs,mask)
 
-def kcorr_mangle(days, filts, mags, m_mask, restfilts, z,sBV = 1.0, version='H3+L', 
+def kcorr_mangle(days, filts, mags, m_mask, restfilts, z,sBV = 1.0, version='H3', 
       colorfilts=None, full_output=0, mepoch=False, Scorr=False, 
       extrapolate=False, **mopts):
    '''Compute (cross-)band K-corrections with "mangling" using built-in library
