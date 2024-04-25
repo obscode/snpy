@@ -85,7 +85,8 @@ def dosetup():
             'matplotlib',
             'ipython',
             'astropy',
-            'certifi'],
+            'certifi',
+            'pandas'],
          **configuration(top_path='').todict())
 
 if __name__ == '__main__':
