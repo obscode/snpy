@@ -1,14 +1,6 @@
 PURPOSE
 -------
 
-This is a folked repo, aim to make the new NIR spectral templates 
-avaialble for the SN fitting process. 
-
-
-The following is the orginal from Chris Burns
-_______________________________________________________________________
-
-
 SNPY (or more affectionately SNooPy) is a Python package for fitting the
 light-curves of TypeIa supernovae.  It is NOT an off-the-shelf program that
 will do all the work for you from the command line.  It is meant to be run
@@ -27,19 +19,20 @@ But briefly, here is what SNOOPY can do:
 
 - Fit lightcurve templates to data.  These templates were constructed
   from the Carnegie Supernova Project's low-z data set (as outlined in
-  Contreras et al. (2009) and Follatelli et al. (2010)).  These include
+  [Contreras et al. (2009)](https://ui.adsabs.harvard.edu/abs/2009AAS...21442704C/abstract) and [Folatelli et al. (2010)](https://ui.adsabs.harvard.edu/abs/2010AJ....139..120F/abstract)).  These include
   templates for the CSP uBVgriYJH filter set.  You can also use Jose-
   Louis Prieto's templates to fit Johnson/Kron/Cousins BRVI lightcurves.
 
 - Using templates, fit for distance (and dm15, E(B-V), stretch, time of 
-  maximum, etc.  This uses the calibration of Follatelli et al. (2010) 
-  for the CSP filter set, or Prieto et al. (2006) for the BVRI set.
+  maximum, etc.  This uses the calibration of [Folatelli et al. (2010)](https://ui.adsabs.harvard.edu/abs/2010AJ....139..120F/abstract) 
+  for the CSP filter set, or [Prieto et al. (2006)](https://ui.adsabs.harvard.edu/abs/2006ApJ...647..501P/abstract) for the BVRI set.
 
 - Alternatively, fit for light-curve parameters only (dm15, stretch,
   time of maximum, maximum light, colors, etc).
 
 - Compute k-corrections based on the spectral energy distribution
-  template of Hsiao et al. (2007).  This includes color-matching the
+  template of [Hsiao et al. (2007)](https://ui.adsabs.harvard.edu/abs/2007ApJ...663.1187H/abstract) (+ [Lu et al. 2003](https://ui.adsabs.harvard.edu/abs/2023ApJ...948...27L/abstract) if would like to use 
+  the updated NIR template).  This includes color-matching the
   SED template to the observed filters.  You can do plain K-corrections
   or cross-band K-corrections.  This is normally done as part of the 
   fitting procedure, but can be done separately.
