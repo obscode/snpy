@@ -86,7 +86,8 @@ def dosetup():
             'ipython',
             'astropy',
             'certifi',
-            'pandas'],
+            'pandas',
+            'scikit-learn'],
          **configuration(top_path='').todict())
 
 if __name__ == '__main__':
