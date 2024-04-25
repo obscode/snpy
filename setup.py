@@ -10,44 +10,7 @@ except ImportError:
    print("Error:  setup.py requires numpy")
    sys.exit(1)
 from numpy.distutils.core import setup
-# This is the numpy.distutils verison of setup.py.
-
-import os,sys, string
-from pkg_resources import parse_version
-try:
-   import numpy
-except ImportError:
-   print("Error:  setup.py requires numpy")
-   sys.exit(1)
-from numpy.distutils.core import setup
 from numpy.distutils.misc_util import Configuration
-from numpy.distutils.system_info import get_info
-try:
-   import matplotlib
-   have_mpl = 1
-except:
-   have_mpl = 0
-
-numpy_min_version = '1.7'
-
-def get_numpy_status():
-   """
-      Returns a dictionary containing a boolean specifying whether NumPy
-      is up-to-date, along with the version string (empty string if
-      not installed).
-   """
-   numpy_status = {}
-   try:
-      import numpy
-      numpy_version = numpy.__version__
-      numpy_status['up_to_date'] = parse_version(
-         numpy_version) >= parse_version(numpy_min_version)
-      numpy_status['version'] = numpy_version
-   except ImportError:
-      numpy_status['up_to_date'] = False
-      numpy_status['version'] = ""
-   return numpy_status
-
 from numpy.distutils.system_info import get_info
 try:
    import matplotlib
@@ -77,10 +40,6 @@ def get_numpy_status():
 
 
 def configuration(parent_package='', top_path=None):
-   config = Configuration(None, parent_package, top_path)
-   config.add_subpackage('snpy')
-   config.add_scripts(['bin/snpy'])
-   config.add_scripts(['bin/update-snpy'])
    config = Configuration(None, parent_package, top_path)
    config.add_subpackage('snpy')
    config.add_scripts(['bin/snpy'])
