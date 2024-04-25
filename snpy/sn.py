@@ -695,12 +695,12 @@ class sn(object):
             # No k-corrections, we'll just use SED
             x = self.data[band].MJD
             # days since Bmax in the frame of the SN
-            if self.k_version != 'H3+L':
+            if SED != 'H3+L':
                 days = (x - self.Tmax)/(1+self.z)/st
             days = days.tolist()
             self.Ss[band],self.Ss_mask[band] = list(map(array,kcorr.kcorr(days, 
                self.restbands[band], band, self.z, st, self.EBVgal, 0.0,
-               version=self.k_version, Scorr=True)))
+               version=SED, Scorr=True)))
             self.Ss_mask[band] = self.Ss_mask[band].astype(bool)
          else:
             self.Ss[band] = []
