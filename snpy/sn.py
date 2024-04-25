@@ -180,7 +180,7 @@ class sn(object):
       self.getEBVgal()
       self.get_restbands()     # based on z, assign rest-frame BVRI filters to 
                                # data
-      self.k_version = 'H3+L'
+      self.k_version = 'H3'
       self.k_extrapolate = False   # Extrapolate SED beyond the ends?
 
    def __getattr__(self, name):
@@ -650,7 +650,7 @@ class sn(object):
          return (result[0][0],result[1][0],result[2][0],result[3][0])
       return result
 
-   def scorr(self, bands=None, SED='H3+L', merge=False):
+   def scorr(self, bands=None, SED='H3', merge=False):
       '''Compute the S-corrections for the named filters. The underlying
       SED is taken as the same that was used to compute k-corretions. If
       k-corrections have not been computed, we simply used the SED
