@@ -69,11 +69,11 @@ n91_sed = f[0].data
 head = f[0].header
 n91_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
       head['CRPIX1'] + 1)*head['CDELT1']
-# building blocks for Lu2022 NIR template:
+# building blocks for Lu2023 NIR template:
 df_1 = pd.read_pickle(os.path.join(spec_base, 'NIR_template_builingblocks_1.pkl'))
 df_2 = pd.read_pickle(os.path.join(spec_base, 'NIR_template_builingblocks_2.pkl'))
 df_3 = pd.read_pickle(os.path.join(spec_base, 'NIR_template_builingblocks_3.pkl'))
-df_buildingblocks = df_1.append(df_2).append(df_3).reset_index(drop=True)
+df_buildingblocks = pd.concat([df_1,df_2,df_3],axis=0,ignore_index=True)
 
 
 def linterp(spec1, spec2, day1, day2, day):
