@@ -12,7 +12,8 @@ from __future__ import print_function
 import os,sys,string,re
 import numpy as num
 import scipy.interpolate
-import pandas as pd
+import h5py
+import onnxruntime as onnx_rt
 from scipy.integrate import simpson as simps
 from .utils import deredden
 try:
@@ -69,11 +70,37 @@ n91_sed = f[0].data
 head = f[0].header
 n91_wav = head['CRVAL1']+(num.arange(head['NAXIS1'],dtype=num.float32) - \
       head['CRPIX1'] + 1)*head['CDELT1']
-# building blocks for Lu2023 NIR template:
-df_1 = pd.read_pickle(os.path.join(spec_base, 'NIR_template_builingblocks_1.pkl'))
-df_2 = pd.read_pickle(os.path.join(spec_base, 'NIR_template_builingblocks_2.pkl'))
-df_3 = pd.read_pickle(os.path.join(spec_base, 'NIR_template_builingblocks_3.pkl'))
-df_buildingblocks = pd.concat([df_1,df_2,df_3],axis=0,ignore_index=True)
+# read in building blocks for Lu2023 NIR template:
+NIR_temp_path = os.path.join(spec_base, 'NIR_template_buildingblocks.h5')
+NIR_temp_dict = {}
+# Open the HDF5 file in read mode and load the onnx model too 
+with h5py.File(NIR_temp_path, "r") as file:
+    # Iterate over the dataset keys and values
+    for key, value in file.items():
+        # check if they are a group, sorry for so many layers of nested groups ><  
+        if isinstance(value, h5py.Group):
+            NIR_temp_dict[key] = {}
+            for subkey, subvalue in value.items():
+                if isinstance(subvalue, h5py.Group):
+                    NIR_temp_dict[key][subkey] = {}
+                    for subsubkey, subsubvalue in subvalue.items():
+                        if isinstance(subsubvalue, h5py.Group):
+                            NIR_temp_dict[key][subkey][subsubkey] = {}
+                            for subsubsubkey, subsubsubvalue in subsubvalue.items():
+                                if subsubsubkey == "GPR_onx_string": # it's byte datatype
+                                    NIR_temp_dict[key][subkey][subsubkey][subsubsubkey] = num.bytes_(subsubsubvalue[()])
+                                    # load the model here is better than in the function - since this is the slow part 
+                                    NIR_temp_dict[key][subkey][subsubkey]["GPR_onx"] = onnx_rt.InferenceSession(
+                                                                                          subsubsubvalue[()], providers=["CPUExecutionProvider"]
+                                                                                    )
+                                else:
+                                    NIR_temp_dict[key][subkey][subsubkey][subsubsubkey] = subsubsubvalue[()]
+                        else:
+                            NIR_temp_dict[key][subkey][subsubkey] = subsubvalue[()]
+                else:
+                    NIR_temp_dict[key][subkey] = subvalue[()]
+        else:
+            NIR_temp_dict[key] = value
 
 
 def linterp(spec1, spec2, day1, day2, day):
@@ -101,11 +128,11 @@ sBV_lims = {
 
 ''' Functions needed for the new CSP2  NIR templates '''
 def GPR_predict_PC(Wbin,epoch,sBV):
-    '''Function of predicting Priciple components from the fitted GPR
-    for the NIR templates
+    '''Function of predicting Principle components from the fitted 
+    Gaussian Process Regression (GPR) model for the NIR templates
 
     Args:
-        Wbin (str): W1 TO W7, correspinding to z,Y,J,telluric1,H,telluric2,K band
+        Wbin (str): 'W1' to 'W7', correspinding to z,Y,J,telluric1,H,telluric2,K band
         epoch (float): restframe days since B-band maximum of the spectrum
         sBV (float): color stretch of the SN
 
@@ -114,26 +141,42 @@ def GPR_predict_PC(Wbin,epoch,sBV):
 
         * pred_PCs: (float array) Gaussian Process predicted pricinple compoennts
         * pred_PC_sigmas: (float array) uncertainty ofGaussian Process
-                          predicted pricinple compoennts
+                          predicted pricinple compoennts (CURRENLTY NOT IMPLEMENTED)
     '''
-    ## locate the df for this Wave bin
-    Wbin_ID = df_buildingblocks.loc[(df_buildingblocks.Wave_bin==Wbin)].index.values[0]
-    ## predict PCs
-    pred_PCs, pred_PC_sigmas = [],[]
-    for i in range(df_buildingblocks.GPR[Wbin_ID].shape[1]):
+    #TODO? Try to include the uncertainty prediction in saved onnx model 
+    #(had issue with white kernel diagonal matrix inversion)
+
+    ## initialize the list to collect the predicted PCs
+    pred_PCs = []
+    for i in range(len(NIR_temp_dict["GPR"][Wbin].keys())):
         PC = 'PC'+str(i+1)
         ## locate the original PC range and min to get the normalization factor for later
-        yrange = df_buildingblocks.GPR[Wbin_ID][PC]['yrange']
-        ymin = df_buildingblocks.GPR[Wbin_ID][PC]['ymin']
-        ## locate the fitted gp and make predictions
-        gp = df_buildingblocks.GPR[Wbin_ID][PC][0]
-        y_gp,y_sigma = gp.predict(num.array([[epoch,sBV]]), return_std=True)
-        ## unnormalize the predicted y using the y above
-        y_gp_unnorm = y_gp*yrange+ymin
-        y_sigma_unnorm = y_sigma*yrange
+        yrange = NIR_temp_dict["GPR"][Wbin][PC]["yrange"]
+        ymin = NIR_temp_dict["GPR"][Wbin][PC]['ymin']
+        ## locate the fitted GPR onx_string and load the onnx model
+        GPR_onx = NIR_temp_dict["GPR"][Wbin][PC]["GPR_onx"] 
+        y_gp = GPR_onx.run(None, {"X": num.array([[num.float64(epoch),num.float64(sBV)]])})[0]
+        ## unnormalize the predicted y using the yrange and min above
+        y_gp_unnorm = y_gp * yrange + ymin #y_sigma_unnorm = y_sigma*yrange
         pred_PCs.append(y_gp_unnorm.flatten()[0])
-        pred_PC_sigmas.append(y_sigma_unnorm.flatten()[0])
-    return pred_PCs,pred_PC_sigmas
+    return pred_PCs,None
+
+def PCA_inverse_transform(Wbin, PC_values,PC_masks):
+   '''Function of inverse transforming the principle components to the flux space 
+
+   Args:
+      Wbin (str): 'W1' to 'W7', correspinding to z,Y,J,telluric1,H,telluric2,K band
+      PC_values (array): the predicted principle component projection values
+
+   Returns:
+      PC_inversed (array): the inverse transformed flux from the principle components
+   '''
+   PC_components = NIR_temp_dict["PCA_components"][Wbin]["components"]
+   PC_masked_values = PC_values*PC_masks
+   PC_inversed = num.sum(PC_masked_values.reshape(-1,1) * PC_components,axis=0) \
+                 + NIR_temp_dict["PCA_components"][Wbin]["pca_mean"]
+   return PC_inversed
+
 
 def merge_spec(wave_b,flux_b,wave_r,flux_r,interp_option=0,normalize='blue_side',plot_ax=None):
     '''Function of merging spectra, *_b as bluer wavelength side, *_r as
@@ -223,28 +266,22 @@ def merge_spec(wave_b,flux_b,wave_r,flux_r,interp_option=0,normalize='blue_side'
             ax.plot(wave_out,flux_out,'k',alpha=0.2)
         return wave_out,flux_out
 
-def get_single_NIR_template(epoch,sBV,return_flux_error = False):
+def get_single_NIR_template(epoch,sBV):
     '''function of getting one template spectra based on given epoch and sBV
 
     Args:
         epoch (float): restframe days since B-band maximum of the spectrum
         sBV (float): color stretch of the SN
-        return_flux_error (bool): If True, template flux error are returned
 
     Returns:
         tuple:
 
-        if not return_flux_error: 2 tuple: (wavelength, flux)
+        2 tuple: (wavelength, flux)
             * wavelength: (float array) NIR template wavelength in unit of Angstroms
             * flux: (float array)  NIR template flux in arbitrary unit
-        if  return_flux_error: 2 tuple: (wavelength, flux, flux_error)
-            * wavelength: (float array) NIR template wavelength in unit of Angstroms
-            * flux: (float array)  NIR template flux in arbitrary unit
-            * flux_error: (float array)  NIR template flux error in arbitrary unit
     '''
     ## define some parameters
     GPR_score_threshold=0.2   ## lower limit of GPR score when selecting PC
-    error_MC_time = 1000
     ## check data type and of value is in range
     if isinstance(epoch,list) or isinstance(epoch,num.ndarray) or isinstance(sBV,list) or isinstance(sBV,num.ndarray):
         raise ValueError('Input single value for epoch and sBV please, one at a time :)')
@@ -256,53 +293,35 @@ def get_single_NIR_template(epoch,sBV,return_flux_error = False):
             raise ValueError('sBV not in supported range, please input sBV \
             between %.1f to %.1f'%(sBV_lims['H3+L'][0],sBV_lims['H3+L'][1]))
     x1,x2 = epoch,sBV
-    for i in range(df_buildingblocks.shape[0]-1):
+    PC_names = ['PC'+str(i+1) for i in range(len(NIR_temp_dict["GPR"]["W1"].keys()))]
+    for i in range(len(NIR_temp_dict["PCA_components"].keys())-1):
         ## read the pca transformation and wave grid in the adjacent blocks
-        if i==0:
-            pca_blue = df_buildingblocks.PCA[i]
-            wave_merged = num.array([col for col in df_buildingblocks.PCA_outputs[i].columns if isinstance(col,float)])
-            df_GPs = df_buildingblocks.GPR[i].copy()
-            Wbin = 'W1'
-            RC_PCs_blue,RC_PCs_sigmas_blue = GPR_predict_PC(Wbin,x1,x2)
+        if i==0: # start with the bluest block as the first "merged product"
+            Wbin_blue = 'W1'
+            wave_merged = NIR_temp_dict["PCA_components"][Wbin_blue]["wavelength"] 
+            # get the predicted PC values from GPR
+            PC_values_blue,_ = GPR_predict_PC(Wbin_blue,x1,x2)
+            # mask the PCs as 0 if the GPR for this PC is under threshold
             if GPR_score_threshold is not None:
-                gp_scores = df_GPs.loc['gp_score'].values
-                GPR_score_threshold_bool = num.array([1. if (score >= GPR_score_threshold) else 0. for score in gp_scores])
-                RC_PCs_blue = RC_PCs_blue*GPR_score_threshold_bool
-            flux_merged = pca_blue.inverse_transform(RC_PCs_blue)
-            ## MC generate many spectrum within gp sigma and take std to the SNR
-            if return_flux_error is not False:
-                flux_merged_MC = []
-                for n in range(error_MC_time):
-                    RC_PCs_blue_random = [num.random.normal(mean,RC_PCs_sigmas_blue[nnn]) if nnn < len(RC_PCs_sigmas_blue) else mean for nnn,mean in enumerate(RC_PCs_blue)]
-                    flux_merged_MC.append(pca_blue.inverse_transform(RC_PCs_blue_random))
-                flux_merged_MC_std = num.array(flux_merged_MC).std(axis=0)
-                flux_SNR_merged = flux_merged/flux_merged_MC_std
-        pca_red = df_buildingblocks.PCA[i+1]
-        wave_red = num.array([col for col in df_buildingblocks.PCA_outputs[i+1].columns if isinstance(col,float)])
-        df_GPs_red = df_buildingblocks.GPR[i+1].copy()
-        Wbin_red = 'W'+str(i+2)
-        RC_PCs_red,RC_PCs_sigmas_red = GPR_predict_PC(Wbin_red,x1,x2)
+               gp_scores = [NIR_temp_dict["GPR"][Wbin_blue][PC_key]["gp_score"] for PC_key in PC_names]
+               PC_masks_blue = num.array([1. if (score >= GPR_score_threshold) else 0. for score in gp_scores])
+            else:
+               PC_masks_blue = num.ones(len(gp_scores))
+            flux_merged = PCA_inverse_transform(Wbin_blue, PC_values_blue,PC_masks_blue)
+        # attach the next wavelength block to previous merged product
+        Wbin_red = 'W'+str(i+2) 
+        wave_red = NIR_temp_dict["PCA_components"][Wbin_red]["wavelength"] 
+        PC_values_red,_ = GPR_predict_PC(Wbin_red,x1,x2)
         if GPR_score_threshold is not None:
-            gp_scores = df_GPs_red.loc['gp_score'].values
-            GPR_score_threshold_bool = num.array([1. if (score >= GPR_score_threshold) else 0. for score in gp_scores])
-            RC_PCs_red = RC_PCs_red*GPR_score_threshold_bool
-        flux_red = pca_red.inverse_transform(RC_PCs_red)
-        ## MC generate many spectrum within gp sigma and take std to the SNR
-        if return_flux_error is not False:
-            flux_red_MC = []
-            for n in range(error_MC_time):
-                RC_PCs_red_random = [num.random.normal(mean,RC_PCs_sigmas_red[nnn]) if nnn < len(RC_PCs_sigmas_red) else mean for nnn,mean in enumerate(RC_PCs_red)]
-                flux_red_MC.append(pca_red.inverse_transform(RC_PCs_red_random))
-            flux_red_MC_std = num.array(flux_red_MC).std(axis=0)
-            flux_red_SNR = flux_red/flux_red_MC_std
-            wave_SNR_merged,flux_SNR_merged = merge_spec(wave_merged,flux_SNR_merged,wave_red,flux_red_SNR,normalize = 0,plot_ax=None)
+           gp_scores = [NIR_temp_dict["GPR"][Wbin_red][PC_key]["gp_score"] for PC_key in PC_names]
+           PC_masks_red = num.array([1. if (score >= GPR_score_threshold) else 0. for score in gp_scores])
+        else:
+           PC_masks_red = num.ones(len(NIR_temp_dict["GPR"][Wbin_red].keys()))
+        flux_red = PCA_inverse_transform(Wbin_red, PC_values_red,PC_masks_red)
         ## merge the flux from the W bins
         wave_merged,flux_merged = merge_spec(wave_merged,flux_merged,wave_red,flux_red)
-    if return_flux_error is not False:
-        flux_error = flux_merged/flux_SNR_merged
-        return wave_merged*10000,flux_merged,flux_error
-    else:
-        return wave_merged*10000,flux_merged
+
+    return wave_merged*10000,flux_merged
 
 def get_SED_H3_plus_L(epoch,sBV,extrapolate=False):
     '''Function to substitude the NIR part of  the Hsiao template (H3) with
@@ -338,12 +357,12 @@ def get_SED_H3_plus_L(epoch,sBV,extrapolate=False):
     wave_hsiao,flux_hsiao = get_SED(day, version='H3')
 
     ## substitude the NIR region of H3
-    w_optical = num.where(wave_hsiao<=wave_NIR[0]+200) # set overlap region to be 200A
+    w_optical = num.where(wave_hsiao<=wave_NIR[0]+300) # set overlap region to be 200A
     wave_optical,flux_optical = wave_hsiao[w_optical],flux_hsiao[w_optical]
     # merge the optical with NIR
     wave_merged,flux_merged = merge_spec(wave_optical,flux_optical,wave_NIR,flux_NIR)
     # merge with the H3 NIR tail since L NIR template only goes to 2.33um
-    w_NIRtail = num.where(wave_hsiao>=wave_NIR[-1]-200)
+    w_NIRtail = num.where(wave_hsiao>=wave_NIR[-1]-300)
     wave_tail,flux_tail = wave_hsiao[w_NIRtail],flux_hsiao[w_NIRtail]
     wave_merged,flux_merged = merge_spec(wave_merged,flux_merged,wave_tail,flux_tail)
 

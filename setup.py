@@ -86,8 +86,8 @@ def dosetup():
             'ipython',
             'astropy',
             'certifi',
-            'pandas',
-            'scikit-learn'],
+            'h5py',
+            'onnxruntime'],
          **configuration(top_path='').todict())
 
 if __name__ == '__main__':
