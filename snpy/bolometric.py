@@ -21,7 +21,7 @@ from .filters import standards
 Vega = standards['VegaB']
 from .utils import deredden
 from .mangle_spectrum import mangle_spectrum2
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid as trapz
 from scipy.interpolate import splrep,splev
 from numpy import *
 import sys

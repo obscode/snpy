@@ -291,7 +291,7 @@ class filter(spectrum):
          integrand = integrand*trim_wave/ch
 
       if integ_method=='simpsons':
-         result = scipy.integrate.simps(integrand, x=trim_wave)
+         result = scipy.integrate.simpson(integrand, x=trim_wave)
       elif integ_method=='trapz':
          result = scipy.integrate.trapezoid(integrand, x=trim_wave)
       else:
