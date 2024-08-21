@@ -19,8 +19,8 @@ else
    location=$1
 fi
 
-mandatory_packages="numpy scipy astropy ipython matplotlib"
-optional_packages="scikit-learn emcee pymysql"
+mandatory_packages="numpy scipy astropy ipython matplotlib pandas"
+optional_packages="emcee pymysql"
 
 
 echo "Checking for conda..."
@@ -29,11 +29,14 @@ if [ $? -eq 1 ] ; then
    echo "conda not found, falling back on venv"
    PY=$(which python 2> /dev/null)
    if [ $? -eq 1 ] ; then
-      echo "No python found! Install python before you run this script."
-      exit 1
+      PY=$(which python3 2> /dev/null)
+      if [ $? -eq 1 ] ; then
+         echo "No python found! Install python before you run this script."
+         exit 1
+      fi
    fi
    version=$($PY -V)
-   if [ $(echo -e "Python 3.0.0\n${version}" | sort -V -r | head -1) = "Python 3.0.0" ] ; then
+   if [ "$(echo -e 'Python 3.0.0\n${version}' | sort -V -r | head -1)" = "Python 3.0.0" ] ; then
       echo "You must be running Python 3 to use this script"
       exit 1
    fi
@@ -64,6 +67,8 @@ if [ $? -eq 1 ] ; then
       exit 1
    fi
 
+   # First, we MUST have scikit-learn 0.24.1
+   $PIP install scikit-learn==0.24.1 > scikit-learn.log 2>&1 || echo "scikit-learn 0.24.1 could not be installed, abort!"; exit
    for package in $mandatory_packages ; do
       echo "Installing $package..."
       $PIP install $package > ${package}.log 2>&1 || echo "$package failed to install, abort!"; exit
@@ -92,7 +97,16 @@ else
       fi
    else
       echo "Creating new virtual environment $location"
-      conda create -n $location -y python=3.7 > /dev/null 2>&1
+      conda create -n $location -y scikit-learn==0.24.1 > env.log 2>&1
+      if [ $? -ne 0 ] ; then
+         echo "Failed to install with scikit-learn 0.24.1, trying 0.24.2"
+         conda create -n $location -y scikit-learn==0.24.2 > env2.log 2>&1
+         if [ $? -ne 0 ] ; then
+            echo "Failed to install an environment with scikit-learn. Sorry"
+            echo " you may have to try another python dist (conda-forge e.g.)"
+            exit
+         fi
+      fi
       echo "Done"
       conda activate $location
    fi
