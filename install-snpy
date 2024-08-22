@@ -19,7 +19,7 @@ else
    location=$1
 fi
 
-mandatory_packages="numpy scipy astropy ipython matplotlib pandas"
+mandatory_packages="numpy scipy astropy ipython matplotlib pandas h5py onnxruntime"
 optional_packages="emcee pymysql"
 
 
@@ -67,8 +67,6 @@ if [ $? -eq 1 ] ; then
       exit 1
    fi
 
-   # First, we MUST have scikit-learn 0.24.1
-   $PIP install scikit-learn==0.24.1 > scikit-learn.log 2>&1 || echo "scikit-learn 0.24.1 could not be installed, abort!"; exit
    for package in $mandatory_packages ; do
       echo "Installing $package..."
       $PIP install $package > ${package}.log 2>&1 || echo "$package failed to install, abort!"; exit
@@ -97,15 +95,11 @@ else
       fi
    else
       echo "Creating new virtual environment $location"
-      conda create -n $location -y scikit-learn==0.24.1 > env.log 2>&1
+      conda create -n $location -y > env.log 2>&1
       if [ $? -ne 0 ] ; then
-         echo "Failed to install with scikit-learn 0.24.1, trying 0.24.2"
-         conda create -n $location -y scikit-learn==0.24.2 > env2.log 2>&1
-         if [ $? -ne 0 ] ; then
-            echo "Failed to install an environment with scikit-learn. Sorry"
-            echo " you may have to try another python dist (conda-forge e.g.)"
-            exit
-         fi
+         echo "Failed to create a conda environment. You may not have a"
+         echo "properly set-up version. Abort!"
+         exit
       fi
       echo "Done"
       conda activate $location
