@@ -8,7 +8,8 @@ import numpy as num
 from snpy.utils import fit_spline
 from scipy.interpolate import splrep,splev,sproot
 from scipy.optimize import brentq, newton
-from scipy.misc import derivative as deriv
+#from scipy.misc import derivative as deriv
+from .derivative import derivative as deriv
 import six
 try:
    from snpy.spline2 import spline2, evalsp,eval_extrema,eval_x
