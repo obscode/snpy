@@ -714,7 +714,6 @@ for obs in obsdirs:
       f = open(os.path.join(dir, 'filters.dat'))
       lines = f.readlines()
       for line in lines:
-         print(line)
          l = line.split()
          if l[2].find('=') >= 0:
             # We have a std=mag format
