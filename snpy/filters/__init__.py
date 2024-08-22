@@ -158,7 +158,7 @@ class filter(spectrum):
       '''Reads in the response for file and updates several member functions.'''
       spectrum.read(self)
 
-   def compute_zpt(self, spectrum, mag, zeropad=0):
+   def compute_zpt(self, spectrum, mag, zeropad=True):
       '''Compute the photometric zero point.  If spectrum is a list of spectra, then
       a zero point is computed for each and returned as a Numeric array (which you
       can then average, median, whatever.'''
@@ -714,6 +714,7 @@ for obs in obsdirs:
       f = open(os.path.join(dir, 'filters.dat'))
       lines = f.readlines()
       for line in lines:
+         print(line)
          l = line.split()
          if l[2].find('=') >= 0:
             # We have a std=mag format

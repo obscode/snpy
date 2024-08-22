@@ -41,7 +41,6 @@ gloes.
 from __future__ import print_function
 import sys,os,string
 import numpy as num
-from scipy.interpolate import CloughTocher2DInterpolator as interp2D
 from scipy.interpolate import bisplrep,bisplev
 import scipy.optimize
 import pickle

@@ -237,9 +237,11 @@ def merge_spec(wave_b,flux_b,wave_r,flux_r,interp_option=0,normalize='blue_side'
         if normalize == 'blue_side':
             ### match the overlappen region flux based on the blue side
             norm_b = 1
-            norm_r = simps(flux_b[w1],wave_b[w1])/simps(flux_r[w2],wave_r[w2])
+            norm_r = simps(flux_b[w1],x=wave_b[w1])/\
+                     simps(flux_r[w2],x=wave_r[w2])
         elif normalize == 'red_side':
-            norm_b = simps(flux_r[w2],wave_r[w2])/simps(flux_b[w1],wave_b[w1])
+            norm_b = simps(flux_r[w2],x=wave_r[w2])/\
+                  simps(flux_b[w1],x=wave_b[w1])
             norm_r = 1
         else:
             norm_b,norm_r = 1,1 ## let the spectra merge by weight, smooothly merging together
