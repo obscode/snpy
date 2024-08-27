@@ -59,8 +59,10 @@ if os.path.isdir('.git'):
 
    of = open('SNooPy.build.log','w')
    print("Building updated SNooPy source code...")
-   p = subprocess.Popen([os.path.join(sys.prefix, 'bin','python'),'setup.py',
-      'install'], stdout=of, stderr=subprocess.STDOUT)
+   #p = subprocess.Popen([os.path.join(sys.prefix, 'bin','python'),'setup.py',
+   #   'install'], stdout=of, stderr=subprocess.STDOUT)
+   p = subprocess.Popen([os.path.join(sys.prefix, 'bin','pip'),'install',
+      '.'], stdout=of, stderr=subprocess.STDOUT)
    p.wait()
    if p.returncode != 0:
       print("Failed to build the updated SNooPy source code!")
@@ -72,7 +74,7 @@ if os.path.isdir('.git'):
 
 else:
    # find the correct pip command to update....
-   print("Sorry, the SNooPy source does not appear to be an SVN working")
+   print("Sorry, the SNooPy source does not appear to be a git working")
    print("copy.  You'll need to update by hand.")
    print(instructions)
    
