@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools","wheel","oldest-supported-numpy"]
+requires = ["setuptools","wheel","numpy"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -42,4 +42,7 @@ dependencies = [
 packages = ["snpy","snpy.CSPtemp","snpy.SwiftTemp","snpy.dm15temp",
             "snpy.filters","snpy.spline2","snpy.sqlmod","snpy.utils"]
 
-
+[tool.setuptools.package-data]
+"snpy.CSPtemp" = ["fits/*.fits"]
+"snpy.dm15temp" = ["*.pickle"]
+"snpy.utils" = ["*.pickle"]
