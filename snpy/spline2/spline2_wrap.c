@@ -226,9 +226,9 @@ static PyObject *_wrap_eval_inflect(PyObject *self, PyObject *args) {
 
     /* Make the arrays */
     dims[0] = (npy_intp) n_inflect;
-    out_x_a = (PyArrayObject *) PyArray_SimpleNew(1, dims, PyArray_DOUBLE);
-    out_y_a = (PyArrayObject *) PyArray_SimpleNew(1, dims, PyArray_DOUBLE);
-    out_dy_a = (PyArrayObject *) PyArray_SimpleNew(1, dims, PyArray_DOUBLE);
+    out_x_a = (PyArrayObject *) PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    out_y_a = (PyArrayObject *) PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    out_dy_a = (PyArrayObject *) PyArray_SimpleNew(1, dims, NPY_DOUBLE);
     for (i = 0 ; i < n_inflect ; ++i) {
        dptr3 = (double *) PyArray_GETPTR1(out_x_a, i);
        dptr2 = (double *) PyArray_GETPTR1(out_y_a, i);

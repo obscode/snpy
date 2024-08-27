@@ -46,3 +46,4 @@ packages = ["snpy","snpy.CSPtemp","snpy.SwiftTemp","snpy.dm15temp",
 "snpy.CSPtemp" = ["fits/*.fits"]
 "snpy.dm15temp" = ["*.pickle"]
 "snpy.utils" = ["*.pickle"]
+"snpy.filters" = ["filters/*/*/*","standards/*/*"]
