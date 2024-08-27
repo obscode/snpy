@@ -15,5 +15,5 @@ setup(
                    include_dirs = [numpy.get_include()],
                    )
          ],
-      scripts = ["bin/snpy"],
+      scripts = ["bin/snpy","bin/update-snpy"],
       )
