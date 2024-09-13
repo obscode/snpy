@@ -1441,7 +1441,7 @@ class sn(object):
             print("# column 2:  model magnitude", file=f)
             print("# column 3:  model magnitude error", file=f)
             for i in range(len(ts)):
-               print("%.1f, %.3f %.3f" % (ts[i]+self.Tmax-toff, ms[i],
+               print("%.1f %.3f %.3f" % (ts[i]+self.Tmax-toff, ms[i],
                   e_ms[i]), file=f)
             f.close()
          if self.data[filt].interp is not None:
