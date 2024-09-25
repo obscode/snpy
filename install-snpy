@@ -69,7 +69,7 @@ if [ $? -eq 1 ] ; then
 
    for package in $mandatory_packages ; do
       echo "Installing $package..."
-      $PIP install $package > ${package}.log 2>&1 || echo "$package failed to install, abort!"; exit
+      $PIP install $package > ${package}.log 2>&1 || (echo "$package failed to install, abort!"; exit)
    done
 
    for package in $optional_packages ; do
