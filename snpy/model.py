@@ -1576,31 +1576,40 @@ class color_model(model):
       Mmaxs = []
       eMmaxs = []
       rbands = []
-      self.template.mktemplate(self.dm15)
+      a = self.nparameters['a']
+      b = self.nparameters['b']
+      c = self.nparameters['c']
+      ea = self.enparameters['a']
+      self.template.mktemplate(self.st)
       for band in bands:
+         var = 0
          rband = self.parent.restbands[band]
          # find where the template truly peaks:
-         x0 = brent(lambda x: self.template.eval(rband, x, gen=self.gen)[0], brack=(0.,5.))
+         x0 = brent(lambda x: self.template.eval(rband, x, gen=self.gen)[0], 
+                    brack=(0.,5.))
          Tmaxs.append(x0 + self.Tmax)
-         mmax = self.Bmax + self.MMax(rband, self.calibration) - \
-               self.MMax('B', self.calibation)
+
+         mmax = self.Bmax
+         var = var + self.errors['Bmax']**2
+         if self.ncolor >= 0:
+            mmax = mmax + a[self.ncolor] + b[self.ncolor]*(self.st - 1) + \
+                  c[self.ncolor]*(self.st - 1)**2
+            var = var + ea[self.ncolor]**2
+         if rband != 'B':
+            cid = self.Xfilters.index(rband)
+            mmax = mmax - a[cid] - b[cid]*(self.st-1) - c[cid]*(self.st -1)**2
+            var = var + ea[cid]**2
          if not restframe and band in self.parent.ks_tck:
             # add the K-correction
             mmax = mmax + scipy.interpolate.splev(Tmaxs[-1], self.parent.ks_tck[band])
          if not deredden:
-            if band in self.parent.Robs:
-               if type(self.parent.Robs[band]) is type(()):
-                  Rmw = scipy.interpolate.splev(x0+self.Tmax, 
-                        self.parent.Robs[band])
-               else:
-                  Rmw = self.parent.Robs[band]
-            Rhost = kcorr.R_obs(rband, 0, x0, self.EBVhost, 
-                     self.parent.EBVgal, self.Rv_host, self.parent.Rv_gal, 'H3',
-                     redlaw=self.parent.redlaw,
-                     extrapolate=self.parent.k_extrapolate)
-            mmax = mmax + Rhost*self.EBVhost + Rmw*self.parent.EBVgal
+            RX = redlaw.R_lambda(rband, self.Rv, self.EBVhost, 
+                                 redlaw=self.redlaw)
+            mwRX = redlaw.R_lambda(rband, 3.1, self.parent.EBVgal, 
+                                   redlaw=self.redlaw)
+            mmax = mmax + RX*self.EBVhost +  mwRX*self.parent.EBVgal
          Mmaxs.append(mmax)
-         eMmaxs.append(self.errors['Bmax'])
+         eMmaxs.append(sqrt(var))
          rbands.append(rband)
       return(Tmaxs, Mmaxs, eMmaxs, rbands)
 
