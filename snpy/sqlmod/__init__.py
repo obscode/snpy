@@ -495,8 +495,8 @@ class sql_oldlocal(sqlbase):
    JD_OFFSET = 52999.5    # database is JD - 2453000, so +2999.5 gives MJD
 
 class sql_csp2(sqlbase):
-   host = "csp2.lco.cl"
-   user = "cburns"
+   host = "127.0.0.1"
+   user = "csp"
    passwd = None
    PHOTO_DB = "Phot"
    port = 3306
