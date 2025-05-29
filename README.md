@@ -31,7 +31,7 @@ But briefly, here is what SNOOPY can do:
   time of maximum, maximum light, colors, etc).
 
 - Compute k-corrections based on the spectral energy distribution
-  template of [Hsiao et al. (2007)](https://ui.adsabs.harvard.edu/abs/2007ApJ...663.1187H/abstract) (+ [Lu et al. 2003](https://ui.adsabs.harvard.edu/abs/2023ApJ...948...27L/abstract) if would like to use 
+  template of [Hsiao et al. (2007)](https://ui.adsabs.harvard.edu/abs/2007ApJ...663.1187H/abstract) (+ [Lu et al. 2023](https://ui.adsabs.harvard.edu/abs/2023ApJ...948...27L/abstract) if would like to use 
   the updated NIR template).  This includes color-matching the
   SED template to the observed filters.  You can do plain K-corrections
   or cross-band K-corrections.  This is normally done as part of the 
