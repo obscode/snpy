@@ -17,6 +17,7 @@ the following correction:
 import six
 from snpy.filters import fset
 from snpy import kcorr
+from scipy.interpolate import bisplev
 from . import deredden
 import numpy as np
 import scipy
@@ -38,11 +39,11 @@ def R_lambda(f, Rv, EBV, redlaw='ccm'):
    Rv = np.atleast_1d(Rv)
    EBV = np.atleast_1d(EBV)
    #res = np.diag(Bspls[redlaw][f](Rv,EBV))
-   res = Bspls[redlaw][f].ev(Rv,EBV)
-   if scalar:
-      return res[0]
-   else:
-      return res
+   #res = Bspls[redlaw][f].ev(Rv,EBV)
+   res = bisplev(Rv, EBV, Bspls[redlaw][f])
+   if len(np.shape(EBV)) == 0:
+      return res[:,0]
+   return res
    
 def Rv_to_R(f1, f2, f3, Rv, EBV=0.01, day=0, redlaw='ccm',
       strict_ccm=0, version='H3'):

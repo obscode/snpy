@@ -442,11 +442,11 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
       
    ax.errorbar(x-Toff, y, yerr=ey, barsabove=True, capsize=0,
          elinewidth=1, fmt=symbol, ms=msize, 
-         mfc=color, label=label, linestyle='None')
+         mfc=color, mec=color, ecolor=color, label=label, linestyle='None')
            #ecolor='black')
    if kwargs.get('label_bad', False):
       gids = equal(obj.data[filt].mask, 0)
-      if sometrue(gids):
+      if any(gids):
          x = obj.data[filt].MJD[gids] - Toff
          if not flux:
             y = obj.data[filt].mag[gids] + delt
@@ -457,7 +457,7 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
       cs = ['orange','red']
       for i in range(2): 
          gids = less(obj.data[filt].SNR, SNR[i])
-         if sometrue(gids):
+         if any(gids):
             x = obj.data[filt].MJD[gids] - Toff
             if not flux:
                y = obj.data[filt].mag[gids] + delt
@@ -471,7 +471,7 @@ def plot_SN_panel(obj, ax, filt, delt, symbol, color, Toff, **kwargs):
          filt in obj.model._fbands:
       t = arange(-10,70,1.0) + obj.Tmax
       mag,err,gids = obj.model(filt, t)
-      if sometrue(gids):
+      if any(gids):
          if not flux:
             y = mag + delt
          else:
@@ -834,7 +834,7 @@ def plot_color(self, f1, f2, dt=0.5, epoch=True, deredden=True, interp=False,
    rids = equal(flag, 1)
    ax.errorbar(MJD[bids]-t0, BV[bids], yerr=eBV[bids], fmt='o', capsize=0, 
          color='black', label='obs')
-   if sometrue(rids):
+   if any(rids):
       ax.errorbar(MJD[rids]-t0, BV[rids], yerr=eBV[rids], fmt='o', capsize=0, 
          color='red', mfc='red', label='inter')
    ax.legend(prop={'size':12})
@@ -903,7 +903,7 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
    p.errorbar(self.MJD - epoch*Tmax, y, yerr=ey, barsabove=True, 
          capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
            ecolor='black', picker=True)
-   if not alltrue(self.mask):
+   if not all(self.mask):
       # Plot any masked out data s red filled symbols
       p._x, = p.plot(self.MJD[~self.mask] - epoch*Tmax, y[~self.mask], 'o', 
             color='red')
@@ -941,7 +941,7 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
       p2._errb = p2.errorbar(x - epoch*Tmax, y, yerr=dy, fmt='o', linestyle='None',
             mfc='blue', capsize=0, elinewidth=1, barsabove=True, ecolor='black',
             picker=True)
-      if not alltrue(self.mask):
+      if not all(self.mask):
          p2._x, = p2.plot(x[~self.mask] - epoch*Tmax, y[~self.mask], 'o', 
                color='red')
       else:
@@ -974,7 +974,7 @@ def plot_lc(self, epoch=1, flux=0, symbol=4, outfile=None, use_model=True):
       p2._errb = p2.errorbar(x - epoch*Tmax,y, yerr=dy, barsabove=True,
          capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
          ecolor='black', picker=True)
-      if not alltrue(self.mask):
+      if not all(self.mask):
          p2._x, = p2.plot(x[~self.mask] - epoch*Tmax, y[~self.mask], 'o',
                color='red')
       else:
@@ -1008,7 +1008,7 @@ def replot_lc(self):
       for p in self.mp.axes:
          # Only need to deal with possible mask
          if p._x:  p._x.remove()
-         if not alltrue(self.mask):
+         if not all(self.mask):
             xx,yy = p.lines[0].get_data()
             p._x, = p.plot(xx[~self.mask], yy[~self.mask], 'o', color='red')
             self.mp.fig.canvas.draw()
@@ -1052,7 +1052,7 @@ def replot_lc(self):
    p2._errb = p2.errorbar(x - epoch*Tmax,y, yerr=dy, barsabove=True,
       capsize=0, elinewidth=1, fmt='o', mfc='blue', linestyle='None',
       ecolor='black')
-   if not alltrue(self.mask):
+   if not all(self.mask):
       p._x, = p.plot(self.MJD[~self.mask] - epoch*Tmax, yy[~self.mask], 'o', 
             color='red')
       p2._x, = p2.plot(x[~self.mask] - epoch*Tmax, y[~self.mask], 'o',

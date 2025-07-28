@@ -9,6 +9,8 @@
 /dist
 */_build/
 tests/__pycache__
+tests/temp.snpy
+tests/table.dat
 *.cache/
 dist
 .eggs

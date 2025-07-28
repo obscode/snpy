@@ -1,4 +1,4 @@
-{% set version = "2.5.3" %}
+{% set version = "2.7.0" %}
 
 package:
   name: snpy
@@ -7,28 +7,25 @@ package:
 source:
    #git_tag: {{ version }}
    #git_url: https://github.com/obscode/snpy.git
-   path: /home/cburns/src/snpy
+   path: /Users/cburns/src/snpy
 
 requirements:
    build:
       - python
       - setuptools
-      - numpy
       - {{ compiler('c') }}
-      - {{ compiler('gfortran') }}
-
-   host:
-      - python
-      - numpy
 
    run:
       - python
+      - numpy
       - scipy
       - pymysql
       - matplotlib
       - ipython
-      - scikit-learn
       - astropy
+      - pandas
+      - h5py
+      - onnxruntime
 
 test:
    requires:

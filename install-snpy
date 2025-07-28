@@ -19,8 +19,8 @@ else
    location=$1
 fi
 
-mandatory_packages="numpy scipy astropy ipython matplotlib"
-optional_packages="scikit-learn emcee pymysql"
+mandatory_packages="numpy scipy astropy ipython matplotlib pandas h5py onnxruntime"
+optional_packages="emcee pymysql"
 
 
 echo "Checking for conda..."
@@ -29,11 +29,14 @@ if [ $? -eq 1 ] ; then
    echo "conda not found, falling back on venv"
    PY=$(which python 2> /dev/null)
    if [ $? -eq 1 ] ; then
-      echo "No python found! Install python before you run this script."
-      exit 1
+      PY=$(which python3 2> /dev/null)
+      if [ $? -eq 1 ] ; then
+         echo "No python found! Install python before you run this script."
+         exit 1
+      fi
    fi
    version=$($PY -V)
-   if [ $(echo -e "Python 3.0.0\n${version}" | sort -V -r | head -1) = "Python 3.0.0" ] ; then
+   if [ "$(echo -e 'Python 3.0.0\n${version}' | sort -V -r | head -1)" = "Python 3.0.0" ] ; then
       echo "You must be running Python 3 to use this script"
       exit 1
    fi
@@ -66,7 +69,7 @@ if [ $? -eq 1 ] ; then
 
    for package in $mandatory_packages ; do
       echo "Installing $package..."
-      $PIP install $package > ${package}.log 2>&1 || echo "$package failed to install, abort!"; exit
+      $PIP install $package > ${package}.log 2>&1 || (echo "$package failed to install, abort!"; exit)
    done
 
    for package in $optional_packages ; do
@@ -92,15 +95,30 @@ else
       fi
    else
       echo "Creating new virtual environment $location"
-      conda create -n $location -y python=3.7 > /dev/null 2>&1
+      conda create -n $location -y > env.log 2>&1
+      if [ $? -ne 0 ] ; then
+         echo "Failed to create a conda environment. You may not have a"
+         echo "properly set-up version. Abort!"
+         exit
+      fi
       echo "Done"
       conda activate $location
+   fi
+
+   # We still need pip to install SNooPy from source, so check it
+   PIP=$(which pip 2> /dev/null)
+   if [ $? -ne 0 ] ; then
+      echo "Installing PIP..."
+      conda install -y pip > pip.log 2>&1 || (echo "Installation of PIP failed. Check pip.log. Abort!"; exit)
+      PIP=$(which pip 2> /dev/null)
+      rm pip.log
    fi
 
    # Now we have activated the environment, install the software
    for package in $mandatory_packages ; do
       echo "Installing ${package}..."
-      conda install -y $package > ${package}.log 2>&1 || (echo "Installation of $package failed. Abort!"; exit)
+      conda install -y $package > ${package}.log 2>&1 || (echo "Installation of $package failed. Check ${package}.log. Abort!"; exit)
+      rm ${package}.log
    done
 
    for package in $optional_packages ; do
@@ -108,7 +126,9 @@ else
       conda install -y $package > ${package}.log 2>&1
       if [ $? -ne 0 ] ; then
          echo "Trying PIP..."
-         pip install $package > ${package}.log 2>&1 || echo "Installation of optional package $package failed"
+         pip install $package > ${package}.log 2>&1 || echo "Installation of optional package $package failed. Check ${package}.log"
+      else
+         rm ${package}.log
       fi
    done
 
@@ -124,7 +144,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 cd snpy
-python setup.py install > snpy.log 2>&1
+$PIP install . > snpy.log 2>&1
 echo "Done!  With any luck, SNooPy has been successfully installed into the"
 echo "virtual environment ${location}. From now on, if you want to run"
 echo "SNooPy, you will need to activate this virtual environment first. Then"

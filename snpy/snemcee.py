@@ -155,12 +155,12 @@ def lnlike(p, varinfo, snobj, bands):
             cov_f = np.power(err/mod*1.0857,2)
 
       m = mask*snobj.data[band].mask
-      if not np.sometrue(m):
+      if not np.any(m):
          # We're outside the support of the data
          return -np.inf
       N = sum(m)
       X = snobj.data[band].flux[m] - f[m]
-      #if not np.alltrue(m):
+      #if not np.all(m):
       #   ids = np.nonzero(-m)[0]
       #   thiscovar = np.delete(np.delete(snobj.bcovar[band],ids,axis=0), 
       #         ids, axis=1)

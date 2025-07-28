@@ -65,7 +65,8 @@ class template:
       the current B-lc to that value of dm15.'''
 
       try:
-         root = brentq(lambda x: self.tck['B'].ev(x, self.dm15)-dm15,0,30)
+         #root = brentq(lambda x: self.tck['B'].ev(x, self.dm15)-dm15,0,30)
+         root = brentq(lambda x: bisplev(x, self.dm15, self.tck['B'])-dm15,0,30)
       except ValueError:
          return (1)
 
@@ -86,9 +87,11 @@ class template:
          self.t = arange(-10,71, 1.0)
          for band in ['B','V','R','I']:
             self.__dict__[band] = \
-                  self.tck[band].ev(self.t/self.s, self.t*0+self.dm15)
+                  bisplev(self.t/self.s, self.dm15,self.tck[band])[:,0]
+                  #self.tck[band].ev(self.t/self.s, self.t*0+self.dm15)
             self.__dict__['e'+band] = \
-                  self.tck['e_'+band].ev(self.t/self.s, self.t*0+self.dm15)
+                  bisplev(self.t/self.s, self.dm15,self.tck['e_'+band])[:,0]
+                  #self.tck['e_'+band].ev(self.t/self.s, self.t*0+self.dm15)
          self.eB = num.where(num.less(self.eB, 0.001), 0.001, self.eB)
          self.eV = num.where(num.less(self.eV, 0.001), 0.001, self.eV)
          self.eR = num.where(num.less(self.eR, 0.001), 0.001, self.eR)
@@ -144,8 +147,10 @@ class template:
       elif band == 'K':
          return(0.042 + evt/s*0.02728437+ 0.003194500*(evt/s)**2 - 0.0004139377*(evt/s)**3,
                0.0*evt/s + 0.08, num.greater_equal(evt/s, -12)*num.less_equal(evt/s, 10)) 
-      evd = self.tck[band].ev(evt/self.s, evt*0+self.dm15)
-      eevd = self.tck['e_'+band].ev(evt/self.s, evt*0+self.dm15)
+      #evd = self.tck[band].ev(evt/self.s, evt*0+self.dm15)
+      #eevd = self.tck['e_'+band].ev(evt/self.s, evt*0+self.dm15)
+      evd = bisplev(evt/self.s, self.dm15, self.tck[band])
+      eevd = bisplev(evt/self.s, self.dm15, self.tck['e_'+band])
       mask = num.greater_equal(evt/self.s, -10)*num.less_equal(evt/self.s,70)
 
       if scalar:

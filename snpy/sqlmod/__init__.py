@@ -396,14 +396,14 @@ class sqlbase:
                tol)
          num_match = numpy.sum(con, axis=1)
          # Check to see there's at least one match per requested time:
-         if not numpy.alltrue(num_match):
+         if not numpy.all(num_match):
             bids = numpy.nonzero(numpy.equal(num_match, 0))[0]
             btimes = ""
             for i in range(len(bids)):  btimes += " %.1f " % (times[bids[i]])
             raise AttributeError("No photometry entry for %s" % btimes)
 
          # check if multiple matches:
-         if numpy.sometrue(numpy.greater(num_match,1)):
+         if numpy.any(numpy.greater(num_match,1)):
             bids = numpy.nonzero(numpy.greater(num_match,1))[0]
             btimes = ""
             for i in range(len(bids)):  btimes += " %.1f " % (times[bids[i]])
@@ -495,8 +495,8 @@ class sql_oldlocal(sqlbase):
    JD_OFFSET = 52999.5    # database is JD - 2453000, so +2999.5 gives MJD
 
 class sql_csp2(sqlbase):
-   host = "csp2.lco.cl"
-   user = "cburns"
+   host = "127.0.0.1"
+   user = "csp"
    passwd = None
    PHOTO_DB = "Phot"
    port = 3306
@@ -528,8 +528,8 @@ class sql_csp2(sqlbase):
          'DUPRCJ':'Jd',
          'DUPRCH':'Hd',
          'DUPWIY':'Ydw',
-         'DUPWIJ':'J',
-         'DUPWIH':'H',
+         'DUPWIJ':'Jdw',
+         'DUPWIH':'Hdw',
          'DUPWIK':'Kdw',
          'DUPDCB':'B',
          'DUPDCV':'V',
@@ -537,6 +537,12 @@ class sql_csp2(sqlbase):
          'DUPDCg':'g',
          'DUPDCr':'r',
          'DUPDCi':'i',
+         'DUPTKu':'u',
+         'DUPTKg':'g',
+         'DUPTKr':'r',
+         'DUPTKi':'i',
+         'DUPTKB':'B',
+         'DUPTKV':'V',
          'SWODCB':'B',
          'SWODCu':'u',
          'SWODCg':'g',

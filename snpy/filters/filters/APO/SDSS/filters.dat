@@ -3,3 +3,8 @@ g_s sdss_g.dat 14.2013159905 sloan g at APO
 r_s sdss_r.dat 14.2156544329 sloan r at APO
 i_s sdss_i.dat 13.7775438954 sloan i at APO
 z_s sdss_z.dat 11.8525822106 sloan z at APO
+u13 sdss_u.dat bd17adj=10.56   sloan u at APO from Doi+2010, airmass=1.3
+g13 sdss_g.dat bd17adj=9.6256  sloan g at APO from Doi+2010, airmass=1.3
+r13 sdss_r.dat bd17adj=9.34615 sloan r at APO from Doi+2010, airmass=1.3
+i13 sdss_i.dat bd17adj=9.24549 sloan i at APO from Doi+2010, airmass=1.3
+z13 sdss_z.dat bd17adj=9.2321  sloan z at APO from Doi+2010, airmass=1.3

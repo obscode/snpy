@@ -32,5 +32,15 @@ def test_kcorr():
    delta2 = absolute((magzs[0,:]-mag0s)[0] - ks[0])
 
    # The mangling should be better and precise
-   assert alltrue(delta2 < delta1) and alltrue(delta2 < 0.01)
+   assert all(delta2 < delta1) and all(delta2 < 0.01)
    
+def test_SEDs():
+   wave1,flux1 = kcorr.get_SED(0, version='H3')
+   wave2,flux2 = kcorr.get_SED(0, version='H3+L')
+
+   delta1 = fset['B'].synth_mag(wave1, flux1) - fset['B'].synth_mag(wave2,flux2)
+   delta2 = fset['H'].synth_mag(wave1, flux1) - fset['H'].synth_mag(wave2,flux2)
+
+   assert (delta1 < 0.001) and (delta2 - 0.785952 < 0.001)
+
+

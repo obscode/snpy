@@ -80,7 +80,7 @@ def test_model(snobj, model, result):
 
    res = [round(snobj.model.parameters[key],3) == round(result[key],3) \
          for key in result]
-   assert num.alltrue(res)
+   assert num.all(res)
 
 @havesalt
 def test_SALT(snobj):
@@ -90,7 +90,7 @@ def test_SALT(snobj):
 
    res = [round(snobj.model.parameters[key],3) == round(SALT_results[key],3) \
          for key in SALT_results]
-   assert num.alltrue(res)
+   assert num.all(res)
 
 @havemlcs
 def test_MLCS(snobj):
@@ -100,4 +100,4 @@ def test_MLCS(snobj):
 
    res = [round(snobj.model.parameters[key],3) == round(MLCS_results[key],3) \
          for key in MLCS_results]
-   assert num.alltrue(res)
+   assert num.all(res)

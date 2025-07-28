@@ -27,4 +27,5 @@ For more details, see:
     vol 12 no. 4 July 1998
  *  http://structureandchange.3me.tudelft.nl/
 '''
+#import spline2c
 from .spline2 import *

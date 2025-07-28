@@ -226,7 +226,7 @@ def plot_sn(self, xrange=None, yrange=None, device=None,
       pp.error(x-Tmax*epoch, y, dy1=ey, length=0, order=1000)
       if label_bad:
          gids = equal(self.data[filter].mask, 0)
-         if sometrue(gids):
+         if any(gids):
             x = self.data[filter].MJD[gids] - Tmax*epoch
             if not flux:
                y = self.data[filter].mag[gids] + \
@@ -319,7 +319,7 @@ def bind_mask(x,y,key,inst):
    # now, what are we doing?
    if key == 'A':
       # first, if all data is masked:
-      if not sometrue(lc.mask):
+      if not any(lc.mask):
          return
       # find distances to valid (unmasked) data:
       dists = power(lc.mag[lc.mask] - y, 2) + power(lc.t[lc.mask] - x, 2)
@@ -330,7 +330,7 @@ def bind_mask(x,y,key,inst):
       lc.pts[id] = inst.point([lc.t[id]],[lc.mag[id]], symbol=5, color='red', size=4.0)
    elif key == 'u':
       # first, if none are masked, nothing to do
-      if alltrue(lc.mask):
+      if all(lc.mask):
          return
       # find distances to invalid (masked) data:
       gids = logical_not(lc.mask)

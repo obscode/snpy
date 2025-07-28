@@ -442,7 +442,7 @@ class sn(object):
          ys = interp(ts)[0]
 
       nids = less(dirs, 0)   # concave-down (i.e., maxima)
-      if not sometrue(nids):
+      if not any(nids):
          return None,None
 
       idx = argmax(maxs[nids])  # take the true maximum
@@ -456,12 +456,12 @@ class sn(object):
          interp.draw()
          btmaxs,bmaxs,bdirs = interp.find_extrema()
          if plot: yys.append(interp(ts)[0])
-         if len(bdirs) == len(dirs) and alltrue(bdirs == dirs):
+         if len(bdirs) == len(dirs) and all(bdirs == dirs):
             # same maxima
             tBVmaxs.append(btmaxs[nids][idx])
          else:
             bnids = less(bdirs, 0)
-            if sometrue(bnids):
+            if any(bnids):
                bidx = argmax(bmaxs[bnids])
                if absolute(btmaxs[bnids][bidx] - tBVmax) < 10.0:
                   tBVmaxs.append(btmaxs[bnids][bidx])
@@ -539,7 +539,7 @@ class sn(object):
       gids = gids*greater_equal(t-Tmax, tmin)*less_equal(t-Tmax, tmax)
 
       # Now check that we actually HAVE some data left
-      if not sometrue(gids):
+      if not any(gids):
          raise RuntimeError("Sorry, no data available between t=%f and t=%f" % (tmin,tmax)) 
       
       # extract the data we want and convert to Vmax epochs
@@ -695,11 +695,12 @@ class sn(object):
             # No k-corrections, we'll just use SED
             x = self.data[band].MJD
             # days since Bmax in the frame of the SN
-            days = (x - self.Tmax)/(1+self.z)/st
+            if SED != 'H3+L':
+                days = (x - self.Tmax)/(1+self.z)/st
             days = days.tolist()
             self.Ss[band],self.Ss_mask[band] = list(map(array,kcorr.kcorr(days, 
-               self.restbands[band], band, self.z, self.EBVgal, 0.0,
-               version=self.k_version, Scorr=True)))
+               self.restbands[band], band, self.z, st, self.EBVgal, 0.0,
+               version=SED, Scorr=True)))
             self.Ss_mask[band] = self.Ss_mask[band].astype(bool)
          else:
             self.Ss[band] = []
@@ -883,11 +884,14 @@ class sn(object):
          for band in bands:
             x = self.data[band].MJD
             # days since Bmax in the frame of the SN
-            days = (x - self.Tmax)/(1+self.z)/s
+            if self.k_version != 'H3+L':
+                days = (x - self.Tmax)/(1+self.z)/s
+            else:
+                days = (x - self.Tmax)/(1+self.z)
             days = days.tolist()
             kextrap = getattr(self, 'k_extrapolate', False)
             self.ks[band],self.ks_mask[band] = list(map(array,kcorr.kcorr(days, 
-               self.restbands[band], band, self.z, self.EBVgal, 0.0,
+               self.restbands[band], band, self.z, self.ks_s, self.EBVgal, 0.0,
                version=self.k_version, extrapolate=kextrap)))
             self.ks_mask[band] = self.ks_mask[band].astype(bool)
             #self.ks_tck[band] = scipy.interpolate.splrep(x, self.ks[band], k=1, s=0)
@@ -903,7 +907,7 @@ class sn(object):
       eff_waves = eff_waves[sids]
       mbands = [mbands[sids[i]] for i in range(len(sids))]
       dwaves = eff_waves[1:] - eff_waves[0:-1]
-      while sometrue(less(dwaves, min_filter_sep)):
+      while any(less(dwaves, min_filter_sep)):
          bids = less(dwaves, min_filter_sep)
          mbands = [mbands[i] for i in range(len(bids)) if not bids[i]] + mbands[-1:]
          eff_waves = array([fset[band].eff_wave(Ia_w,Ia_f) for band in mbands])
@@ -939,11 +943,15 @@ class sn(object):
       if self.Tmax is None:
          raise AttributeError("Error.  self.Tmax must be set in oder to compute K-correctsions")
       t = res['MJD'] - self.Tmax
-      if not sometrue(greater_equal(t, -19)*less(t, 70)):
+      if not any(greater_equal(t, -19)*less(t, 70)):
          raise RuntimeError("Error:  your epochs are all outside -20 < t < 70.  Check self.Tmax")
       kextrap = getattr(self, 'k_extrapolate', False)
-      kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle(t/(1+self.z)/s, bands, 
-            mags, masks, restbands, self.z, 
+      if  self.k_version != 'H3+L':
+          use_t = t/(1+self.z)/s
+      else:
+          use_t = t/(1+self.z)
+      kcorrs,mask,Rts,m_opts = kcorr.kcorr_mangle(use_t, bands, 
+            mags, masks, restbands, self.z, sBV=s,
             colorfilts=mbands, version=self.k_version, full_output=1, 
             extrapolate=kextrap, **mopts)
       mask = greater(mask, 0)
@@ -994,10 +1002,13 @@ class sn(object):
          raise AttributeError("Mangling info not found... try running self.kcorr()")
       if self.ks_mopts[band][i] is None:
          return(None,None,None,None)
-      epoch = self.data[band].t[i]/(1+self.z)/self.ks_s
+      if  self.k_version != 'H3+L':
+         epoch = int(self.data[band].t[i]/(1+self.z)/self.ks_s)
+      else:
+         epoch = self.data[band].t[i]/(1+self.z)
       kextrap = getattr(self, 'k_extrapolate', False)
       wave,flux = kcorr.get_SED(int(epoch), version=self.k_version, 
-            extrapolate=kextrap)
+            sBV=self.ks_s,extrapolate=kextrap)
       if self.ks_mopts[band][i]:
          man_flux = mangle_spectrum.apply_mangle(wave,flux, 
                **self.ks_mopts[band][i])[0]
@@ -1093,7 +1104,7 @@ class sn(object):
             k = 0
             kflag = 0
 
-         if not sometrue(bids):
+         if not any(bids):
             # They all good, carry on.
             ms.append(data[band]-k)
             ems.append(data['e_'+band])
@@ -1438,7 +1449,7 @@ class sn(object):
             print("# column 2:  model magnitude", file=f)
             print("# column 3:  model magnitude error", file=f)
             for i in range(len(ts)):
-               print("%.1f, %.3f %.3f" % (ts[i]+self.Tmax-toff, ms[i],
+               print("%.1f %.3f %.3f" % (ts[i]+self.Tmax-toff, ms[i],
                   e_ms[i]), file=f)
             f.close()
          if self.data[filt].interp is not None:
@@ -2537,7 +2548,8 @@ def load(fname):
       if getattr(inst, 'k_extrapolate', None) is None:
          inst.k_extrapolate = False
    except:
-      print("Error:  could not load pickle file {}".format(fname))
+      print("Warning:  could not load pickle file {}, trying as plain "\
+            "text import".format(fname))
       inst = None
    return(inst)
 

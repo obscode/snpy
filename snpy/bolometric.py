@@ -21,7 +21,7 @@ from .filters import standards
 Vega = standards['VegaB']
 from .utils import deredden
 from .mangle_spectrum import mangle_spectrum2
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid as trapz
 from scipy.interpolate import splrep,splev
 from numpy import *
 import sys
@@ -507,6 +507,7 @@ def bolometric_direct(sn, bands=None, tmin=None, tmax=None,
 
       # Finally!  integrate!
       fbol = trapz(flam[masks[i]], x=lam_eff[masks[i]])
+      if not len(bs) > 1: fbol = flam[masks[i]][0]
 
       filters_used.append(bs)
       boloflux.append(fbol)

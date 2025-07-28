@@ -41,7 +41,6 @@ gloes.
 from __future__ import print_function
 import sys,os,string
 import numpy as num
-from scipy.interpolate import CloughTocher2DInterpolator as interp2D
 from scipy.interpolate import bisplrep,bisplev,splev,make_interp_spline
 import scipy.optimize
 import pickle
@@ -236,7 +235,7 @@ def finterp(band, t, p, param, gen, extrap=False):
       t1,t2 = get_t_lim(band, param, gen)
       mask = num.logical_not(num.isnan(Z))
       # extrapolate lower with t^2 law
-      if num.sometrue(num.less(t,t1)):
+      if num.any(num.less(t,t1)):
          Tp = bisplev(t1, p, f, dx=1)
          T = bisplev(t1, p, f)
          eT = bisplev(t, p, ef)
@@ -244,7 +243,7 @@ def finterp(band, t, p, param, gen, extrap=False):
          Z = num.where(num.less(t, t1), a*num.power(t-t0,2), Z)
          eZ = num.where(num.less(t, t1), eT, eZ)
          mask = mask*num.greater(Z,0)*num.greater(t, t0)
-      if num.sometrue(num.greater(t, t2)):
+      if num.any(num.greater(t, t2)):
          # extrapolate with m = a*(t-t2)+b
          Tp = bisplev(t2, p, f, dx=1)
          T = bisplev(t2, p, f)
@@ -494,7 +493,7 @@ class st_template:
          evt = times/(1+z)
 
       if self.st <= 0:
-         return (evt*0, evt*0, num.zeros(evt.shape, dtype=num.bool))
+         return (evt*0, evt*0, num.zeros(evt.shape, dtype=bool))
 
       if band == 'J_K':
          s = self.st

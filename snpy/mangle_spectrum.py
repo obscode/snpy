@@ -573,8 +573,8 @@ class mangler:
       # Check that all bands have support on the spectra
       ggids = [~num.isnan([fset[band].synth_mag(self.wave[i],self.flux[i]) \
             for band in bands]) for i in range(self.wave.shape[0])]
-      gids = num.alltrue(ggids, axis=0)
-      if not num.alltrue(gids):
+      gids = num.all(ggids, axis=0)
+      if not num.all(gids):
          bad = ",".join([bands[i] for i in range(len(gids)) if not gids[i]])
          print("Warning! The following filters were not covered by the SED:")
          print(bad)

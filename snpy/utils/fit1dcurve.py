@@ -8,7 +8,8 @@ import numpy as num
 from snpy.utils import fit_spline
 from scipy.interpolate import splrep,splev,sproot
 from scipy.optimize import brentq, newton
-from scipy.misc import derivative as deriv
+#from scipy.misc import derivative as deriv
+from .derivative import derivative as deriv
 import six
 try:
    from snpy.spline2 import spline2, evalsp,eval_extrema,eval_x
@@ -693,7 +694,7 @@ if spline2 is not None:
             vals = eval_extrema(self.realization)
          else:
             vals = eval_extrema(self.tck)
-         gids = num.ones(vals[0].shape, dtype=num.bool)
+         gids = num.ones(vals[0].shape, dtype=bool)
          if xmin is not None:
             gids = gids*num.greater_equal(vals[0],xmin)
          if xmax is not None:
@@ -776,7 +777,7 @@ class Spline(oneDcurve):
       '''Given the current set of params, setup the interpolator.'''
       self.tck = splrep(self.x, self.y, 1.0/self.ey, **self.pars)
       # Check for NaN's in the tck.
-      if num.sometrue(num.isnan(self.tck[1])):
+      if num.any(num.isnan(self.tck[1])):
          raise ValueError("The Spline is invalid.  It is possible the data are too noisy, or smoothing is too low.  Try increasing 's' or fixing your errors")
       self.setup = True
       self.realization = None
@@ -1149,7 +1150,7 @@ if gp == 'pymc':
          ys = f(xs)
    
          pids = num.greater(ys, 0)
-         if num.alltrue(pids) or num.alltrue(-pids):
+         if num.all(pids) or num.all(-pids):
             return None
    
          ret = []
@@ -1352,7 +1353,7 @@ elif gp == 'sklearn':
          ys = f(xs)
    
          pids = num.greater(ys, 0)
-         if num.alltrue(pids) or num.alltrue(-pids):
+         if num.all(pids) or num.all(-pids):
             return None
    
          ret = []

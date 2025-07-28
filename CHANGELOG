@@ -79,3 +79,7 @@ August 2012:
              or, if computing the k-corrections manually
              s.kcorr(mangle=1, mepoch=True)
            
+Version 2.7.0:
+	- Incorporating Jing Lu's sBV-dependent SEDs for K-corrections.
+	- Trying to be better about version numbers. This one fixes up some old
+	  problems with new Numpy getting rid of more and more useful things.

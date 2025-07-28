@@ -49,8 +49,8 @@ for i in range(len(dm15s)):
 x = ravel(array(t_mat))
 y = ravel(array(dm15_mat))
 if os.path.isfile(tck_file):
-   f = open(tck_file)
-   tck = pickle.load(f)
+   f = open(tck_file, 'rb')
+   tck = pickle.load(f, encoding='iso-8859-1')
    f.close()
 else:
    tck = {}
@@ -65,8 +65,8 @@ for band in bands:
       print(x.shape)
       print(y.shape)
       print(z.shape)
-      #tck[band] = inter.bisplrep(x, y, z, w=1.0/ez, kx=1, ky=1, s=0.0*len(x))
-      tck[band] = inter.SmoothBivariateSpline(x, y, z, w=1.0/ez, s=smooths[band]*len(x))
+      tck[band] = inter.bisplrep(x, y, z, w=1.0/ez, kx=1, ky=1, s=0.0*len(x))
+      #tck[band] = inter.SmoothBivariateSpline(x, y, z, w=1.0/ez, s=smooths[band]*len(x))
    except:
       print(x,y,z,ez,smooths[band]*len(x))
       print(type(x), x.shape)
@@ -74,7 +74,8 @@ for band in bands:
       print(type(z), z.shape)
       print(type(ez), ez.shape)
       sys.exit(1)
-   tck["e_"+band] = inter.SmoothBivariateSpline(x, y, ez, kx=1, ky=1, s=0.0*len(x))
-f = open(tck_file, 'w')
+   #tck["e_"+band] = inter.SmoothBivariateSpline(x, y, ez, kx=1, ky=1, s=0.0*len(x))
+   tck["e_"+band] = inter.bisplrep(x, y, ez, kx=1, ky=1, s=0.0*len(x))
+f = open("tck_new.pickle", 'wb')
 pickle.dump(tck, f)
 f.close()

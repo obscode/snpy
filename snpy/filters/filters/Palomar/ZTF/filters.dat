@@ -1,0 +1,6 @@
+ztf_g ztf_g_atm.dat AB "ZTF g band obtained from SVO Filter Profile Service V2 and CTIO atmostpheric model"
+ztf_r ztf_r_atm.dat AB "ZTF r band obtained from SVO Filter Profile Service V2 and CTIO atmostpheric model"
+ztf_i ztf_i_atm.dat AB "ZTF i band obtained from SVO Filter Profile Service V2 and CTIO atmostpheric model"
+ztf_g0 ztf_g_band.dat AB "ZTF g band obtained from SVO Filter Profile Service V2"
+ztf_r0 ztf_r_band.dat AB "ZTF r band obtained from SVO Filter Profile Service V2"
+ztf_i0 ztf_i_band.dat AB "ZTF i band obtained from SVO Filter Profile Service V2"

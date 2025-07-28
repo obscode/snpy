@@ -9,9 +9,8 @@ from snpy import kcorr
 from snpy.filters import fset
 from numpy import *
 from scipy import stats
-import scipy.interpolate
 from scipy.optimize import brentq
-from numpy import median, bool, diag, atleast_1d, std
+from numpy import median, diag, atleast_1d, std
 from numpy.linalg import inv
 
 #from snpy.utils import fit1dcurve

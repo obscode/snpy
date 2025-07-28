@@ -92,7 +92,7 @@ class InteractiveFit:
       # fit plot
       self.mp.axes[1].errorbar(self.x, self.y, yerr=self.ey, capsize=0,
             fmt='o')
-      if not num.alltrue(self.mask):
+      if not num.all(self.mask):
          m = num.logical_not(self.mask)
          self._x1, = self.mp.axes[1].plot(self.x[m], self.y[m], 'x', 
                color='red', ms=16)
@@ -116,7 +116,7 @@ class InteractiveFit:
       resids = self.interp.residuals(mask=False)
       self._rp,dum,self._rl = self.mp.axes[0].errorbar(self.x, 
             resids, yerr=self.ey, capsize=0, fmt='o')
-      if not num.alltrue(self.interp.mask):
+      if not num.all(self.interp.mask):
          self._x2, = self.mp.axes[0].plot(self.x[num.logical_not(self.mask)], 
                self.interp.residuals(mask=False)[num.logical_not(self.mask)],
                'x', ms=16, color='red')
@@ -125,7 +125,7 @@ class InteractiveFit:
       self.mp.axes[0].axhline(0, color='black')
 
       self.mp.set_limits()
-      if not num.alltrue(m):
+      if not num.all(m):
          resids = resids[m]
          self.mp.axes[0].set_ylim((resids.min(), resids.max()))
       self.mp.axes[1].text(1.01, 1.0, "Parameters:", va='bottom', ha='left',
@@ -184,7 +184,7 @@ class InteractiveFit:
       self._rp,dum,self._rl = self.mp.axes[0].errorbar(self.x, 
             resids, yerr=self.ey, capsize=0, fmt='o', color='blue')
       #self.mp.set_limits()
-      if not num.alltrue(m):
+      if not num.all(m):
          resids = resids[m]
          self.mp.axes[0].set_ylim((resids.min(), resids.max()))
       self.plot_stats()
@@ -201,7 +201,7 @@ class InteractiveFit:
 
    def redraw_x(self):
       '''Redraw the little red X's if needed'''
-      if not num.alltrue(self.mask):
+      if not num.all(self.mask):
          if self._x1 is not None:
             self._x1.set_data((self.x[num.logical_not(self.mask)], 
                self.y[num.logical_not(self.mask)]))
@@ -264,7 +264,8 @@ class InteractiveFit:
       ax = self.mp.axes[0]
       if id is None:
          bbox = self._stats_labels.get_window_extent(find_renderer(self.mp.fig))
-         bbox = bbox.inverse_transformed(ax.transAxes)
+         #bbox = bbox.inverse_transformed(ax.transAxes)
+         bbox = bbox.transformed(ax.transAxes.inverted())
          self._statsid = ax.text(bbox.x1,0.95,label, va='top', ha='left',
               transform=ax.transAxes, fontdict={'size':10})
       else:
@@ -282,7 +283,8 @@ class InteractiveFit:
       ax = self.mp.axes[1]
       if id is None:
          bbox = self._pars_labels.get_window_extent(find_renderer(self.mp.fig))
-         bbox = bbox.inverse_transformed(ax.transAxes)
+         #bbox = bbox.inverse_transformed(ax.transAxes)
+         bbox = bbox.transformed(ax.transAxes.inverted())
          self._parsid = ax.text(bbox.x1, 0.95, label, va='top', ha='left',
                transform=ax.transAxes, fontdict={'size':10})
       else:

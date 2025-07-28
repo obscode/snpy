@@ -2,7 +2,7 @@ from __future__ import print_function
 import pytest
 import snpy.spline2 as spline2
 import sys
-from numpy import array,arange,sin,pi,absolute,alltrue
+from numpy import array,arange,sin,pi,absolute,all
 
 #data = columns('example1')
 #p = Plot()
@@ -20,7 +20,7 @@ def spdata():
 def test_spline2(spdata):
    x,y,tck = spdata
    yeval = spline2.evalsp(x, tck)
-   assert alltrue(absolute(yeval-y) < 0.01)
+   assert all(absolute(yeval-y) < 0.01)
 
 def test_extrema(spdata):
    xe,ye,si = spline2.eval_extrema(tck)
