@@ -83,3 +83,19 @@ Version 2.7.0:
 	- Incorporating Jing Lu's sBV-dependent SEDs for K-corrections.
 	- Trying to be better about version numbers. This one fixes up some old
 	  problems with new Numpy getting rid of more and more useful things.
+
+Version 2.7.1:
+	- Various bug-fixes.
+	- Updated CSP filters to include more cases (Dupont TEK CCD, e.g.)
+
+Version 2.7.2:
+	- Update to the CSP database paramters, now that our SQL is behind a 
+	  firewall
+
+Version 2.7.3:
+	- Added generation 3 (based on CSPI+II) light-curve templates. These
+	  are not used by default. Must specify gen=3 in fit() call.
+	- Added experimental generation 3.1, which will hopefully fix the
+	  "piling up" of SNe at st=1.18. Must specify gen=3.1 to fit() call.
+	  DO NOT USE UNLESS YOU KNOW WHAT YOU'RE DOING.
+	- Added the POISE database parameters
