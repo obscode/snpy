@@ -591,6 +591,56 @@ class sql_SBS_csp2(sql_csp2):
    SPEC_INDEX = "FILE"
    SPEC_NAME = "SN"
 
+class sql_SBS_csp2_prelim(sqlbase):
+   host = "sql.obs.carnegiescience.edu"
+   user = "CSP"
+   passwd = None
+   PHOTO_DB = "CSP"
+   port = 3306
+
+   SN_TABLE = "SNList"
+   SN_ID = "SN"
+   ATTR_KEYS = {'z':'zc/300000.0',
+                'ra':'ra*15.0',
+                'decl':'de'}
+   PHOTO_TABLE = "MAGSN"
+   PHOTO_ID = "field"
+   PHOTO_JD = "jd"
+   PHOTO_MAG = "mag"
+   PHOTO_EMAG = "err"
+   PHOTO_FILT = "FILT"
+   PHOTO_K = None      # No K-corrections in the DB
+   PHOTO_COND = "and obj=0 and mag > 0"
+   JD_OFFSET = -2400000.5
+
+class sql_SBS_csp2(sql_csp2):
+   host = 'obsns09.obs.carnegiescience.edu'
+   user = 'CSP'
+
+   PHOTO_DB = "CSP"
+   SPEC_DB = "CSP"
+   SPEC_TABLE = "SPECTRA"
+   SPEC_INFO = "SP_INFO"
+   SPEC_JD = "JD"
+   SPEC_LAMB = "LAMBDA"
+   SPEC_FLUX = "FLUX"
+   SPEC_INDEX = "FILE"
+   SPEC_NAME = "SN"
+
+class sql_SBS_POISE(sql_csp2):
+   host = 'obsns09.obs.carnegiescience.edu'
+   user = 'CSP'
+
+   PHOTO_DB = "POISE"
+   SPEC_DB = "POISE"
+   SPEC_TABLE = "SPECTRA"
+   SPEC_INFO = "SP_INFO"
+   SPEC_JD = "JD"
+   SPEC_LAMB = "LAMBDA"
+   SPEC_FLUX = "FLUX"
+   SPEC_INDEX = "FILE"
+   SPEC_NAME = "SN"
+
 class sql_csp2_pub(sql_csp2):
    PHOTO_DB = "PubPhot"
 
@@ -603,6 +653,8 @@ class sql_SBS_csp2_pub(sql_csp2):
 databases = \
    {'default':(sql_csp2, "Working CSP2 database at LCO"),
     'SBS':(sql_SBS_csp2, "Working CSP2 database at SBS"),
+    'SBSp':(sql_SBS_csp2_prelim, "Working CSP2 database at SBS"),
+    'POISE':(sql_SBS_POISE, "POISE database at SBS"),
     'LCOpub':(sql_csp2_pub, "Published CP2 database at LCO"),
     'SBSpub':(sql_SBS_csp2_pub, "Published CSP2 database at SBS"),
     'highz':(sql_highz, "Highz database at SBS")}
