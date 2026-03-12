@@ -668,8 +668,8 @@ def plot_sn(self, **kwargs):
       else:
          rows = n_plots // cols
       if n_plots % cols:  rows += 1
-      figwidth = min(8*dpi,max_width)*1.0/dpi
-      figheight = min(8.*rows//cols*dpi, max_height)*1.0/dpi
+      figwidth = min([8*dpi, max_width])*1.0/dpi
+      figheight = min([8.*rows//cols*dpi, max_height])*1.0/dpi
       p = myplotlib.PanelPlot(cols, rows, num=110, figsize=(figwidth,figheight))
    else:
       p = myplotlib.SimplePlot(num=110, figsize=(8,8))
