@@ -578,7 +578,7 @@ class sql_csp2(sqlbase):
       return name[-1]
 
 class sql_SBS_csp2(sql_csp2):
-   host = 'obsns09.obs.carnegiescience.edu'
+   host = 'sql.obs.carnegiescience.edu'
    user = 'CSP'
 
    PHOTO_DB = "CSP"
@@ -614,7 +614,7 @@ class sql_SBS_csp2_prelim(sqlbase):
    JD_OFFSET = -2400000.5
 
 class sql_SBS_csp2(sql_csp2):
-   host = 'obsns09.obs.carnegiescience.edu'
+   host = 'sql.obs.carnegiescience.edu'
    user = 'CSP'
 
    PHOTO_DB = "CSP"
@@ -628,7 +628,7 @@ class sql_SBS_csp2(sql_csp2):
    SPEC_NAME = "SN"
 
 class sql_SBS_POISE(sql_csp2):
-   host = 'obsns09.obs.carnegiescience.edu'
+   host = 'sql.obs.carnegiescience.edu'
    user = 'CSP'
 
    PHOTO_DB = "POISE"
